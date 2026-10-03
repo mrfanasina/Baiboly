@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="10dp">
+
+    <!-- Plus de bulle : le texte IA prend toute la largeur disponible,
+         comme dans ChatGPT. Pas de background, pas de marge asymétrique. -->
+    <TextView
+        android:id="@+id/tvChatMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:lineSpacingMultiplier="1.15"
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="16sp" />
+
+    <!-- Bouton copier : discret, aligné à gauche sous le texte, plutôt
+         qu'incrusté dans un coin de bulle. -->
+    <ImageButton
+        android:id="@+id/btnCopyMessage"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginTop="4dp"
+        android:layout_gravity="start"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Adikaina"
+        android:padding="6dp"
+        android:src="@drawable/ic_copy"
+        app:tint="?android:attr/textColorSecondary" />
+
+    <!-- Actions sous la réponse IA : re-question ciblée + accès direct
+         aux réglages IA. L'adapter n'affiche cette rangée que sous la
+         dernière réponse de la conversation. -->
+    <LinearLayout
+        android:id="@+id/aiActionsRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Ouvre une réponse resserrée sur le sujet -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipNotRelevant"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tsy dia mifandraika loatra?"
+            android:textColor="?attr/colorPrimary"
+            app:chipBackgroundColor="?attr/colorPrimaryContainer"
+            app:chipEndPadding="8dp"
+            app:chipStartPadding="8dp"
+            app:chipStrokeWidth="0dp"
+            app:rippleColor="?attr/colorPrimary" />
+
+        <!-- Lien direct vers les réglages IA (style, niveau, longueur...) -->
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipAiSettings"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Fikirakiran'ny IA"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            app:chipBackgroundColor="?attr/colorSurfaceVariant"
+            app:chipEndPadding="8dp"
+            app:chipIcon="@drawable/ic_settings"
+            app:chipIconSize="16dp"
+            app:chipIconTint="?attr/colorOnSurfaceVariant"
+            app:chipStartPadding="8dp"
+            app:chipStrokeWidth="0dp"
+            app:rippleColor="?attr/colorOnSurfaceVariant" />
+
+    </LinearLayout>
+
+</LinearLayout>

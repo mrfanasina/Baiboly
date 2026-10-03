@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/navigation_home">
+
+    <fragment
+        android:id="@+id/navigation_home"
+        android:name="com.fa.baiboly.ui.home.HomeFragment"
+        android:label="@string/title_home"
+        tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/navigation_dashboard"
+        android:name="com.fa.baiboly.ui.baiboly.BaibolyFragment"
+        android:label="@string/title_dashboard"
+        tools:layout="@layout/fragment_baiboly" />
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.fa.baiboly.SettingsFragment"
+        android:label="Fikirakirana" />
+    <fragment
+        android:id="@+id/navigation_notifications"
+        android:name="com.fa.baiboly.ui.fihirana.FihiranaFragment"
+        android:label="@string/title_notifications"
+        tools:layout="@layout/fragment_notifications" />
+    <fragment
+        android:id="@+id/fanekena"
+        android:name="com.fa.baiboly.ui.fanekena.FanekenaFragment"
+        android:label="Fanekena"
+        tools:layout="@layout/fragment_fanekena" />
+    <fragment
+        android:id="@+id/navigation_chapter"
+        android:name="com.fa.baiboly.ui.baiboly.ChapterFragment"
+        android:label="Toko">
+        <argument
+            android:name="book"
+            app:argType="com.fa.baiboly.models.Book" />
+    </fragment>
+</navigation>

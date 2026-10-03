@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Baiboly</string>
+    <string name="title_home">Mofonaina</string>
+    <string name="title_dashboard">Baiboly</string>
+    <string name="title_notifications">Fihirana</string>
+    <string name="appwidget_text">Baiboly</string>
+    <string name="add_widget">Ampidiro widget</string>
+    <string name="app_widget_description">Widget ho an\'ny Baiboly</string>
+    <string name="action_swipe_unlocked">Afaka manakisaka</string>
+    <string name="action_swipe_locked">Tsy afaka manakisaka</string>
+</resources>

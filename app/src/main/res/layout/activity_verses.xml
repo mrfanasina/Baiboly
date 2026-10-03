@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:elevation="0dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorSurface"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:popupTheme="@style/ThemeOverlay.Material3" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Lecteur : ViewPager2 (swipe natif entre chapitres / vakiteny) -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <!-- Container paramètres -->
+    <FrameLayout
+        android:id="@+id/settings_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"/>
+
+    <!-- Overlay : sélection de versets (copier / surligner / favori / IA) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:animateLayoutChanges="true">
+
+        <!-- Barre flottante de sélection -->
+        <LinearLayout
+            android:id="@+id/floatingActionBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="28dp"
+            android:background="@drawable/shape_floating_pill"
+            android:elevation="12dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <ImageButton
+                android:id="@+id/btnFloatCopy"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Copier"
+                android:padding="10dp"
+                android:src="@drawable/ic_copy"
+                app:tint="?attr/colorControlNormal"/>
+
+            <ImageButton
+                android:id="@+id/btnFloatHighlight"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Marquer"
+                android:padding="10dp"
+                android:src="@drawable/book_bookmark_favorite_like_star_svgrepo_com"
+                app:tint="?attr/colorControlNormal"/>
+
+            <ImageButton
+                android:id="@+id/btnFloatFavorite"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Favori"
+                android:padding="10dp"
+                android:src="@drawable/ic_star_outline"
+                app:tint="?attr/colorControlNormal"/>
+
+            <ImageButton
+                android:id="@+id/btnAIExplain"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Hazavao"
+                android:padding="10dp"
+                android:src="@drawable/ic_ai_chat"
+                app:tint="?attr/colorControlNormal"/>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:background="#22000000"/>
+
+            <ImageButton
+                android:id="@+id/btnFloatClose"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Fermer"
+                android:padding="10dp"
+                android:src="@drawable/ic_close2"
+                app:tint="?attr/colorControlNormal"/>
+
+        </LinearLayout>
+
+        <!-- Palette -->
+        <LinearLayout
+            android:id="@+id/floatingColorStrip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/shape_floating_pill"
+            android:elevation="12dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/floatingActionBar"
+            app:layout_constraintEnd_toEndOf="@id/floatingActionBar">
+
+            <View
+                android:id="@+id/colorYellow"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/circle_yellow"/>
+
+            <View
+                android:id="@+id/colorGreen"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/circle_green"/>
+
+            <View
+                android:id="@+id/colorBlue"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/circle_blue"/>
+
+            <View
+                android:id="@+id/colorPink"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_margin="4dp"
+                android:background="@drawable/circle_pink"/>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="22dp"
+                android:layout_marginHorizontal="6dp"
+                android:background="#22000000"/>
+
+            <ImageButton
+                android:id="@+id/colorRemove"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/ic_close2"
+                app:tint="?attr/colorControlNormal"/>
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,61 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ========================= -->
+    <!-- 🌙 DARK THEME (MATERIAL 3) -->
+    <!-- ========================= -->
+    <style name="Theme.Baiboly" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Couleurs primaires (version pastel pour le sombre) -->
+        <item name="colorPrimary">#C97171</item>
+        <item name="colorOnPrimary">#E9DFDF</item>
+        <item name="colorPrimaryContainer">#004D40</item>
+        <item name="colorOnPrimaryContainer">#B2EBF2</item>
+
+        <!-- Couleurs secondaires  -->
+        <item name="colorSecondary">#3B7AC7</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+
+        <!-- Surfaces et Arrière-plan Sombre -->
+        <item name="android:colorBackground">#121212</item>
+        <item name="colorSurface">#1C1B1F</item>
+        <item name="colorOnSurface">#E6E1E5</item>
+        <item name="colorSurfaceVariant">#303032</item>
+        <item name="colorOnSurfaceVariant">#CAC4D0</item>
+        <item name="colorOutline">#5C5C5C</item>
+
+        <!-- Barre d'état -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+
+        <item name="textInputStyle">@style/Widget.Material3.TextInputLayout.OutlinedBox</item>
+    </style>
+
+    <!-- Style Boutons Mode Sombre -->
+    <style name="NumPadButton" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">#E6E1E5</item>
+        <item name="backgroundTint">#2D2D2D</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.MediumComponent</item>
+    </style>
+    <!-- 1. Le style principal du bouton -->
+    <style name="Widget.App.Button.Toggle" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="materialThemeOverlay">@style/ThemeOverlay.App.Button.ToggleContainer</item>
+        <item name="strokeColor">?attr/colorPrimary</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+    </style>
+
+    <!-- 2. Le "Thème Overlay" qui définit les couleurs quand le bouton est COCHÉ -->
+    <style name="ThemeOverlay.App.Button.ToggleContainer" parent="">
+        <!-- Couleur de fond du bouton sélectionné (Ici Rose/Bordeaux comme votre colorPrimary) -->
+        <item name="colorPrimaryContainer">#C40E5A</item>
+        <!-- Couleur du texte et de l'icône quand sélectionné (Blanc) -->
+        <item name="colorOnPrimaryContainer">#FFFFFF</item>
+    </style>
+</resources>

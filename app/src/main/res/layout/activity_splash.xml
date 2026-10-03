@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bgColor">
+
+    <!-- Decorative circle background -->
+    <View
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_gravity="center"
+        android:alpha="0.06"
+        android:background="@drawable/circle_green" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <!-- App icon (same as launcher icon) -->
+        <ImageView
+            android:id="@+id/splashIcon"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@mipmap/ic_launcher"
+            android:alpha="0"
+            android:layout_marginBottom="24dp" />
+
+        <!-- App name -->
+        <TextView
+            android:id="@+id/splashTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BAIBOLY"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:fontFamily="serif"
+            android:letterSpacing="0.15"
+            android:textColor="?attr/colorPrimary"
+            android:alpha="0" />
+
+        <!-- Subtitle -->
+        <TextView
+            android:id="@+id/splashSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Baiboly Malagasy"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginTop="4dp"
+            android:alpha="0" />
+
+        <!-- Divider -->
+        <View
+            android:id="@+id/splashDivider"
+            android:layout_width="48dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="32dp"
+            android:background="@color/teal_700"
+            android:alpha="0" />
+
+        <!-- Random verse -->
+        <TextView
+            android:id="@+id/splashVerse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:textAlignment="center"
+            android:textSize="16sp"
+            android:fontFamily="serif"
+            android:textStyle="italic"
+            android:lineSpacingMultiplier="1.4"
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0" />
+
+        <!-- Verse reference -->
+        <TextView
+            android:id="@+id/splashReference"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="@color/teal_700"
+            android:alpha="0" />
+
+    </LinearLayout>
+</FrameLayout>

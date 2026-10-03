@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#C61D68</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="blue">#256EC7</color>
+    <color name="toolbar_bg">#CCFFFFFF</color>
+    <color name="toolbar_bg_bl">#E6FFFFFF</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="background">#FFFFFFFF</color>
+    <color name="text_full">#000000</color>
+
+    <color name="title_gray">#616161</color>
+    <color name="text2">#322F2F</color>
+    <color name="ic_launcher_background">#F2E9DF</color>
+
+    <color name="bgColor">#F5F5F5</color>
+    <color name="cardColor">#EEFBFF</color>
+
+    <color name="textPrimary">#393535</color>
+
+    <color name="purple">#670F95</color>
+    <color name="green">#2E7D32</color>
+    <color name="orange">#EF6C00</color>
+    <color name="ripple_subtle">#33000000</color>
+    <color name="light_blue_50">#FFE1F5FE</color>
+    <color name="light_blue_200">#FF81D4FA</color>
+    <color name="light_blue_600">#FF039BE5</color>
+    <color name="light_blue_900">#FF01579B</color>
+
+
+    <!-- Bulle de chat utilisateur — rose adouci sur fond clair -->
+    <color name="chat_bubble_user">#FFE1F5FE</color>
+
+    <!-- Liturgical season colors -->
+    <color name="liturgical_advent">#28A21F</color>
+    <color name="liturgical_krismasy">#FDD835</color>
+    <color name="liturgical_karemy">#7B1FA2</color>
+    <color name="liturgical_paska">#FDD835</color>
+    <color name="liturgical_pentekosta">#D32F2F</color>
+    <color name="liturgical_epifania">#FDD835</color>
+    <color name="liturgical_ordinary">#2E7D32</color>
+</resources>

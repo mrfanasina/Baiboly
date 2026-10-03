@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Baiboly">
+        <receiver
+            android:name=".widgets.MofonainaOnlineWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mofonaina_online_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widgets.MofonainaOfflineWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/mofonaina_offline_widget_info" />
+        </receiver>
+        <activity
+            android:name="com.fa.baiboly.ui.settings.AiSettingsActivity"
+            android:exported="false"
+            android:label="Fanazavana AI" />
+
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Baiboly.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:label="@string/app_name" /> <!-- Déclaration de VersesActivity -->
+        <activity
+            android:name=".ui.verses.VersesActivity"
+            android:exported="true"
+            android:label="Vakiteny" />
+        <activity
+            android:name=".ui.fihirana.SongDetailActivity"
+            android:exported="true"
+            android:label="fihirana" />
+        <activity
+            android:name=".ui.fihirana.SongListActivity"
+            android:exported="true"
+            android:label="fihirana" />
+        <activity
+            android:name=".ui.mofonaina.MofonainaActivity"
+            android:label="Mofonaina" />
+        <activity
+            android:name=".ui.mofonaina.MofonainaCalendarActivity"
+            android:label="Vakiteny isam-bolana" />
+        <activity
+            android:name=".ui.search.SearchActivity"
+            android:label="Mofonaina" />
+        <activity android:name=".ui.fihirana.SolfaActivity" />
+        <activity android:name=".ui.fanekena.FanekenaActivity" />
+        <activity
+            android:name=".ui.ai.AiExplanationActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.mofonaina.MofonainaYearlyListActivity"
+            android:label="Vakiteny isam-bolana" />
+        <activity
+            android:name=".ui.mofonaina.AinaOfDayActivity"
+            android:label="Aina sy Fahasalamana" />
+        <activity
+            android:name=".ui.history.HistoryManageActivity"
+            android:label="Novakiana" />
+        <activity
+            android:name=".ui.fandaharana.FandaharanaActivity"
+            android:label="Fandaharana" />
+        <activity
+            android:name=".ui.fandaharana.ProgramDetailActivity"
+            android:label="Fandaharana" />
+    </application>
+
+</manifest>

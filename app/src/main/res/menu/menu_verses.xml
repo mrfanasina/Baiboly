@@ -1,0 +1,21 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.fa.baiboly.ui.verses.VersesActivity">
+    <item
+        android:id="@+id/action_toggle_swipe"
+        android:orderInCategory="90"
+        android:title="@string/action_swipe_unlocked"
+        android:icon="@drawable/ic_lock_open"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="Fikirakirana"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/about"
+        android:orderInCategory="100"
+        android:title="Mombamomba"
+        app:showAsAction="never" />
+</menu>

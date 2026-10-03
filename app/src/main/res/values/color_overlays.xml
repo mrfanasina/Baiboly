@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Overlays de couleurs choisies par l'utilisateur (Paramètres > Loko).
+
+    Chaque nuance a deux overlays indépendants :
+      - ColorPrimaryN   : remplace la famille colorPrimary (boutons, icônes,
+                          sliders, headers, barre de navigation...)
+      - ColorSecondaryN : remplace la famille colorSecondary
+
+    Les deux sont appliqués au thème de chaque Activity avant l'inflation
+    (voir ColorManager.applyTheme) : les couleurs servent donc PARTOUT.
+    La couleur d'erreur (colorError) n'est jamais touchée.
+-->
+<resources>
+
+    <style name="ColorPrimary0" parent="">
+        <item name="colorPrimary">#C40E5A</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29C40E5A</item>
+        <item name="colorOnPrimaryContainer">#C40E5A</item>
+    </style>
+
+    <style name="ColorPrimary1" parent="">
+        <item name="colorPrimary">#E53935</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29E53935</item>
+        <item name="colorOnPrimaryContainer">#E53935</item>
+    </style>
+
+    <style name="ColorPrimary2" parent="">
+        <item name="colorPrimary">#D84315</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29D84315</item>
+        <item name="colorOnPrimaryContainer">#D84315</item>
+    </style>
+
+    <style name="ColorPrimary3" parent="">
+        <item name="colorPrimary">#EF6C00</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29EF6C00</item>
+        <item name="colorOnPrimaryContainer">#EF6C00</item>
+    </style>
+
+    <style name="ColorPrimary4" parent="">
+        <item name="colorPrimary">#558B2F</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29558B2F</item>
+        <item name="colorOnPrimaryContainer">#558B2F</item>
+    </style>
+
+    <style name="ColorPrimary5" parent="">
+        <item name="colorPrimary">#2E7D32</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#292E7D32</item>
+        <item name="colorOnPrimaryContainer">#2E7D32</item>
+    </style>
+
+    <style name="ColorPrimary6" parent="">
+        <item name="colorPrimary">#00897B</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#2900897B</item>
+        <item name="colorOnPrimaryContainer">#00897B</item>
+    </style>
+
+    <style name="ColorPrimary7" parent="">
+        <item name="colorPrimary">#33B8C4</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#2933B8C4</item>
+        <item name="colorOnPrimaryContainer">#33B8C4</item>
+    </style>
+
+    <style name="ColorPrimary8" parent="">
+        <item name="colorPrimary">#0097A7</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#290097A7</item>
+        <item name="colorOnPrimaryContainer">#0097A7</item>
+    </style>
+
+    <style name="ColorPrimary9" parent="">
+        <item name="colorPrimary">#256EC7</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29256EC7</item>
+        <item name="colorOnPrimaryContainer">#256EC7</item>
+    </style>
+
+    <style name="ColorPrimary10" parent="">
+        <item name="colorPrimary">#1565C0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#291565C0</item>
+        <item name="colorOnPrimaryContainer">#1565C0</item>
+    </style>
+
+    <style name="ColorPrimary11" parent="">
+        <item name="colorPrimary">#3949AB</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#293949AB</item>
+        <item name="colorOnPrimaryContainer">#3949AB</item>
+    </style>
+
+    <style name="ColorPrimary12" parent="">
+        <item name="colorPrimary">#8E24AA</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#298E24AA</item>
+        <item name="colorOnPrimaryContainer">#8E24AA</item>
+    </style>
+
+    <style name="ColorPrimary13" parent="">
+        <item name="colorPrimary">#6A1B9A</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#296A1B9A</item>
+        <item name="colorOnPrimaryContainer">#6A1B9A</item>
+    </style>
+
+    <style name="ColorPrimary14" parent="">
+        <item name="colorPrimary">#AD1457</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29AD1457</item>
+        <item name="colorOnPrimaryContainer">#AD1457</item>
+    </style>
+
+    <style name="ColorPrimary15" parent="">
+        <item name="colorPrimary">#795548</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#29795548</item>
+        <item name="colorOnPrimaryContainer">#795548</item>
+    </style>
+
+    <style name="ColorSecondary0" parent="">
+        <item name="colorSecondary">#C40E5A</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29C40E5A</item>
+        <item name="colorOnSecondaryContainer">#C40E5A</item>
+    </style>
+
+    <style name="ColorSecondary1" parent="">
+        <item name="colorSecondary">#E53935</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29E53935</item>
+        <item name="colorOnSecondaryContainer">#E53935</item>
+    </style>
+
+    <style name="ColorSecondary2" parent="">
+        <item name="colorSecondary">#D84315</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29D84315</item>
+        <item name="colorOnSecondaryContainer">#D84315</item>
+    </style>
+
+    <style name="ColorSecondary3" parent="">
+        <item name="colorSecondary">#EF6C00</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29EF6C00</item>
+        <item name="colorOnSecondaryContainer">#EF6C00</item>
+    </style>
+
+    <style name="ColorSecondary4" parent="">
+        <item name="colorSecondary">#558B2F</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29558B2F</item>
+        <item name="colorOnSecondaryContainer">#558B2F</item>
+    </style>
+
+    <style name="ColorSecondary5" parent="">
+        <item name="colorSecondary">#2E7D32</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#292E7D32</item>
+        <item name="colorOnSecondaryContainer">#2E7D32</item>
+    </style>
+
+    <style name="ColorSecondary6" parent="">
+        <item name="colorSecondary">#00897B</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#2900897B</item>
+        <item name="colorOnSecondaryContainer">#00897B</item>
+    </style>
+
+    <style name="ColorSecondary7" parent="">
+        <item name="colorSecondary">#33B8C4</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#2933B8C4</item>
+        <item name="colorOnSecondaryContainer">#33B8C4</item>
+    </style>
+
+    <style name="ColorSecondary8" parent="">
+        <item name="colorSecondary">#0097A7</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#290097A7</item>
+        <item name="colorOnSecondaryContainer">#0097A7</item>
+    </style>
+
+    <style name="ColorSecondary9" parent="">
+        <item name="colorSecondary">#256EC7</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29256EC7</item>
+        <item name="colorOnSecondaryContainer">#256EC7</item>
+    </style>
+
+    <style name="ColorSecondary10" parent="">
+        <item name="colorSecondary">#1565C0</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#291565C0</item>
+        <item name="colorOnSecondaryContainer">#1565C0</item>
+    </style>
+
+    <style name="ColorSecondary11" parent="">
+        <item name="colorSecondary">#3949AB</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#293949AB</item>
+        <item name="colorOnSecondaryContainer">#3949AB</item>
+    </style>
+
+    <style name="ColorSecondary12" parent="">
+        <item name="colorSecondary">#8E24AA</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#298E24AA</item>
+        <item name="colorOnSecondaryContainer">#8E24AA</item>
+    </style>
+
+    <style name="ColorSecondary13" parent="">
+        <item name="colorSecondary">#6A1B9A</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#296A1B9A</item>
+        <item name="colorOnSecondaryContainer">#6A1B9A</item>
+    </style>
+
+    <style name="ColorSecondary14" parent="">
+        <item name="colorSecondary">#AD1457</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29AD1457</item>
+        <item name="colorOnSecondaryContainer">#AD1457</item>
+    </style>
+
+    <style name="ColorSecondary15" parent="">
+        <item name="colorSecondary">#795548</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#29795548</item>
+        <item name="colorOnSecondaryContainer">#795548</item>
+    </style>
+
+</resources>

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background"
+    android:padding="16dp">
+
+    <!-- Mode selector: Lire / Ampidiro ao programme -->
+    <LinearLayout
+        android:id="@+id/modeSelector"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:orientation="horizontal"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_verse_chip"
+        android:padding="3dp">
+
+        <TextView
+            android:id="@+id/modeLire"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Vakiana"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:gravity="center"
+            android:background="@drawable/bg_badge_verset"
+            android:textColor="@android:color/white"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/modeAddProgram"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Ampidiro ao programme"
+            android:textSize="12sp"
+            android:textAlignment="center"
+            android:gravity="center"
+            android:textColor="#9CA3AF"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+    <!-- Program selector (shown only in add mode) -->
+    <LinearLayout
+        android:id="@+id/programSelector"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fandaharana :"
+            android:textSize="13sp"
+            android:textColor="#6B7280"
+            android:layout_marginEnd="8dp" />
+
+        <Spinner
+            android:id="@+id/spinnerPrograms"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_verse_chip"
+            android:paddingHorizontal="12dp" />
+    </LinearLayout>
+
+    <!-- Barre de recherche / Référence -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layoutInput"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:boxCornerRadiusBottomEnd="16dp"
+        app:boxCornerRadiusBottomStart="16dp"
+        app:boxCornerRadiusTopEnd="16dp"
+        app:boxCornerRadiusTopStart="16dp"
+        app:endIconMode="custom"
+        app:endIconDrawable="@drawable/ic_check"
+        app:startIconDrawable="@drawable/book_open">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/inputReference"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapSentences"
+            android:textSize="16sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Label d'action dynamique -->
+    <TextView
+        android:id="@+id/tvLabelAction"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="12dp"
+        android:text="Toko faha :"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textColor="?attr/colorPrimary"
+        android:textStyle="bold" />
+
+    <!-- Liste des chiffres -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerChapters"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        tools:listitem="@android:layout/simple_list_item_1" />
+
+    <!-- Barre d'actions en bas -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+
+
+
+        <!-- Bouton Lire : Style Plein (Coloré) et dominant -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRead"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:text="Vakiana"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:cornerRadius="16dp"
+            app:backgroundTint="?attr/colorPrimary"
+            tools:visibility="visible" />
+        <!-- Bouton Retour : Icone agrandie et style Tonal (Gris/Bleu doux) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBackToChapters"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="64dp"
+            android:layout_height="60dp"
+            android:layout_marginEnd="12dp"
+            android:visibility="gone"
+            app:icon="@drawable/ic_backspace"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:iconSize="28dp"
+            app:iconTint="?attr/colorPrimary"
+            app:cornerRadius="16dp"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+</LinearLayout>
