@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Skeleton de l'accueil : reproduit la structure des cartes
+     (titre lohahevitra, carte mofonaina, carte vakiteny, perikopa,
+     hitory) pendant leur chargement. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/skeletonHome"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="24dp"
+    android:background="@color/bgColor"
+    android:visibility="gone">
+
+    <!-- Titre lohahevitra centré -->
+    <View
+        android:layout_width="200dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/bg_skeleton_block" />
+
+    <!-- Carte : gros bloc avec ligne titre + 4 lignes de contenu -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_skeleton_card"
+        android:padding="20dp"
+        android:layout_marginBottom="12dp">
+
+        <View
+            android:layout_width="140dp"
+            android:layout_height="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="40dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="80dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="180dp"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_skeleton_block" />
+    </LinearLayout>
+
+    <!-- Carte : ligne unique (vakiteny anio) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_skeleton_card"
+        android:padding="20dp"
+        android:layout_marginBottom="12dp">
+
+        <View
+            android:layout_width="120dp"
+            android:layout_height="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_skeleton_block" />
+    </LinearLayout>
+
+    <!-- Carte : perikopa (3 lignes) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_skeleton_card"
+        android:padding="20dp"
+        android:layout_marginBottom="12dp">
+
+        <View
+            android:layout_width="130dp"
+            android:layout_height="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginEnd="50dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="160dp"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_skeleton_block" />
+    </LinearLayout>
+
+    <!-- Carte : hitory (2 lignes) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_skeleton_card"
+        android:padding="20dp">
+
+        <View
+            android:layout_width="100dp"
+            android:layout_height="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_skeleton_block" />
+
+        <View
+            android:layout_width="200dp"
+            android:layout_height="12dp"
+            android:background="@drawable/bg_skeleton_block" />
+    </LinearLayout>
+
+</LinearLayout>

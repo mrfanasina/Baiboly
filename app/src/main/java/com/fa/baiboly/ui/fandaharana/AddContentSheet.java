@@ -17,8 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Menu d'ajout d'un contenu au programme : grille de types construite
- * depuis {@link ProgramContentTypes}. Un type est choisi -> callback.
+ * Menu d'ajout d'un contenu au programme : grille des types lisibles par
+ * l'app ({@link ProgramContentTypes#SELECTABLE}). Un type est choisi -> callback.
  */
 public class AddContentSheet extends BottomSheetDialogFragment {
 
@@ -48,7 +48,7 @@ public class AddContentSheet extends BottomSheetDialogFragment {
         int columns = 3;
         LinearLayout currentRow = null;
 
-        for (ProgramContentTypes.TypeDef type : ProgramContentTypes.TYPES) {
+        for (ProgramContentTypes.TypeDef type : ProgramContentTypes.SELECTABLE) {
 
             if (grid.getChildCount() == 0
                     || (currentRow != null && currentRow.getChildCount() >= columns)) {

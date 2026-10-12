@@ -133,7 +133,7 @@ public class FihiranaFragment extends Fragment {
 
         // Rouge temporaire
         binding.tvSongNumber.setTextColor(
-                Color.parseColor("#EF4444")
+                ContextCompat.getColor(requireContext(), R.color.danger)
         );
 
         // Annule anciens callbacks
@@ -235,13 +235,49 @@ public class FihiranaFragment extends Fragment {
     }
 
     private void loadCategories() {
-        List<String> categories = service.getCategories();
-        CategoryAdapter adapter = new CategoryAdapter(categories, category -> {
-            Intent intent = new Intent(requireContext(), SongListActivity.class);
-            intent.putExtra("category", category);
-            startActivity(intent);
-        });
-        binding.recyclerCategories.setAdapter(adapter);
+        startListSkeleton();
+
+        // Chargement DB sur un thread à part : le skeleton reste visible
+        // pendant la réponse, puis la liste réelle le remplace.
+        new Thread(() -> {
+            List<String> categories = service.getCategories();
+
+            if (getActivity() == null) return;
+            getActivity().runOnUiThread(() -> {
+                if (binding == null) return;
+
+                CategoryAdapter adapter = new CategoryAdapter(categories, category -> {
+                    Intent intent = new Intent(requireContext(), SongListActivity.class);
+                    intent.putExtra("category", category);
+                    startActivity(intent);
+                });
+                binding.recyclerCategories.setAdapter(adapter);
+
+                stopListSkeleton();
+            });
+        }).start();
+    }
+
+    // =========================================================
+    // SKELETON DE CHARGEMENT (liste grise pulsée)
+    // =========================================================
+
+    /** Affiche le skeleton de la liste et masque le RecyclerView. */
+    private void startListSkeleton() {
+        binding.skeletonCategories.getRoot().setVisibility(View.VISIBLE);
+        binding.recyclerCategories.setVisibility(View.INVISIBLE);
+
+        android.view.animation.Animation pulse =
+                android.view.animation.AnimationUtils.loadAnimation(
+                        requireContext(), R.anim.skeleton_pulse);
+        binding.skeletonCategories.getRoot().startAnimation(pulse);
+    }
+
+    /** Masque le skeleton et révèle la liste réelle. */
+    private void stopListSkeleton() {
+        binding.skeletonCategories.getRoot().clearAnimation();
+        binding.skeletonCategories.getRoot().setVisibility(View.GONE);
+        binding.recyclerCategories.setVisibility(View.VISIBLE);
     }
 
     @Override

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Skeleton simple : une liste de lignes (catégories hira, credos). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/skeletonList"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <include layout="@layout/include_skeleton_rows" android:layout_width="match_parent" android:layout_height="wrap_content" />
+</LinearLayout>

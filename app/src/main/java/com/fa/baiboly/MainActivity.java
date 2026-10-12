@@ -10,6 +10,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -19,17 +20,20 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.navigation.NavController;
+import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
-import androidx.navigation.ui.NavigationUI;
 import androidx.work.Constraints;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 
+import com.fa.baiboly.data.playback.PlaybackService;
 import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.MofonainaRepository;
 import com.fa.baiboly.databinding.ActivityMainBinding;
+import com.fa.baiboly.ui.fihirana.PlaybackServiceBridge;
+import com.fa.baiboly.ui.fihirana.SongDetailActivity;
 import com.fa.baiboly.ui.search.SearchActivity;
 import com.fa.baiboly.ui.verses.VersesActivity;
 import com.fa.baiboly.worker.MofonainaSyncWorker;
@@ -88,8 +92,39 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
-        // Connect BottomNavigationView with Navigation Component
-        NavigationUI.setupWithNavController(navView, navController);
+        // Connect BottomNavigationView with Navigation Component :
+        // mêmes règles que NavigationUI (singleTop + restoreState +
+        // popUpTo racine) mais avec une transition crossfade douce
+        // entre les fragments (nav_fade_in / nav_fade_out)
+        navView.setOnItemSelectedListener(item -> {
+            NavOptions.Builder builder = new NavOptions.Builder()
+                    .setLaunchSingleTop(true)
+                    .setRestoreState(true);
+            if ((item.getOrder() & Menu.CATEGORY_SECONDARY) == 0) {
+                builder.setPopUpTo(
+                        navController.getGraph().getStartDestinationId(), false);
+            }
+            builder.setEnterAnim(R.anim.nav_fade_in);
+            builder.setExitAnim(R.anim.nav_fade_out);
+            builder.setPopEnterAnim(R.anim.nav_fade_in);
+            builder.setPopExitAnim(R.anim.nav_fade_out);
+            try {
+                navController.navigate(item.getItemId(), null, builder.build());
+            } catch (IllegalArgumentException e) {
+                // Item sans destination dans le graphe
+                return false;
+            }
+            return true;
+        });
+
+        // Coche l'onglet correspondant à la destination courante
+        // (setChecked ne redéclenche PAS la navigation)
+        navController.addOnDestinationChangedListener(
+                (controller, destination, arguments) -> {
+                    MenuItem menuItem = navView.getMenu().findItem(
+                            getBottomNavMenuId(destination.getId()));
+                    if (menuItem != null) menuItem.setChecked(true);
+                });
 
         // Sync bottom nav when navigating to sub-destinations like ChapterFragment
         // (which are not in the bottom menu but belong to the Baiboly tab)
@@ -112,6 +147,10 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(this, com.fa.baiboly.ui.fandaharana.FandaharanaActivity.class);
             startActivity(intent);
         });
+
+        // Mini-lecteur : affiché au-dessus de la bottom nav dès qu'un feo
+        // joue (il continue depuis SongDetailActivity via le service).
+        setupPlaybackBar();
 
         // Optional: preload data in background
         // preloadMofonaina();
@@ -217,6 +256,108 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * Mini-lecteur global : se connecte au PlaybackService. Si un feo
+     * joue (même lancé depuis SongDetailActivity), la barre s'affiche
+     * AU-DESSUS de la bottom navigation — jamais par-dessus.
+     */
+    private PlaybackServiceBridge playbackBridge;
+
+    private void setupPlaybackBar() {
+        playbackBridge = new PlaybackServiceBridge(this,
+                new PlaybackServiceBridge.Listener() {
+                    @Override
+                    public void onPlayingChanged(boolean playing) {
+                        syncPlaybackBar();
+                    }
+
+                    @Override
+                    public void onProgress(int currentMs, int durationMs) {
+                        binding.mainPlaybackBar.playbackTime.setText(
+                                formatMs(currentMs) + " / " + formatMs(durationMs));
+                        if (durationMs > 0) {
+                            binding.mainPlaybackBar.playbackSeek.setMax(durationMs);
+                        }
+                        binding.mainPlaybackBar.playbackSeek.setProgress(currentMs);
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        syncPlaybackBar();
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        syncPlaybackBar();
+                    }
+
+                    @Override
+                    public void onStopped() {
+                        binding.mainPlaybackBar.getRoot().setVisibility(View.GONE);
+                    }
+                },
+                this::syncPlaybackBar);
+        playbackBridge.connect();
+
+        // Play / pause
+        binding.mainPlaybackBar.playbackToggle.setOnClickListener(
+                v -> playbackBridge.toggle());
+        // Stop
+        binding.mainPlaybackBar.playbackClose.setOnClickListener(v -> {
+            playbackBridge.stop();
+            binding.mainPlaybackBar.getRoot().setVisibility(View.GONE);
+        });
+        // Tap sur la barre : rouvre le chant en cours
+        binding.mainPlaybackBar.getRoot().setOnClickListener(v -> {
+            PlaybackService.ServiceState s = playbackBridge.peekState();
+            if (s != null && s.songId != null) {
+                SongDetailActivity.open(this, s.songId, s.title);
+            }
+        });
+    }
+
+    /** Affiche/masque la barre selon l'état réel du service. */
+    private void syncPlaybackBar() {
+        runOnUiThread(() -> {
+            if (binding == null || playbackBridge == null) return;
+            PlaybackService.ServiceState s = playbackBridge.peekState();
+            boolean visible = s != null && s.hasCurrent;
+            binding.mainPlaybackBar.getRoot().setVisibility(
+                    visible ? View.VISIBLE : View.GONE);
+            if (!visible) return;
+
+            binding.mainPlaybackBar.playbackToggle.setImageResource(
+                    s.playing ? R.drawable.ic_pause : R.drawable.ic_play);
+            adjustPlaybackBarForTablet();
+        });
+    }
+
+    /** Sur tablette la barre reste compacte, calée à droite ; sur
+     *  téléphone elle garde sa largeur wrap_content (déjà à droite). */
+    private void adjustPlaybackBarForTablet() {
+        boolean tablet = getResources().getConfiguration().screenWidthDp >= 600;
+        ViewGroup.LayoutParams lp = binding.mainPlaybackBar.getRoot().getLayoutParams();
+        lp.width = tablet
+                ? getResources().getDisplayMetrics().widthPixels * 2 / 5
+                : ViewGroup.LayoutParams.WRAP_CONTENT;
+        binding.mainPlaybackBar.getRoot().setLayoutParams(lp);
+    }
+
+    /** Format "1:23". */
+    private static String formatMs(int ms) {
+        int totalSec = ms / 1000;
+        return (totalSec / 60) + ":"
+                + String.format(java.util.Locale.US, "%02d", totalSec % 60);
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (playbackBridge != null) {
+            playbackBridge.disconnect(); // le service continue en fond
+        }
+        super.onDestroy();
     }
 
     /**

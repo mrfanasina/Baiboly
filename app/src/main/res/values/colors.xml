@@ -15,6 +15,7 @@
 
     <color name="title_gray">#616161</color>
     <color name="text2">#322F2F</color>
+    <color name="text_content">#333333</color>
     <color name="ic_launcher_background">#F2E9DF</color>
 
     <color name="bgColor">#F5F5F5</color>
@@ -34,6 +35,47 @@
 
     <!-- Bulle de chat utilisateur — rose adouci sur fond clair -->
     <color name="chat_bubble_user">#FFE1F5FE</color>
+
+    <!-- ============================== -->
+    <!-- Couleurs sémantiques partagées -->
+    <!-- (variantes nuit dans values-night) -->
+    <!-- ============================== -->
+
+    <!-- Action-destructrice / suppression -->
+    <color name="danger">#EF4444</color>
+
+    <!-- Favoris / étoile / badge "chant" -->
+    <color name="star">#F59E0B</color>
+
+    <!-- Textes / icônes secondaires discrets -->
+    <color name="secondary_text">#6B7280</color>
+
+    <!-- Icônes / textes désactivés, placeholders -->
+    <color name="muted">#9CA3AF</color>
+
+    <!-- Chevron gris des items de liste -->
+    <color name="chevron_gray">#BDBDBD</color>
+
+    <!-- Bordures de cartes (stroke) -->
+    <color name="card_stroke">#E5E7EB</color>
+
+    <!-- Séparateurs / poignées de bottom sheets -->
+    <color name="sheet_handle">#D1D1D1</color>
+
+    <!-- Fond de pastilles / chips / état vide -->
+    <color name="chip_bg">#F3F4F6</color>
+    <color name="chip_stroke">#E5E7EB</color>
+
+    <!-- Cercle des numéros de chant -->
+    <color name="number_circle_bg">#F0F0F0</color>
+    <color name="number_circle_stroke">#E0E0E0</color>
+
+    <!-- Validation / succès -->
+    <color name="success">#10B981</color>
+
+    <!-- Fond de l'app / surface -->
+    <color name="window_bg">#FFFFFF</color>
+    <color name="window_stroke">#E5E7EB</color>
 
     <!-- Liturgical season colors -->
     <color name="liturgical_advent">#28A21F</color>

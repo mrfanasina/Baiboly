@@ -12,7 +12,7 @@
     app:cardCornerRadius="14dp"
     app:cardElevation="0dp"
     app:strokeWidth="1dp"
-    app:strokeColor="#E5E7EB"
+    app:strokeColor="@color/card_stroke"
     app:cardBackgroundColor="?attr/colorSurface"
     android:foreground="?attr/selectableItemBackground">
 
@@ -33,7 +33,7 @@
             android:padding="8dp"
             android:layout_marginEnd="4dp"
             android:contentDescription="Manoifona"
-            app:tint="#9CA3AF" />
+            app:tint="@color/muted" />
 
         <!-- Type icon -->
         <FrameLayout
@@ -76,7 +76,7 @@
                     android:layout_marginEnd="4dp"
                     android:visibility="gone"
                     android:contentDescription="Favori"
-                    app:tint="#F59E0B" />
+                    app:tint="@color/star" />
 
                 <TextView
                     android:id="@+id/textTitle"
@@ -95,7 +95,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#6B7280"
+                android:textColor="@color/secondary_text"
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:visibility="gone"
@@ -106,7 +106,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#9CA3AF"
+                android:textColor="@color/muted"
                 android:layout_marginTop="2dp" />
         </LinearLayout>
 
@@ -119,7 +119,7 @@
             android:src="@drawable/ic_star_outline"
             android:padding="8dp"
             android:contentDescription="Favori"
-            app:tint="#F59E0B" />
+            app:tint="@color/star" />
 
         <ImageButton
             android:id="@+id/btnDuplicate"
@@ -129,7 +129,7 @@
             android:src="@drawable/ic_copy"
             android:padding="8dp"
             android:contentDescription="Dikany"
-            app:tint="#6B7280" />
+            app:tint="@color/secondary_text" />
 
         <!-- Delete button -->
         <ImageButton
@@ -137,10 +137,10 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_close2"
+            android:src="@drawable/ic_close"
             android:padding="8dp"
             android:contentDescription="Fafao"
-            app:tint="#EF4444" />
+            app:tint="@color/danger" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

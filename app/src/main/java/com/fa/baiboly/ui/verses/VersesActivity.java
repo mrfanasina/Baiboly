@@ -29,6 +29,9 @@ import com.fa.baiboly.databinding.ActivityVersesBinding;
 import com.fa.baiboly.models.Reading;
 import com.fa.baiboly.models.Verse;
 import com.fa.baiboly.ui.ai.AiExplanationActivity;
+import com.fa.baiboly.ui.reader.ProgramSession;
+import com.fa.baiboly.ui.reader.ReaderNeighborPageFragment;
+import com.fa.baiboly.ui.reader.ReaderSessionPagerAdapter;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
@@ -47,10 +50,29 @@ import java.util.Set;
  * cliquable et ne se déclenchait jamais.
  *
  * Mode programme (extra "readings") : chaque vakiteny est une page.
+ * Mode session de programme (extra "programSession") : les vakiteny
+ * consécutifs du programme sont les pages, puis une page "Manaraka"
+ * enchaîne sur l'item suivant (hira, fanekena...) au swipe.
  * Mode simple (extra "reading") : la lecture demandée est la page centrale,
  * entourée des chapitres précédent et suivant -> le swipe fonctionne aussi.
  */
-public class VersesActivity extends AppCompatActivity implements VersePageFragment.Host {
+public class VersesActivity extends AppCompatActivity
+        implements VersePageFragment.Host, ReaderNeighborPageFragment.Host,
+        SettingsFragment.TextSettingsListener {
+
+    /** L'historique écrit en DB après le premier frame (évite un jank
+     *  d'entrée pendant la transition d'ouverture). */
+    private final Runnable deferredHistory = new Runnable() {
+        @Override
+        public void run() {
+            if (entryHistoryRef != null) {
+                historyService.addHistory(entryHistoryRef.first, entryHistoryRef.second);
+            }
+        }
+    };
+
+    /** Lecture/type à enregistrer à l'entrée (post-premier-frame). */
+    private android.util.Pair<String, String> entryHistoryRef;
 
     private ActivityVersesBinding binding;
 
@@ -68,6 +90,22 @@ public class VersesActivity extends AppCompatActivity implements VersePageFragme
 
     /** Quand true, le swipe horizontal du pager est désactivé. */
     private boolean swipeLocked = false;
+
+    // --- Session de lecture d'un programme ---
+    /** Session complète (JSON) reçue de l'écran appelant. */
+    private String sessionJson;
+    /** Items de la session (version décodée). */
+    private List<ProgramSession.Item> sessionItems;
+    /** Premier item de la portion affichée par ce lecteur. */
+    private int sessionStartIndex = 0;
+    /** Nombre d'items consécutifs de type vakiteny affichés ici. */
+    private int sessionRunSize = 0;
+    /** Item précédent (autre type -> autre lecteur), null si début. */
+    private ProgramSession.Item sessionPrevItem;
+    /** Item suivant (autre type -> autre lecteur), null si fin de session. */
+    private ProgramSession.Item sessionNextItem;
+    /** Évite de déclencher deux fois un passage (avant ou arrière). */
+    private boolean sessionNavigating = false;
 
     private static final String PREFS_NAME = "app_settings";
 
@@ -116,14 +154,26 @@ public class VersesActivity extends AppCompatActivity implements VersePageFragme
         setupFloatingActionBar();
 
         // =====================================================
-        // MODE PROGRAMME : plusieurs vakiteny, un par page
+        // MODE SESSION : vakiteny du programme, puis item suivant
         // =====================================================
-        String readingsExtra = getIntent().getStringExtra("readings");
+        String sessionExtra = getIntent().getStringExtra(ProgramSession.EXTRA_SESSION);
 
-        if (readingsExtra != null && !readingsExtra.isEmpty()) {
-            openInProgramMode(readingsExtra);
+        if (sessionExtra != null) {
+            openInSessionMode(sessionExtra,
+                    getIntent().getIntExtra(ProgramSession.EXTRA_SESSION_INDEX, 0),
+                    getIntent().getIntExtra(ProgramSession.EXTRA_SESSION_PAGE, 0));
         } else {
-            openInSingleMode();
+
+            // =================================================
+            // MODE PROGRAMME : plusieurs vakiteny, un par page
+            // =================================================
+            String readingsExtra = getIntent().getStringExtra("readings");
+
+            if (readingsExtra != null && !readingsExtra.isEmpty()) {
+                openInProgramMode(readingsExtra);
+            } else {
+                openInSingleMode();
+            }
         }
 
         setupViewPagerTransform();
@@ -188,7 +238,7 @@ public class VersesActivity extends AppCompatActivity implements VersePageFragme
         }
 
         setupToolbar(currentReading.toString());
-        historyService.addHistory(currentReading.toString(), "baiboly");
+        deferEntryHistory(currentReading.toString(), "baiboly");
 
         // Tous les chapitres de la Bible dans l'ordre canonique (1 requête)
         pages.addAll(bibleService.getAllChapterPages());
@@ -236,9 +286,206 @@ public class VersesActivity extends AppCompatActivity implements VersePageFragme
 
         setupToolbar("Vakiteny (" + pages.size() + ")");
 
-        historyService.addHistory(pages.get(0), "baiboly");
+        deferEntryHistory(pages.get(0), "baiboly");
 
         setupPagerAdapter();
+    }
+
+    // =====================================================
+    // MODE SESSION DE PROGRAMME
+    // =====================================================
+
+    /**
+     * Affiche les vakiteny consécutifs de la portion commençant à
+     * {@code index}, précédée d'une page "Teo aloha" (item précédent) et
+     * suivie d'une page "Manaraka" (item suivant). Le swipe dans les deux
+     * sens enchaîne les items du programme (changement d'activity animé
+     * quand le type change).
+     */
+    private void openInSessionMode(String sessionJson, int index, int startPage) {
+
+        this.sessionJson = sessionJson;
+        sessionItems = ProgramSession.decode(sessionJson);
+        sessionStartIndex = index;
+
+        List<ProgramSession.Item> run = ProgramSession.sameTypeRun(sessionItems, index);
+
+        if (run.isEmpty()) {
+            // Sécurité : rien à afficher ici, on passe à l'item suivant
+            if (index + 1 < sessionItems.size()) {
+                ProgramSession.finishAndAdvance(this, sessionJson, index + 1);
+            } else {
+                finish();
+            }
+            return;
+        }
+
+        sessionRunSize = run.size();
+        sessionPrevItem = index > 0 ? sessionItems.get(index - 1) : null;
+        sessionNextItem = (index + run.size() < sessionItems.size())
+                ? sessionItems.get(index + run.size()) : null;
+
+        for (ProgramSession.Item item : run) {
+            if (item.reference != null && !item.reference.trim().isEmpty()) {
+                pages.add(item.reference.trim());
+            }
+        }
+
+        if (pages.isEmpty()) {
+            finish();
+            return;
+        }
+
+        int start = Math.max(0, Math.min(startPage, pages.size() - 1));
+
+        setupToolbar(pages.get(start));
+        deferEntryHistory(pages.get(start), "baiboly");
+
+        int offset = sessionPrevItem != null ? 1 : 0;
+
+        binding.viewPager.setOffscreenPageLimit(1);
+        binding.viewPager.setAdapter(new ReaderSessionPagerAdapter(
+                this,
+                sessionPrevItem,
+                pages.size(),
+                position -> VersePageFragment.newInstance(pages.get(position)),
+                sessionNextItem));
+
+        // Arrivée directe sur la page demandée (swipe arrière, ancrage)
+        binding.viewPager.setCurrentItem(offset + start, false);
+
+        binding.viewPager.registerOnPageChangeCallback(
+                new ViewPager2.OnPageChangeCallback() {
+                    @Override
+                    public void onPageSelected(int position) {
+
+                        int off = sessionPrevItem != null ? 1 : 0;
+
+                        if (sessionPrevItem != null && position == 0) {
+                            // Page "Teo aloha" feuilletée : item précédent
+                            scheduleSessionBack();
+                            return;
+                        }
+
+                        if (position < off + pages.size()) {
+                            String ref = pages.get(position - off);
+                            if (getSupportActionBar() != null) {
+                                getSupportActionBar().setTitle(ref);
+                            }
+                            historyService.addHistory(ref, "baiboly");
+                        } else {
+                            // Page "Manaraka" feuilletée : item suivant
+                            scheduleSessionAdvance();
+                        }
+                    }
+
+                    @Override
+                    public void onPageScrollStateChanged(int state) {
+                        // L'utilisateur regagne une page de contenu (retour
+                        // manuel depuis "Manaraka") : annule le passage.
+                        if (state == ViewPager2.SCROLL_STATE_IDLE) {
+                            int off = sessionPrevItem != null ? 1 : 0;
+                            int pos = binding.viewPager.getCurrentItem();
+                            boolean onContent = pos >= off
+                                    && pos < off + pages.size();
+                            if (onContent) cancelPendingSessionMove();
+                        }
+                    }
+                });
+    }
+
+    /** Repos sur l'écran de transition ("Manaraka" / "Teo aloha") avant
+     *  de lancer le lecteur suivant : le swipe se termine visuellement,
+     *  l'activity se construit hors animation -> plus de saccade. */
+    private static final long TRANSITION_REST_MS = 1500;
+
+    /** Changement de lecteur programmé (annulable). */
+    private final Runnable pendingSessionMove = new Runnable() {
+        @Override
+        public void run() {
+            pendingBack = false;
+            performSessionAdvance();
+        }
+    };
+
+    /** Sens du changement programmé : true = item précédent. */
+    private boolean pendingBack = false;
+
+    /** Programme le passage (avant ou arrière) après le repos de transition. */
+    private void scheduleSessionMove(boolean back) {
+        pendingBack = back;
+        binding.viewPager.removeCallbacks(pendingSessionMove);
+        binding.viewPager.postDelayed(pendingSessionMove, TRANSITION_REST_MS);
+    }
+
+    /** Programme le passage vers l'item suivant. */
+    private void scheduleSessionAdvance() {
+        scheduleSessionMove(false);
+    }
+
+    /** Programme le retour vers l'item précédent. */
+    private void scheduleSessionBack() {
+        scheduleSessionMove(true);
+    }
+
+    /** Annule le passage programmé. */
+    private void cancelPendingSessionMove() {
+        binding.viewPager.removeCallbacks(pendingSessionMove);
+    }
+
+    /** Effectue le passage programmé (callback du délai). */
+    private void performSessionAdvance() {
+        if (isFinishing() || isDestroyed()) return;
+        if (pendingBack) {
+            goBackSession();
+        } else {
+            advanceSession();
+        }
+    }
+
+    /** Passe à l'item suivant du programme (lecteur suivant, animé). */
+    private void advanceSession() {
+        if (sessionNavigating || sessionNextItem == null) return;
+        sessionNavigating = true;
+        ProgramSession.finishAndAdvance(
+                this, sessionJson, sessionStartIndex + sessionRunSize);
+    }
+
+    /** Revient à l'item précédent du programme (lecteur précédent, animé). */
+    private void goBackSession() {
+        if (sessionNavigating || sessionPrevItem == null) return;
+        sessionNavigating = true;
+
+        int prevIndex = sessionStartIndex - 1;
+        int prevRunStart = ProgramSession.runStart(sessionItems, prevIndex);
+
+        ProgramSession.finishAndGoBack(
+                this, sessionJson, prevRunStart, prevIndex - prevRunStart);
+    }
+
+    /** Service d'historique partagé avec les pages voisines. */
+    @Override
+    public com.fa.baiboly.data.history.HistoryService getHistoryService() {
+        return historyService;
+    }
+
+    /** Écrit l'historique d'entrée après le premier frame (hors transition). */
+    private void deferEntryHistory(String reading, String type) {
+        entryHistoryRef = new android.util.Pair<>(reading, type);
+        getWindow().getDecorView().removeCallbacks(deferredHistory);
+        getWindow().getDecorView().post(deferredHistory);
+    }
+
+    /** Tap sur la page "Manaraka" -> même passage que le swipe. */
+    @Override
+    public void onReaderNextTapped() {
+        advanceSession();
+    }
+
+    /** Tap sur la page "Teo aloha" -> même retour que le swipe. */
+    @Override
+    public void onReaderPrevTapped() {
+        goBackSession();
     }
 
     private void setupPagerAdapter() {
@@ -602,6 +849,14 @@ public class VersesActivity extends AppCompatActivity implements VersePageFragme
                 ((VersePageFragment) fragment).applyTextSettings();
             }
         }
+    }
+
+    /** Appelé par SettingsFragment (panneau intégré) quand la taille du
+     *  texte ou la justification change : les pages vivantes lisent les
+     *  nouvelles préférences et se re-rendent immédiatement. */
+    @Override
+    public void onTextSettingsChanged() {
+        applyTextSettings();
     }
 
     // =====================================================

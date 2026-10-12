@@ -392,4 +392,12 @@
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Skeleton de chargement : reproduit les cartes pendant que les
+         données se chargent, puis se masque (cf. HomeFragment). -->
+    <include
+        android:id="@+id/skeletonHome"
+        layout="@layout/include_skeleton_home"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </LinearLayout>

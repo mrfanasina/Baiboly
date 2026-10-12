@@ -23,6 +23,6 @@
             android:layout_height="wrap_content"
             android:textSize="18sp"
             android:lineSpacingExtra="8dp"
-            android:textColor="#333333" />
+            android:textColor="@color/text_content" />
     </LinearLayout>
 </ScrollView>

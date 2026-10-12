@@ -10,6 +10,11 @@
         android:icon="@drawable/ic_lock_open"
         app:showAsAction="always" />
     <item
+        android:id="@+id/action_add_playback"
+        android:orderInCategory="95"
+        android:title="Playback"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="Fikirakirana"

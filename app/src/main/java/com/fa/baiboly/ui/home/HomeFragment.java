@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,8 +30,10 @@ import com.fa.baiboly.models.History;
 import com.fa.baiboly.models.MofonainaData;
 import com.fa.baiboly.models.PerikopaDay;
 import com.fa.baiboly.models.Song;
+import com.fa.baiboly.ui.fanekena.CodeAdapter;
 import com.fa.baiboly.ui.fanekena.FanekenaActivity;
 import com.fa.baiboly.ui.fihirana.SongDetailActivity;
+import com.fa.baiboly.ui.reader.ProgramSession;
 import com.fa.baiboly.ui.history.HistoryManageActivity;
 import com.fa.baiboly.ui.ai.AiExplanationActivity;
 import com.fa.baiboly.data.AinaMofonainaRepository;
@@ -45,8 +46,10 @@ import com.fa.baiboly.widgets.MofonainaOfflineWidget;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.fa.baiboly.SettingsFragment;
 import com.fa.baiboly.data.CardOrderAdapter;
@@ -55,6 +58,9 @@ public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
     private FihiranaService fihiranaService;
+
+    /** Données mofonaina actuellement affichées (pour la session maison). */
+    private MofonainaData currentMofonaina;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -69,10 +75,12 @@ public class HomeFragment extends Fragment {
         fihiranaService = new FihiranaService(requireContext());
 
         // Load content
+        showSkeleton(true);
         loadMofonainaPreview();
         loadAinaCard();
         loadPerikopa(inflater);
         loadHistory(inflater);
+        hideSkeletonWhenReady();
 
         // Apply card order from settings
         applyCardOrder();
@@ -82,10 +90,10 @@ public class HomeFragment extends Fragment {
         String currentReading = homeViewModel.getCurrentReading();
         binding.textHome.setText(currentReading);
 
+        // Vakiteny anio -> session maison complète, ancrée dessus
         binding.cardReading.setOnClickListener(v -> {
-            Intent intent = new Intent(requireContext(), VersesActivity.class);
-            intent.putExtra("reading", currentReading);
-            startActivity(intent);
+            String ref = binding.textHome.getText().toString().trim();
+            openHomeSession(GROUP_READING, "verse", ref);
         });
 
         // MOFONAINA - open full activity
@@ -121,24 +129,12 @@ public class HomeFragment extends Fragment {
             startActivity(intent);
         });
 
-        // Perikopa card click -> open all verses as program
+        // Perikopa -> session maison complète, ancrée sur la 1re lecture
         binding.cardPerikopa.setOnClickListener(v -> {
-            PerikopaService perikopaService = new PerikopaService(requireContext());
-            PerikopaDay today = perikopaService.getTodayPerikopa();
-            if (today.getVerses() == null || today.getVerses().isEmpty()) {
-                today = perikopaService.getNextPerikopa();
-            }
-            PerikopaDay sorted = perikopaService.sortPerikopa(today);
-            List<String> allVerses = sorted.getVerses();
-            if (allVerses != null && !allVerses.isEmpty()) {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < allVerses.size(); i++) {
-                    if (i > 0) sb.append(",");
-                    sb.append(allVerses.get(i));
-                }
-                Intent intent = new Intent(requireContext(), VersesActivity.class);
-                intent.putExtra("readings", sb.toString());
-                startActivity(intent);
+            List<String> allVerses = todayPerikopaVerses();
+            if (!allVerses.isEmpty()) {
+                String first = allVerses.get(0);
+                openHomeSession(GROUP_PERIKOPA, "verse", first);
             }
         });
 
@@ -159,6 +155,35 @@ public class HomeFragment extends Fragment {
         if (binding != null) {
             loadHistory(getLayoutInflater());
         }
+    }
+
+    // =========================================================
+    // SKELETON DE CHARGEMENT
+    // =========================================================
+
+    /** Affiche/masque le skeleton de l'accueil (avec pulse). */
+    private void showSkeleton(boolean show) {
+        View skeleton = binding.skeletonHome.getRoot();
+        skeleton.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) {
+            android.view.animation.Animation pulse =
+                    android.view.animation.AnimationUtils.loadAnimation(
+                            requireContext(), R.anim.skeleton_pulse);
+            skeleton.startAnimation(pulse);
+        } else {
+            skeleton.clearAnimation();
+        }
+    }
+
+    /** Masque le skeleton dès que le premier contenu réel est posé
+     *  (mofonaina en cache ou perikopa/histoire déjà liés). */
+    private void hideSkeletonWhenReady() {
+        // Les cartes se remplissent de façon asynchrone : on laisse le
+        // skeleton au moins un frame de plus pour éviter un flash, puis
+        // on le retire dès que la vue est dessinée.
+        binding.getRoot().postDelayed(
+                () -> { if (binding != null) showSkeleton(false); },
+                350);
     }
 
     /**
@@ -222,11 +247,8 @@ public class HomeFragment extends Fragment {
         if (verses != null && !verses.isEmpty()) {
             for (int i = 0; i < verses.size(); i++) {
                 String verse = verses.get(i);
-                addPerikopaRow(binding.perikopaContainer, verse, seasonColor, v -> {
-                    Intent intent = new Intent(requireContext(), VersesActivity.class);
-                    intent.putExtra("reading", verse);
-                    startActivity(intent);
-                });
+                addPerikopaRow(binding.perikopaContainer, verse, seasonColor,
+                        v -> openHomeSession(GROUP_PERIKOPA, "verse", verse));
             }
         }
     }
@@ -417,6 +439,9 @@ public class HomeFragment extends Fragment {
     private void displayMofonaina(MofonainaData data) {
         if (data == null) return;
 
+        // Mémorise ce qui est affiché (session maison)
+        currentMofonaina = data;
+
         // Show the mofonaina card
         binding.cardMofonaina.setVisibility(View.VISIBLE);
 
@@ -450,11 +475,8 @@ public class HomeFragment extends Fragment {
             verseRow.setLayoutParams(lp);
 
             final String vRef = verseOfDayStr;
-            verseRow.setOnClickListener(v -> {
-                Intent intent = new Intent(requireContext(), VersesActivity.class);
-                intent.putExtra("reading", vRef);
-                startActivity(intent);
-            });
+            verseRow.setOnClickListener(v ->
+                    openHomeSession(GROUP_MOFONAINA, "verse", vRef));
             binding.mofonainaDetailsContainer.addView(verseRow);
         }
 
@@ -463,11 +485,8 @@ public class HomeFragment extends Fragment {
             String reading1 = data.getBibleReading1().toString();
             if (verseOfDayStr == null || !reading1.equals(verseOfDayStr)) {
                 addPremiumRow(binding.mofonainaDetailsContainer, reading1,
-                        R.drawable.menu_book, v -> {
-                            Intent intent = new Intent(requireContext(), VersesActivity.class);
-                            intent.putExtra("reading", reading1);
-                            startActivity(intent);
-                        });
+                        R.drawable.menu_book,
+                        v -> openHomeSession(GROUP_MOFONAINA, "verse", reading1));
             }
         }
 
@@ -475,18 +494,18 @@ public class HomeFragment extends Fragment {
         if (data.getSong1() != null) {
             String songName = data.getSong1().getCategory().toUpperCase() + " " + data.getSong1().getNumber();
             addPremiumRow(binding.mofonainaDetailsContainer, songName,
-                    R.drawable.ic_music_note, v -> {
-                        SongDetailActivity.open(requireContext(), data.getSong1().getId(), data.getSong1().getTitle());
-                    });
+                    R.drawable.ic_music_note,
+                    v -> openHomeSession(GROUP_MOFONAINA, "song",
+                            data.getSong1().getId()));
         }
 
         // Adding Song 2
         if (data.getSong2() != null) {
             String songName = data.getSong2().getCategory().toUpperCase() + " " + data.getSong2().getNumber();
             addPremiumRow(binding.mofonainaDetailsContainer, songName,
-                    R.drawable.ic_music_note, v -> {
-                        SongDetailActivity.open(requireContext(), data.getSong2().getId(), data.getSong2().getTitle());
-                    });
+                    R.drawable.ic_music_note,
+                    v -> openHomeSession(GROUP_MOFONAINA, "song",
+                            data.getSong2().getId()));
         }
 
         // Check if Vakiteny anio (textHome) is same as verseOfDay → hide card
@@ -500,19 +519,21 @@ public class HomeFragment extends Fragment {
 
     /**
      * Loads the local browsing history and displays it in the history container.
-     */
-    /**
-     * Loads the local browsing history and displays it in the history container.
      * Songs are formatted with category and number to match the Mofonaina card style.
      */
     private void loadHistory(LayoutInflater inflater) {
         HistoryService historyService = new HistoryService(requireContext());
-        List<History> historyList = historyService.getHistoryPrev();
+        List<History> historyList = historyService.getAllHistory();
 
         binding.historyContainer.removeAllViews();
 
         if (historyList != null && !historyList.isEmpty()) {
-            for (History history : historyList) {
+            List<History> shown = new ArrayList<>(historyList);
+            shown.sort((a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
+
+            int displayed = 0;
+            for (History history : shown) {
+                if (displayed++ >= 5) break;
                 // Default values
                 int iconRes = android.R.drawable.ic_menu_recent_history;
                 String displayTitle = history.getReading();
@@ -531,44 +552,15 @@ public class HomeFragment extends Fragment {
                     }
                 } else if ("fanekena".equals(historyType)) {
                     iconRes = R.drawable.ic_dashboard_black_24dp;
+                    String pretty = CodeAdapter.getDisplayName(history.getReading());
+                    if (pretty != null) displayTitle = pretty;
                 }
 
                 // Add the row with the formatted title
                 addPremiumRow(binding.historyContainer, displayTitle, iconRes, v -> {
-                    if (historyType == null) return;
-
-                    switch (historyType) {
-                        case "baiboly":
-                            Intent intent = new Intent(requireContext(), VersesActivity.class);
-                            intent.putExtra("reading", history.getReading());
-                            startActivity(intent);
-                            break;
-
-                        case "fihirana":
-                            Song song = fihiranaService.getSongById(history.getReading());
-                            if (song != null) {
-                                SongDetailActivity.open(
-                                        requireContext(),
-                                        history.getReading(),
-                                        ""
-                                );
-                            } else {
-                                Toast.makeText(requireContext(),
-                                        "Tsy hita ny hira",
-                                        Toast.LENGTH_SHORT).show();
-                            }
-                            break;
-                        case "fanekena":
-                            String fanekena = history.getReading();
-                            if (fanekena != null) {
-                                Intent fintent = new Intent(requireContext(), FanekenaActivity.class);
-                                fintent.putExtra("code", history.getReading());
-                                startActivity(fintent);
-                            }
-                        default:
-                            Log.d("HISTORY_TYPE", historyType);
-                            break;
-                    }
+                    // Session DE LA CARTE hitory, ancrée sur l'élément cliqué
+                    openHomeSession(GROUP_HISTORY,
+                            readerTypeOf(historyType), history.getReading());
                 });
             }
         } else {
@@ -576,6 +568,185 @@ public class HomeFragment extends Fragment {
             empty.setText("Tsy mbola misy novakiana");
             empty.setPadding(48, 24, 48, 24);
             binding.historyContainer.addView(empty);
+        }
+    }
+
+    // =========================================================
+    // SESSION MAISON : tout ce qui est affiché sur les cartes
+    // =========================================================
+
+    /** Type lisible pour la session à partir d'un type d'historique. */
+    private static String readerTypeOf(String historyType) {
+        if ("fihirana".equals(historyType)) return "song";
+        if ("fanekena".equals(historyType)) return "fanekena";
+        return "verse";
+    }
+
+    /** Cartes d'accueil : chaque carte forme son propre groupe de lecture. */
+    private static final String GROUP_MOFONAINA = "mofonaina";
+    private static final String GROUP_READING = "reading";
+    private static final String GROUP_PERIKOPA = "perikopa";
+    private static final String GROUP_HISTORY = "history";
+
+    /** Ajoute un item à la session (sans doublon type+référence). */
+    private static void addSessionItem(List<ProgramSession.Item> session,
+                                       Set<String> seen,
+                                       String type, String reference,
+                                       String title) {
+        if (type == null || reference == null || reference.trim().isEmpty()) return;
+        String ref = reference.trim();
+        if (!seen.add(type + "|" + ref)) return;
+        session.add(new ProgramSession.Item(type, ref,
+                title != null && !title.isEmpty() ? title : ref));
+    }
+
+    /**
+     * Session D'UNE SEULE carte d'accueil : seuls les éléments affichés
+     * dans cette carte sont retournés (mofonaina, vakiteny anio, perikopa
+     * ou hitory), dans l'ordre d'affichage.
+     */
+    private List<ProgramSession.Item> buildHomeSession(String group) {
+        List<ProgramSession.Item> session = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        if (GROUP_MOFONAINA.equals(group)) {
+            // Carte mofonaina : andininy du jour, vakiteny, hira 1 et 2
+            MofonainaData m = currentMofonaina;
+            if (m != null) {
+                if (m.getVerseOfDay() != null) {
+                    String v = m.getVerseOfDay().toString();
+                    addSessionItem(session, seen, "verse", v, v);
+                }
+                if (m.getBibleReading1() != null) {
+                    String r = m.getBibleReading1().toString();
+                    addSessionItem(session, seen, "verse", r, r);
+                }
+                if (m.getSong1() != null) {
+                    addSessionItem(session, seen, "song", m.getSong1().getId(),
+                            m.getSong1().getCategory().toUpperCase() + " "
+                                    + m.getSong1().getNumber());
+                }
+                if (m.getSong2() != null) {
+                    addSessionItem(session, seen, "song", m.getSong2().getId(),
+                            m.getSong2().getCategory().toUpperCase() + " "
+                                    + m.getSong2().getNumber());
+                }
+            }
+
+        } else if (GROUP_READING.equals(group)) {
+            // Carte vakiteny anio : cette seule lecture
+            String homeReading = binding.textHome.getText().toString().trim();
+            addSessionItem(session, seen, "verse", homeReading, homeReading);
+
+        } else if (GROUP_PERIKOPA.equals(group)) {
+            // Carte perikopa : les lectures du jour (ou prochaine)
+            for (String verse : todayPerikopaVerses()) {
+                addSessionItem(session, seen, "verse", verse, verse);
+            }
+
+        } else if (GROUP_HISTORY.equals(group)) {
+            // Carte hitory : les entrées novakiana
+            HistoryService historyService = new HistoryService(requireContext());
+            List<History> historyList = historyService.getHistoryPrev();
+            if (historyList != null) {
+                for (History h : historyList) {
+                    String type = readerTypeOf(h.getType());
+                    String title = h.getReading();
+                    if ("song".equals(type) && h.getReading() != null) {
+                        title = h.getReading().toUpperCase().replace("_", " ");
+                    } else if ("fanekena".equals(type) && h.getReading() != null) {
+                        title = CodeAdapter.getDisplayName(h.getReading());
+                    }
+                    addSessionItem(session, seen, type, h.getReading(), title);
+                }
+            }
+        }
+
+        return session;
+    }
+
+    /** Lectures de la perikopa du jour (ou de la prochaine), triées. */
+    private List<String> todayPerikopaVerses() {
+        try {
+            PerikopaService service = new PerikopaService(requireContext());
+            PerikopaDay day = service.getTodayPerikopa();
+            if (day.getVerses() == null || day.getVerses().isEmpty()) {
+                day = service.getNextPerikopa();
+            }
+            PerikopaDay sorted = service.sortPerikopa(day);
+            List<String> verses = sorted.getVerses();
+            return verses != null ? verses : new ArrayList<>();
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    /** Position d'un élément dans la session (-1 si absent). */
+    private static int sessionIndexOf(List<ProgramSession.Item> session,
+                                      String type, String reference) {
+        if (type == null || reference == null) return -1;
+        String ref = reference.trim();
+        for (int i = 0; i < session.size(); i++) {
+            ProgramSession.Item it = session.get(i);
+            if (it.type != null && it.type.equals(type)
+                    && it.reference != null && ref.equals(it.reference)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Clic sur un élément d'accueil : ouvre la session DE SA CARTE,
+     * ancrée sur cet élément. Seuls les éléments de cette carte-là sont
+     * pris (ex. clic dans le mofonaina -> seulement le mofonaina), et le
+     * swipe (dans les deux sens) fait découvrir les autres de la carte.
+     */
+    private void openHomeSession(String group, String type, String reference) {
+        List<ProgramSession.Item> session = buildHomeSession(group);
+        int anchor = sessionIndexOf(session, type, reference);
+
+        if (anchor >= 0) {
+            int runStart = ProgramSession.runStart(session, anchor);
+            ProgramSession.openReader(requireContext(),
+                    ProgramSession.encode(session), runStart, anchor - runStart);
+            return;
+        }
+
+        // Élément introuvable dans la session (données pas encore chargées) :
+        // ouverture directe comme avant
+        openSingleItem(type, reference);
+    }
+
+    /** Ancien comportement : ouverture d'un seul élément, animée. */
+    private void openSingleItem(String type, String reference) {
+        if (reference == null || reference.trim().isEmpty()) return;
+        switch (type == null ? "verse" : type) {
+            case "song":
+                SongDetailActivity.open(requireContext(), reference, "");
+                animateForward();
+                break;
+            case "fanekena":
+                Intent fintent = new Intent(requireContext(), FanekenaActivity.class);
+                fintent.putExtra("code", reference);
+                startActivity(fintent);
+                animateForward();
+                break;
+            default:
+                Intent intent = new Intent(requireContext(), VersesActivity.class);
+                intent.putExtra("reading", reference);
+                startActivity(intent);
+                animateForward();
+                break;
+        }
+    }
+
+    private void animateForward() {
+        if (getActivity() != null) {
+            // Glissement horizontal opaque : le lecteur entre par la droite,
+            // pas de fondu -> pas de flash du fond de fenêtre.
+            getActivity().overridePendingTransition(
+                    R.anim.slide_in_right, R.anim.slide_out_left);
         }
     }
 

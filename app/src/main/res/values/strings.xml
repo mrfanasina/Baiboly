@@ -8,4 +8,54 @@
     <string name="app_widget_description">Widget ho an\'ny Baiboly</string>
     <string name="action_swipe_unlocked">Afaka manakisaka</string>
     <string name="action_swipe_locked">Tsy afaka manakisaka</string>
+
+    <!-- Playback (feo) -->
+    <string name="playback_select_song">Safidio ny hira</string>
+    <string name="playback_select_file">Tsindrio hisafidy fichier (mp3, m4a…)</string>
+    <string name="playback_song_label">Hira</string>
+    <string name="playback_folder_label">Fitahirizana</string>
+    <string name="playback_folder_default">Ao anatin\'ny app (téléphone)</string>
+    <string name="playback_folder_hint_generic">Safidio ny fitahirizana feo</string>
+    <string name="playback_folder_hint_category">Dossier ho an\'ny sokajy %1$s</string>
+    <string name="playback_folder_note">Ny hira dia voatahiry ao amin\'ny dossier nafidinao, azonao sokafana amin\'ny finday</string>
+    <string name="playback_folder_all_label">Dossier misy rehetra</string>
+    <string name="playback_folder_all_none">Tsy misy (safidio)</string>
+    <string name="playback_folder_all_hint">Ny sous-dossier no sokajy (Ffpm → ffpm, Fihirana Fanampiny → ff)</string>
+    <string name="playback_folder_all_selected">Sous-dossier = sokajy, ny laharana dia ao amin\'ny anaran\'ny fichier</string>
+    <string name="playback_folder_default_root">Ao anatiny ny dossier rehetra</string>
+    <string name="playback_scanning">Mamantatra ny feo ao anatin\'ny dossier…</string>
+    <string name="playback_versions_title">Efa voatahiry</string>
+    <string name="playback_versions_empty">Mbola tsy misy playback ho an\'io hira io</string>
+    <string name="playback_versions_hint">Tsindrio ny "+" hanampy version vaovao</string>
+    <string name="playback_add_button">Manampy</string>
+    <string name="playback_add_from_phone">Avy amin\'ny finday</string>
+    <string name="playback_add_from_server">Avy amin\'ny serveur</string>
+    <string name="playback_version_label_title">Anaran\'ny version</string>
+    <string name="playback_version_hint">Ex. : 1, 2, vihidy…</string>
+    <string name="playback_version_detected">Laharana hita : %1$s</string>
+    <string name="playback_delete">Hamarino ny famafana</string>
+    <string name="playback_delete_confirm">Hamafa ity version ity ?</string>
+    <string name="playback_choose_folder_first">Safidio dossier aloha (sokajy %1$s)</string>
+    <string name="playback_now_playing">Mandefa : %1$s</string>
+    <string name="playback_now_playing_tap">Mandefa</string>
+
+    <!-- Feo : téléchargements serveur -->
+    <string name="playback_sheet_title">Feo ho an\'io hira io</string>
+    <string name="playback_btn_versions">Feo</string>
+    <string name="playback_download">Haka avy amin\'ny serveur</string>
+    <string name="playback_downloading">Maka avy amin\'ny serveur…</string>
+    <string name="playback_download_done">Voatahiry (%1$s)</string>
+    <string name="playback_download_failed">Nisy olana</string>
+    <string name="playback_download_cancel">Hanafoana</string>
+    <string name="playback_download_retry">Haverina</string>
+    <string name="playback_version_server">Serveur</string>
+    <string name="playback_delete_one">Hamafa</string>
+    <string name="playback_no_network">Tsy misy connexion</string>
+    <string name="playback_installed_section">Efa voatahiry</string>
+    <string name="playback_available_section">Azo alaina amin\'ny serveur</string>
+    <string name="playback_server_checking">Manamarina amin\'ny serveur…</string>
+    <string name="playback_server_unavailable">Tsy hita ao amin\'ny serveur</string>
+    <string name="playback_refresh">Havaozina</string>
+    <string name="playback_add_local">Avy amin\'ny finday</string>
+    <string name="playback_nothing_available">Tsy misy feo azo alaina ho an\'io hira io</string>
 </resources>

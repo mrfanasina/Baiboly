@@ -10,6 +10,12 @@
         android:icon="@drawable/ic_lock_open"
         app:showAsAction="always" />
     <item
+        android:id="@+id/action_ai_chat"
+        android:orderInCategory="95"
+        android:title="Hazavao AI"
+        android:icon="@drawable/ic_ai_chat"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="Fikirakirana"

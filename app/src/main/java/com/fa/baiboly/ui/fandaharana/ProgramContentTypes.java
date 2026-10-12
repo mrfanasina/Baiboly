@@ -31,12 +31,23 @@ public final class ProgramContentTypes {
     public static final String COLOR_SONG = "#C40E5A";
     public static final String COLOR_FANEKENA = "#7B1FA2";
 
+    /** Tous les types (catalogue complet, pour afficher les anciens items). */
     public static final List<TypeDef> TYPES = new ArrayList<>();
 
+    /**
+     * Types proposés à l'ajout : uniquement ce que l'app sait lire
+     * (vakiteny, hira, fanekena). Les autres types ne servaient à rien :
+     * aucun lecteur ne peut les ouvrir.
+     */
+    public static final List<TypeDef> SELECTABLE = new ArrayList<>();
+
     static {
-        TYPES.add(new TypeDef("verse", "Vakiteny", R.drawable.ic_bible, COLOR_VERSE));
-        TYPES.add(new TypeDef("song", "Hira", R.drawable.ic_music_note, COLOR_SONG));
-        TYPES.add(new TypeDef("fanekena", "Fanekena", R.drawable.ic_dashboard_black_24dp, COLOR_FANEKENA));
+        SELECTABLE.add(new TypeDef("verse", "Vakiteny", R.drawable.ic_bible, COLOR_VERSE));
+        SELECTABLE.add(new TypeDef("song", "Hira", R.drawable.ic_music_note, COLOR_SONG));
+        SELECTABLE.add(new TypeDef("fanekena", "Fanekena", R.drawable.ic_dashboard_black_24dp, COLOR_FANEKENA));
+
+        // Catalogue complet conservé pour l'affichage des anciens items
+        TYPES.addAll(SELECTABLE);
         TYPES.add(new TypeDef("prayer", "Vavaka", R.drawable.ic_prayer, "#0F766E"));
         TYPES.add(new TypeDef("text", "Lahatsoratra", R.drawable.ic_note, "#374151"));
         TYPES.add(new TypeDef("preaching", "Toriteny", R.drawable.ic_mic, "#B45309"));
@@ -49,6 +60,13 @@ public final class ProgramContentTypes {
         TYPES.add(new TypeDef("document", "Antontan-taratasy", R.drawable.ic_document, "#4D7C0F"));
         TYPES.add(new TypeDef("link", "Rohy", R.drawable.ic_link, "#2563EB"));
         TYPES.add(new TypeDef("other", "Hafa", R.drawable.ic_apps, "#6B7280"));
+    }
+
+    /** Vrai si l'app a un lecteur pour ce type (lisible en session). */
+    public static boolean isReadable(String typeId) {
+        return "verse".equals(typeId)
+                || "song".equals(typeId)
+                || "fanekena".equals(typeId);
     }
 
     /** Type par id (null si inconnu). */

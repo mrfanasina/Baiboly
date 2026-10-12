@@ -534,8 +534,10 @@ public class MofonainaActivity extends AppCompatActivity {
                         setBibleLinks(
                                 paragraphView,
                                 paragraph,
-                                data.getVerseOfDay().getBook().getShortName(),
-                                data.getVerseOfDay().getStartChapter()
+                                data.getVerseOfDay() != null
+                                        ? data.getVerseOfDay().getBook().getShortName() : null,
+                                data.getVerseOfDay() != null
+                                        ? data.getVerseOfDay().getStartChapter() : -1
                         );
 
                         paragraphView.setLineSpacing(

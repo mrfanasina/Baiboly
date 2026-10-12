@@ -35,6 +35,7 @@ import com.fa.baiboly.models.ProgramItem;
 import com.fa.baiboly.models.Song;
 import com.fa.baiboly.ui.fihirana.SongDetailActivity;
 import com.fa.baiboly.ui.fanekena.FanekenaActivity;
+import com.fa.baiboly.ui.reader.ProgramSession;
 import com.fa.baiboly.ui.verses.VersesActivity;
 
 import java.util.ArrayList;
@@ -151,10 +152,11 @@ public class ProgramDetailActivity extends AppCompatActivity {
         touchHelper = new ItemTouchHelper(callback);
         touchHelper.attachToRecyclerView(binding.recyclerItems);
 
-        // Ajout : ouvre le menu des types
+        // Ajout : ouvre le menu des types lisibles
         binding.btnAddItem.setOnClickListener(v -> showAddMenu());
 
-        // Lire tout (lecture des vakiteny, inchangé)
+        // Lire tout : lecture de TOUS les items lisibles (vakiteny, hira,
+        // fanekena) dans l'ordre, swipe pour passer au suivant
         binding.btnLireTout.setOnClickListener(v -> lireTout());
 
         loadItems();
@@ -227,9 +229,6 @@ public class ProgramDetailActivity extends AppCompatActivity {
     private void showAddMenu() {
         new AddContentSheet(type -> {
             switch (type.id) {
-                case "verse":
-                    showBiblePicker();
-                    break;
                 case "song":
                     showSongPicker();
                     break;
@@ -237,7 +236,7 @@ public class ProgramDetailActivity extends AppCompatActivity {
                     showFanekenaPicker();
                     break;
                 default:
-                    showGenericForm(type);
+                    showBiblePicker();
                     break;
             }
         }).show(getSupportFragmentManager(), "add_content");
@@ -263,70 +262,13 @@ public class ProgramDetailActivity extends AppCompatActivity {
         }).show(getSupportFragmentManager(), "song_picker");
     }
 
-    /** Sélection fanekena : saisie du code (form générique prérempli). */
+    /** Sélection fanekena : liste des credos disponibles (BottomSheet). */
     private void showFanekenaPicker() {
-        ProgramContentTypes.TypeDef type = ProgramContentTypes.byId("fanekena");
-        showGenericForm(type);
-    }
-
-    /** Formulaire générique : titre + référence/contenu + description. */
-    private void showGenericForm(ProgramContentTypes.TypeDef type) {
-        AlertDialog dialog = new AlertDialog.Builder(this).create();
-        View view = getLayoutInflater().inflate(R.layout.dialog_content_form, null);
-
-        TextView dialogTitle = view.findViewById(R.id.dialogTitle);
-        EditText inputTitle = view.findViewById(R.id.inputTitle);
-        EditText inputReference = view.findViewById(R.id.inputReference);
-        EditText inputDescription = view.findViewById(R.id.inputDescription);
-
-        dialogTitle.setText(type.label + " vaovao");
-
-        boolean isLink = "link".equals(type.id);
-        boolean isPlainContent = "text".equals(type.id)
-                || "preaching".equals(type.id)
-                || "study".equals(type.id)
-                || "announcement".equals(type.id)
-                || "prayer".equals(type.id);
-
-        if (isLink) {
-            inputReference.setHint("https://...");
-            inputReference.setInputType(
-                    android.text.InputType.TYPE_CLASS_TEXT
-                            | android.text.InputType.TYPE_TEXT_VARIATION_URI);
-        } else if (isPlainContent) {
-            inputReference.setHint("Votoatiny");
-            inputReference.setInputType(
-                    android.text.InputType.TYPE_CLASS_TEXT
-                            | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        } else {
-            inputReference.setHint("Antsipiriany (rohy, toerana, na inona na inona)");
-        }
-
-        view.findViewById(R.id.btnConfirm).setOnClickListener(v -> {
-            String title = inputTitle.getText().toString().trim();
-            String ref = inputReference.getText().toString().trim();
-            String desc = inputDescription.getText().toString().trim();
-
-            if (title.isEmpty()) {
-                Toast.makeText(this, "Ampidiro ny lohateny", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if (ref.isEmpty()) ref = title;
-
-            service.addItem(programId, type.id, ref, title,
-                    desc.isEmpty() ? null : desc);
+        new FanekenaPickerSheet((code, displayName) -> {
+            service.addItem(programId, "fanekena", code, displayName);
             loadItems();
-            dialog.dismiss();
-        });
-
-        view.findViewById(R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
-
-        dialog.setView(view);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(
-                    android.R.color.transparent);
-        }
-        dialog.show();
+            Toast.makeText(this, "Fanekena voaongona", Toast.LENGTH_SHORT).show();
+        }).show(getSupportFragmentManager(), "fanekena_picker");
     }
 
     // =========================================================
@@ -334,45 +276,85 @@ public class ProgramDetailActivity extends AppCompatActivity {
     // =========================================================
 
     private void openItem(ProgramItem item) {
+        // Clic sur un item -> TOUTE la session du programme, ancrée dessus :
+        // le swipe (dans les deux sens) fait découvrir les autres items.
+        List<ProgramSession.Item> session = new ArrayList<>();
+        int anchor = -1;
+        int readableCount = 0;
+        for (ProgramItem it : items) {
+            if (!ProgramContentTypes.isReadable(it.getType())) continue;
+            if (it.getId() == item.getId()) anchor = readableCount;
+            readableCount++;
+            session.add(new ProgramSession.Item(
+                    it.getType(),
+                    it.getReference(),
+                    it.getTitle() != null ? it.getTitle() : it.getReference()));
+        }
+
+        if (anchor >= 0 && !session.isEmpty()) {
+            int runStart = ProgramSession.runStart(session, anchor);
+            ProgramSession.openReader(this, ProgramSession.encode(session),
+                    runStart, anchor - runStart);
+            return;
+        }
+
+        // Item non lisible (ancien type) : ouverture directe comme avant
         switch (item.getType() != null ? item.getType() : "verse") {
             case "song":
                 SongDetailActivity.open(this, item.getReference(),
                         item.getTitle() != null ? item.getTitle() : "");
+                animateForward();
                 break;
             case "fanekena":
                 Intent fanekenaIntent =
                         new Intent(this, FanekenaActivity.class);
                 fanekenaIntent.putExtra("code", item.getReference());
                 startActivity(fanekenaIntent);
+                animateForward();
                 break;
             default:
                 // Bible et tout autre type : référence lue par VersesActivity
                 Intent intent = new Intent(this, VersesActivity.class);
                 intent.putExtra("reading", item.getReference());
                 startActivity(intent);
+                animateForward();
                 break;
         }
     }
 
-    private void lireTout() {
-        StringBuilder sb = new StringBuilder();
-        for (ProgramItem item : items) {
-            if ("verse".equals(item.getType())) {
-                if (sb.length() > 0) sb.append(",");
-                sb.append(item.getReference());
-            }
-        }
+    /** Animation d'ouverture (utilisée à chaque changement d'activity) :
+     *  glissement horizontal opaque, pas de fondu -> pas de flash. */
+    private void animateForward() {
+        overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+    }
 
-        if (sb.length() == 0) {
+    private void lireTout() {
+        // Session = TOUS les items lisibles dans l'ordre du programme.
+        // Le lecteur adapté à chaque type s'enchaîne au swipe.
+        List<ProgramSession.Item> session = buildReadableSession();
+
+        if (session.isEmpty()) {
             Toast.makeText(this,
-                    "Tsy misy vakiteny ao amin'ny fandaharana",
+                    "Tsy misy azo vakiana ao amin'ny fandaharana",
                     Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Intent intent = new Intent(this, VersesActivity.class);
-        intent.putExtra("readings", sb.toString());
-        startActivity(intent);
+        ProgramSession.openReader(this, ProgramSession.encode(session), 0);
+    }
+
+    /** Tous les items lisibles du programme, dans l'ordre affiché. */
+    private List<ProgramSession.Item> buildReadableSession() {
+        List<ProgramSession.Item> session = new ArrayList<>();
+        for (ProgramItem item : items) {
+            if (ProgramContentTypes.isReadable(item.getType())) {
+                session.add(new ProgramSession.Item(
+                        item.getType(),
+                        item.getReference(),
+                        item.getTitle() != null ? item.getTitle() : item.getReference()));
+            }
+        }
+        return session;
     }
 
     // =========================================================
@@ -386,12 +368,16 @@ public class ProgramDetailActivity extends AppCompatActivity {
     }
 
     private void updateLireToutVisibility() {
-        long verseCount = 0;
+        // Le bouton s'affiche dès qu'au moins un item est lisible
+        boolean hasReadable = false;
         for (ProgramItem item : items) {
-            if ("verse".equals(item.getType())) verseCount++;
+            if (ProgramContentTypes.isReadable(item.getType())) {
+                hasReadable = true;
+                break;
+            }
         }
         binding.btnLireTout.setVisibility(
-                verseCount > 0 ? View.VISIBLE : View.GONE);
+                hasReadable ? View.VISIBLE : View.GONE);
     }
 
     private void saveOrder() {

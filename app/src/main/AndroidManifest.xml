@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:allowBackup="true"
@@ -56,10 +59,18 @@
             android:name=".ui.verses.VersesActivity"
             android:exported="true"
             android:label="Vakiteny" />
+        <service
+            android:name=".data.playback.PlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
         <activity
             android:name=".ui.fihirana.SongDetailActivity"
             android:exported="true"
             android:label="fihirana" />
+        <activity
+            android:name=".ui.fihirana.AddPlayBackActivity"
+            android:exported="false"
+            android:label="Playback" />
         <activity
             android:name=".ui.fihirana.SongListActivity"
             android:exported="true"

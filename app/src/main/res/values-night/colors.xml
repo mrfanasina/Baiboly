@@ -11,6 +11,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="title_gray">#B0B0B0</color>
     <color name="text2">#B9AEAE</color>
+    <color name="text_content">#BBBBBB</color>
     <color name="background">#1F1D1D</color>
     <color name="text_full">#FFFFFFFF</color>
 
@@ -25,4 +26,44 @@
 
     <!-- Même famille, mais plus saturée pour rester visible sur fond sombre -->
     <color name="chat_bubble_user">#5B4B8A</color>
+
+    <!-- ============================== -->
+    <!-- Couleurs sémantiques — variantes nuit -->
+    <!-- ============================== -->
+
+    <!-- Rouge plus doux, lisible sur fond sombre -->
+    <color name="danger">#F87171</color>
+
+    <!-- Ambre plus chaud, ressort bien sur fond sombre -->
+    <color name="star">#FBBF24</color>
+
+    <!-- Textes / icônes secondaires : remontés pour rester lisibles -->
+    <color name="secondary_text">#9CA3AF</color>
+
+    <!-- Icônes / textes désactivés -->
+    <color name="muted">#6B7280</color>
+
+    <!-- Chevron des items de liste -->
+    <color name="chevron_gray">#6B7280</color>
+
+    <!-- Bordures de cartes -->
+    <color name="card_stroke">#374151</color>
+
+    <!-- Séparateurs / poignées -->
+    <color name="sheet_handle">#4B5563</color>
+
+    <!-- Chips / pastilles -->
+    <color name="chip_bg">#2A2A2E</color>
+    <color name="chip_stroke">#3F3F46</color>
+
+    <!-- Centre de numéros de chant -->
+    <color name="number_circle_bg">#2A2A2E</color>
+    <color name="number_circle_stroke">#3F3F46</color>
+
+    <!-- Validation / succès -->
+    <color name="success">#34D399</color>
+
+    <!-- Fond / surface -->
+    <color name="window_bg">#1C1B1F</color>
+    <color name="window_stroke">#374151</color>
 </resources>

@@ -2,6 +2,7 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -20,6 +21,33 @@
             android:background="?attr/colorSurface"
             app:popupTheme="@style/ThemeOverlay.Material3"
             >
+            <!-- Titre animé : glisse verticalement (bas -> haut) quand on
+                 passe de "Fihirana" au chant au scroll. Le TextView se recycle
+                 en restant dans sa position, seul le texte glisse. -->
+            <TextView
+                android:id="@+id/toolbarTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginEnd="96dp"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:singleLine="true"
+                tools:text="Fihirana" />
+
+            <ImageView
+                android:id="@+id/playButton"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginHorizontal="10dp"
+                android:contentDescription="Playback"
+                android:src="@drawable/ic_play"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:layout_gravity="end|center_vertical"/>
+
             <ImageView
                 android:id="@+id/solfaButton"
                 android:layout_width="24dp"
@@ -39,6 +67,76 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+    <!-- MINI-LECTEUR : visible pendant la lecture, AU-DESSUS de la
+         navigation basse (ne la masque jamais). Largeur fluide :
+         le seek prend le poids, le X reste toujours visible. -->
+    <LinearLayout
+        android:id="@+id/playbackBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        android:elevation="6dp"
+        android:background="@drawable/bg_playback_pill"
+        android:paddingStart="8dp"
+        android:paddingEnd="4dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <!-- Play / Pause -->
+        <ImageView
+            android:id="@+id/playbackToggle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_play"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Alefa/Ajanona"
+            app:tint="?attr/colorOnSurface" />
+
+        <!-- Temps + progression (masqués en état mini) -->
+        <LinearLayout
+            android:id="@+id/playbackControls"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/playbackTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:minEms="4"
+                android:text="0:00"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <SeekBar
+                android:id="@+id/playbackSeek"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="8dp" />
+        </LinearLayout>
+
+        <!-- Stop : toujours visible, taille 40dp bien détachée -->
+        <ImageView
+            android:id="@+id/playbackClose"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="9dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Hanafoana"
+            app:tint="?attr/colorOnSurface" />
+    </LinearLayout>
+
 
     <FrameLayout
         android:id="@+id/settings_container"

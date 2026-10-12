@@ -68,6 +68,7 @@
             android:layout_marginEnd="8dp"
             android:contentDescription="Kopia"
             app:icon="@drawable/copy_solid_full"
+            app:iconTint="?attr/colorOnSurface"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />
 

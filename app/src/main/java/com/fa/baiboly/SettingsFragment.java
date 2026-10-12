@@ -3,13 +3,10 @@ package com.fa.baiboly;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.drawable.GradientDrawable;
-import android.os.Build;
 import android.os.Bundle;
-import android.text.Layout;
 import android.view.*;
 import android.widget.GridLayout;
 import android.widget.ScrollView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -33,6 +30,11 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 
 /**
  * Fragment for settings with real-time saving and instant UI updates.
+ *
+ * La taille du texte et la justification sont enregistrées immédiatement,
+ * puis l'écran hôte (s'il implémente {@link TextSettingsListener}) est
+ * prévenu pour rafraîchir son propre contenu — le fragment ne mute jamais
+ * l'arbre de vues de son hôte ni des autres écrans.
  */
 public class SettingsFragment extends Fragment {
 
@@ -231,19 +233,44 @@ public class SettingsFragment extends Fragment {
                 .show();
     }
 
+    /** Écran hôte (lecteur, mofonaina...) à prévenir quand un réglage
+     *  de texte change, pour qu'il rafraîchisse son propre contenu. */
+    public interface TextSettingsListener {
+        void onTextSettingsChanged();
+    }
+
+    /** Trouve l'écran hôte qui implémente TextSettingsListener (s'il y en a un). */
+    @Nullable
+    private TextSettingsListener findTextSettingsListener() {
+        android.app.Activity activity = getActivity();
+        if (activity instanceof TextSettingsListener) {
+            return (TextSettingsListener) activity;
+        }
+        return null;
+    }
+
+    /** Notifie l'écran hôte que taille/justification ont changé. */
+    private void notifyTextSettingsChanged() {
+        TextSettingsListener listener = findTextSettingsListener();
+        if (listener != null) {
+            listener.onTextSettingsChanged();
+        }
+    }
+
     // =========================
     // TEXT SIZE (REAL-TIME)
     // =========================
     private void setupTextSizeRealTime() {
         binding.textSizeSlider.addOnChangeListener((slider, value, fromUser) -> {
-            // 1. Update Preview
+            // 1. Update Preview (aperçu local uniquement)
             binding.txtSizePreview.setTextSize(value);
 
             // 2. Save Preference
             preferences.edit().putFloat(KEY_TEXT_SIZE, value).apply();
 
-            // 3. Apply to all visible views
-            applyGlobalStyle(value, null);
+            // 3. L'écran hôte (lecteur...) se rafraîchit lui-même — on ne
+            //    touche plus à l'arbre de vues de tout le monde ici.
+            notifyTextSettingsChanged();
         });
     }
 
@@ -258,8 +285,8 @@ public class SettingsFragment extends Fragment {
                 // 1. Save Preference
                 preferences.edit().putBoolean(KEY_JUSTIFICATION, isJustified).apply();
 
-                // 2. Apply to all visible views
-                applyGlobalStyle(null, isJustified);
+                // 2. L'écran hôte se rafraîchit lui-même
+                notifyTextSettingsChanged();
             }
         });
     }
@@ -282,8 +309,6 @@ public class SettingsFragment extends Fragment {
         // Justification
         boolean isJustified = preferences.getBoolean(KEY_JUSTIFICATION, true);
         binding.toggleJustification.check(isJustified ? R.id.btnAlignJustify : R.id.btnAlignLeft);
-
-        applyGlobalStyle(size, isJustified);
     }
 
     // =========================
@@ -344,47 +369,6 @@ public class SettingsFragment extends Fragment {
             }
         });
     }
-
-    // =========================
-    // GLOBAL UI UPDATER
-    // =========================
-    private void applyGlobalStyle(Float size, Boolean justified) {
-        if (getActivity() == null) return;
-        View root = getActivity().findViewById(android.R.id.content);
-        if (root instanceof ViewGroup) {
-            updateViewsRecursive((ViewGroup) root, size, justified);
-        }
-    }
-
-    private void updateViewsRecursive(ViewGroup group, Float size, Boolean justified) {
-        for (int i = 0; i < group.getChildCount(); i++) {
-            View view = group.getChildAt(i);
-
-            if (view instanceof TextView) {
-                TextView tv = (TextView) view;
-                int id = tv.getId();
-
-                // Skip system/header views to keep UI clean
-                if (id != R.id.txtPageTitle && id != binding.toolbar.getId()) {
-                    // Update size if provided
-                    if (size != null) tv.setTextSize(size);
-
-                    // Update justification if provided
-                    if (justified != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        tv.setJustificationMode(justified ?
-                                Layout.JUSTIFICATION_MODE_INTER_WORD : Layout.JUSTIFICATION_MODE_NONE);
-                    }
-                }
-            }
-
-            if (view instanceof ViewGroup &&
-                    !(view instanceof com.google.android.material.bottomnavigation.BottomNavigationView)) {
-                updateViewsRecursive((ViewGroup) view, size, justified);
-            }
-        }
-    }
-
-
 
     @Override
     public void onDestroyView() {

@@ -140,6 +140,27 @@ public class BibleRefParserTest {
     }
 
     @Test
+    public void siteFjkmFormats() {
+        // Formats utilisés par le site fjkm.mg (Mofonaina) avec espaces :
+        // "1 Tesaloniana 5,16 - 25", "Sal 96,7-10", "Hira 514: 1, 4" etc.
+        BibleRefParser.ParsedRef r = BibleRefParser.parse("1 Tesaloniana 5:16 - 25");
+        assertNotNull(r);
+        assertEquals(52, r.bookNumber);
+        assertEquals(5, r.startChapter);
+        assertEquals(16, r.startVerse);
+        assertEquals(25, r.endVerse);
+        assertEquals("1Tes 5:16-25", BibleRefParser.format(r));
+
+        BibleRefParser.ParsedRef sal = BibleRefParser.parse("Sal 96,7-10");
+        assertNotNull(sal);
+        assertEquals(19, sal.bookNumber);
+        assertEquals(96, sal.startChapter);
+        assertEquals(7, sal.startVerse);
+        assertEquals(10, sal.endVerse);
+        assertEquals("Sal 96:7-10", BibleRefParser.format(sal));
+    }
+
+    @Test
     public void plageDeChapitres() {
         BibleRefParser.ParsedRef r = BibleRefParser.parse("Jao 3-4");
         assertNotNull(r);

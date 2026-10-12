@@ -116,7 +116,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Fermer"
                 android:padding="10dp"
-                android:src="@drawable/ic_close2"
+                android:src="@drawable/ic_close"
                 app:tint="?attr/colorControlNormal"/>
 
         </LinearLayout>
@@ -176,7 +176,7 @@
                 android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="8dp"
-                android:src="@drawable/ic_close2"
+                android:src="@drawable/ic_close"
                 app:tint="?attr/colorControlNormal"/>
 
         </LinearLayout>

@@ -144,18 +144,17 @@ public class SolfaActivity extends AppCompatActivity {
         String fg = isNight ? "#FFFFFF" : "#1C1B1F";
         String accent = isNight ? "#F0F0F0" : "#2C2B2F";
 
+        // Échelle uniforme : les caractères du solfa sont positionnés au
+        // pixel dans le SVG (x par glyphe, ex. x="24 35 38 49"). Forcer
+        // une font-size, une graisse, une police ou des espacements
+        // décale chaque glyphe de sa position : textes mélangés. On
+        // zoome donc la feuille entière, métriques préservées.
+        // textSize 18 (défaut) = 100 %, borné 70–200 %.
+        int scalePct = Math.round(textSize / 18f * 100f);
+        scalePct = Math.max(70, Math.min(200, scalePct));
+
         String js =
                 "javascript:(function() {" +
-                        // ==========================================
-                        // NETTOYAGE ET CORRECTION DE L'ESPACEMENT SVG
-                        // ==========================================
-                        "document.querySelectorAll('svg text, svg tspan').forEach(function(t) {" +
-                        "   t.removeAttribute('textLength');" +
-                        "   t.removeAttribute('lengthAdjust');" +
-                        "   t.removeAttribute('dx');" +
-                        "   t.removeAttribute('dy');" +
-                        "});" +
-
                         // =========================
                         // CRÉATION / MAJ DU STYLE
                         // =========================
@@ -171,41 +170,39 @@ public class SolfaActivity extends AppCompatActivity {
                         // =========================
                         "style.innerHTML = `" +
 
-                        /* PAGE GLOBAL */
+                        /* PAGE GLOBALE */
                         "html, body {" +
                         "   margin:0 !important;" +
                         "   padding:16px !important;" +
                         "   background:" + bg + " !important;" +
                         "   color:" + fg + " !important;" +
-                        "   font-size:" + textSize + "px !important;" +
-                        "   font-family: system-ui, sans-serif !important;" +
-                        "   line-height:2.0 !important;" +
+                        "   overflow-x:auto !important;" +
                         "}" +
 
-                        /* TEXTE STANDARD */
-                        "body, p, div, span {" +
-                        "   color:" + fg + " !important;" +
-                        "}" +
+                        /* Conteneur en block : une feuille plus large que
+                           l'écran déborde vers la droite (scrollable), au
+                           lieu d'être recadrée des deux côtés par le
+                           centrage flex de .p. */
+                        ".p { display:block !important; }" +
 
-                        /* CONTENEUR SVG */
+                        /* FEUILLE : zoom uniforme, métriques préservées
+                           (le pinçage reste disponible en plus). */
                         "svg {" +
                         "   background:transparent !important;" +
                         "   overflow:visible !important;" +
-                        "   width:100% !important;" +
+                        "   width:" + scalePct + "% !important;" +
+                        "   max-width:none !important;" +
                         "   height:auto !important;" +
+                        "   display:block !important;" +
+                        "   margin:0 auto !important;" +
                         "}" +
 
-                        /* TEXTE DANS LE SVG (SOLFÈGE) */
+                        /* COULEURS UNIQUEMENT : ni famille, ni taille, ni
+                           espacement — chaque caractère est positionné au
+                           pixel dans la feuille. */
                         "svg text, svg tspan {" +
                         "   fill:" + fg + " !important;" +
                         "   color:" + fg + " !important;" +
-                        "   font-family: system-ui, sans-serif !important;" +
-                        "   font-size:" + textSize + "px !important;" +
-                        "   font-weight:500 !important;" +
-                        "   letter-spacing: 0.5px !important;" +
-                        "   word-spacing: 4px !important;" +
-                        "   white-space: pre-wrap !important;" +
-                        "   text-rendering: optimizeLegibility !important;" +
                         "}" +
 
                         /* LIGNES DE PORTÉE ET TRAITS */

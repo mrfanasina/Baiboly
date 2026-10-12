@@ -1,39 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@color/bgColor">
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll"
         android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:background="@color/bgColor"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <!-- Titre -->
+            <TextView
+                android:id="@+id/textTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Contenu -->
+            <TextView
+                android:id="@+id/content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hyphenationFrequency="none"
+                android:breakStrategy="high_quality"
+                android:textSize="19sp"
+                android:lineSpacingExtra="10sp"
+                android:fontFamily="serif"
+                android:textColor="?android:attr/textColorPrimary"
+                android:padding="12dp"
+                android:paddingBottom="40dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Barre flottante de sélection (comme dans la Bible) :
+         Copier le fanekena / annuler -->
+    <LinearLayout
+        android:id="@+id/selectionBar"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="28dp"
+        android:background="@drawable/shape_floating_pill"
+        android:elevation="12dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:visibility="gone">
 
-        <!-- Titre -->
-        <TextView
-            android:id="@+id/textTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="?attr/colorOnSurface"
-            android:layout_marginBottom="20dp" />
+        <ImageButton
+            android:id="@+id/btnCopySelection"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Copier"
+            android:padding="10dp"
+            android:src="@drawable/ic_copy"
+            app:tint="?attr/colorControlNormal" />
 
-        <!-- Contenu -->
-        <TextView
-            android:id="@+id/content"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hyphenationFrequency="none"
-            android:breakStrategy="high_quality"
-            android:textSize="19sp"
-            android:lineSpacingExtra="10sp"
-            android:fontFamily="serif"
-            android:textColor="?android:attr/textColorPrimary"
-            android:paddingBottom="40dp" />
+        <ImageButton
+            android:id="@+id/btnCloseSelection"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Fermer"
+            android:padding="10dp"
+            android:src="@drawable/ic_close"
+            app:tint="?attr/colorControlNormal" />
 
     </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+
+</FrameLayout>

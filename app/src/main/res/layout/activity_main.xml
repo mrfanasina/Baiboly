@@ -38,6 +38,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/book_bookmark_svgrepo_com"
+            app:tint="?attr/colorOnSurface"
             android:layout_gravity="end|center_vertical"/>
         <ImageView
             android:id="@+id/mitady"
@@ -63,6 +64,19 @@
         app:layout_constraintBottom_toTopOf="@id/nav_view"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+    <!-- MINI-LECTEUR : affiché quand un feo joue, posé AU-DESSUS de la
+         bottom nav (ne la masque jamais). Sur tablette : aligné à droite
+         (cf. MainActivity#adjustPlaybackBarForTablet). -->
+    <include
+        android:id="@+id/mainPlaybackBar"
+        layout="@layout/playback_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="12dp"
+        app:layout_constraintBottom_toTopOf="@id/nav_view"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <!-- BOTTOM NAV -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/nav_view"

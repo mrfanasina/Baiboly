@@ -46,8 +46,8 @@ public class BaibolyFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // ✅ Afficher loader immédiatement
-        binding.progressBar.setVisibility(View.VISIBLE);
+        // ✅ Afficher skeleton immédiatement (perception de chargement)
+        startSkeleton();
 
         // 🔍 Configuration du bouton "Check" (endIcon) du TextInputLayout
         binding.layoutInput.setEndIconOnClickListener(v -> {
@@ -72,6 +72,29 @@ public class BaibolyFragment extends Fragment {
         loadBooks();
     }
 
+    // =========================================================
+    // SKELETON DE CHARGEMENT (deux colonnes de lignes grises)
+    // =========================================================
+
+    /** Affiche le skeleton (avec pulse) et masque les listes réelles. */
+    private void startSkeleton() {
+        binding.skeletonBooks.getRoot().setVisibility(View.VISIBLE);
+        binding.booksContainer.setVisibility(View.INVISIBLE);
+        binding.progressBar.setVisibility(View.GONE);
+
+        android.view.animation.Animation pulse =
+                android.view.animation.AnimationUtils.loadAnimation(
+                        requireContext(), R.anim.skeleton_pulse);
+        binding.skeletonBooks.getRoot().startAnimation(pulse);
+    }
+
+    /** Masque le skeleton et révèle les listes de livres. */
+    private void stopSkeleton() {
+        binding.skeletonBooks.getRoot().clearAnimation();
+        binding.skeletonBooks.getRoot().setVisibility(View.GONE);
+        binding.booksContainer.setVisibility(View.VISIBLE);
+    }
+
     private void loadBooks() {
         executor.execute(() -> {
             // 📚 Chargement en background
@@ -80,6 +103,9 @@ public class BaibolyFragment extends Fragment {
 
             mainHandler.post(() -> {
                 if (binding == null) return;
+
+                // Masque le skeleton : les vraies listes prennent le relais
+                stopSkeleton();
 
                 // 🎯 Adapters
                 BookAdapter oldAdapter = new BookAdapter(oldTestament, this::onBookSelected);

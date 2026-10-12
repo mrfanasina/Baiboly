@@ -87,7 +87,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnThemeLight"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -98,7 +98,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnThemeDark"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -109,7 +109,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnThemeSystem"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -323,7 +323,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAlignLeft"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -332,7 +332,7 @@
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAlignJustify"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -512,7 +512,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPinMofonainaOnlineWidget"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Widget Mofonaina ( Online )"

@@ -73,6 +73,7 @@
     <!-- Conteneur principal qui prend tout le reste de l'écran -->
 
     <LinearLayout
+        android:id="@+id/booksContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
@@ -144,5 +145,14 @@
         </LinearLayout>
 
     </LinearLayout>
+
+    <!-- Skeleton de chargement des livres : deux colonnes de lignes
+         grises pendant que la DB répond (cf. BaibolyFragment). -->
+    <include
+        android:id="@+id/skeletonBooks"
+        layout="@layout/include_skeleton_books"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

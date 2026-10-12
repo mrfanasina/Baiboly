@@ -25,7 +25,7 @@
         <View
             android:layout_width="40dp"
             android:layout_height="3dp"
-            android:background="#4E71C7"
+            android:background="?attr/colorPrimary"
             android:layout_marginBottom="10dp"/>
 
         <!-- BARRE DE SAISIE PREMIUM -->
@@ -126,7 +126,7 @@
                         android:src="@drawable/ic_backspace"
                         android:scaleType="centerInside"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        app:tint="#EF4444" />
+                        app:tint="@color/danger" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -169,7 +169,7 @@
                 app:icon="@drawable/clear"
                 app:iconSize="26dp"
                 app:iconGravity="textStart"
-                app:iconTint="#EF4444"
+                app:iconTint="@color/danger"
                 app:backgroundTint="#15EF4444"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
@@ -186,7 +186,7 @@
                 app:icon="@drawable/ic_check1"
                 app:iconSize="26dp"
                 app:iconGravity="textStart"
-                app:backgroundTint="#10B981"
+                app:backgroundTint="@color/success"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 app:cornerRadius="20dp" />
@@ -210,7 +210,7 @@
             <View
                 android:layout_width="32dp"
                 android:layout_height="4dp"
-                android:background="#F59E0B"
+                android:background="?attr/colorPrimary"
                 android:layout_marginTop="4dp"
                 android:layout_marginBottom="16dp"/>
 
@@ -219,6 +219,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"/>
+
+            <!-- Skeleton de la liste (cf. FihiranaFragment) -->
+            <include
+                android:id="@+id/skeletonCategories"
+                layout="@layout/include_skeleton_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
     </LinearLayout>

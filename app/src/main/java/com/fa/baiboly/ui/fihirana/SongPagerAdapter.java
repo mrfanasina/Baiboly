@@ -35,7 +35,7 @@ public class SongPagerAdapter extends FragmentStateAdapter {
     public Fragment createFragment(int position) {
         Song song = songs.get(position);
         List<SongVerse> verses = service.getSongVerses(song.getId());
-        return SongPageFragment.newInstance(verses, textSize);
+        return SongPageFragment.newInstance(song.getId(), verses, textSize);
     }
 
     @Override

@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 
+import com.fa.baiboly.R;
 import com.fa.baiboly.data.fanekena.FanekenaService;
 import com.fa.baiboly.databinding.FragmentFanekenaBinding;
 import com.fa.baiboly.models.Fanekena;
@@ -50,22 +51,57 @@ public class FanekenaFragment extends Fragment {
     }
 
     private void loadCategories() {
-        List<String> codes = service.getCodes();
+        startListSkeleton();
 
-        // Textes des credos, pour afficher un extrait dans la liste
-        Map<String, String> texts = service.getTexts();
+        // Chargement DB sur un thread à part : le skeleton reste visible
+        // pendant la réponse, puis la liste réelle le remplace.
+        new Thread(() -> {
+            List<String> codes = service.getCodes();
 
-        List<Fanekena> items = new ArrayList<>();
-        for (String code : codes) {
-            items.add(new Fanekena(0, code, texts.get(code)));
-        }
+            // Textes des credos, pour afficher un extrait dans la liste
+            Map<String, String> texts = service.getTexts();
 
-        CodeAdapter adapter = new CodeAdapter(items, code -> {
-            Intent intent = new Intent(requireContext(), FanekenaActivity.class);
-            intent.putExtra("code", code);
-            startActivity(intent);
-        });
-        binding.recyclerCode.setAdapter(adapter);
+            if (getActivity() == null) return;
+            getActivity().runOnUiThread(() -> {
+                if (binding == null) return;
+
+                List<Fanekena> items = new ArrayList<>();
+                for (String code : codes) {
+                    items.add(new Fanekena(0, code, texts.get(code)));
+                }
+
+                CodeAdapter adapter = new CodeAdapter(items, code -> {
+                    Intent intent = new Intent(requireContext(), FanekenaActivity.class);
+                    intent.putExtra("code", code);
+                    startActivity(intent);
+                });
+                binding.recyclerCode.setAdapter(adapter);
+
+                stopListSkeleton();
+            });
+        }).start();
+    }
+
+    // =========================================================
+    // SKELETON DE CHARGEMENT (liste grise pulsée)
+    // =========================================================
+
+    /** Affiche le skeleton de la liste et masque le RecyclerView. */
+    private void startListSkeleton() {
+        binding.skeletonCodes.getRoot().setVisibility(View.VISIBLE);
+        binding.recyclerCode.setVisibility(View.INVISIBLE);
+
+        android.view.animation.Animation pulse =
+                android.view.animation.AnimationUtils.loadAnimation(
+                        requireContext(), R.anim.skeleton_pulse);
+        binding.skeletonCodes.getRoot().startAnimation(pulse);
+    }
+
+    /** Masque le skeleton et révèle la liste réelle. */
+    private void stopListSkeleton() {
+        binding.skeletonCodes.getRoot().clearAnimation();
+        binding.skeletonCodes.getRoot().setVisibility(View.GONE);
+        binding.recyclerCode.setVisibility(View.VISIBLE);
     }
 
     @Override

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barre de playback compacte, incluse dans MainActivity au-dessus de
+     la bottom navigation (ne la masque jamais). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/playbackBar"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_playback_pill"
+    android:paddingStart="8dp"
+    android:paddingEnd="4dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp"
+    android:elevation="4dp"
+    android:visibility="gone">
+
+    <!-- Play / Pause -->
+    <ImageView
+        android:id="@+id/playbackToggle"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_play"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Alefa/Ajanona"
+        app:tint="?attr/colorOnSurface" />
+
+    <!-- Position / durée -->
+    <TextView
+        android:id="@+id/playbackTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:minEms="4"
+        android:text="0:00"
+        android:textSize="12sp"
+        android:textColor="?attr/colorOnSurfaceVariant" />
+
+    <!-- Progression -->
+    <SeekBar
+        android:id="@+id/playbackSeek"
+        android:layout_width="170dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp" />
+
+    <!-- Stop : bouton 40dp bien détaché, icône visible -->
+    <ImageView
+        android:id="@+id/playbackClose"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:padding="9dp"
+        android:src="@drawable/ic_close"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Hanafoana"
+        app:tint="?attr/colorOnSurface" />
+</LinearLayout>

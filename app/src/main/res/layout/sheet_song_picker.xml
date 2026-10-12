@@ -14,7 +14,7 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="12dp"
-        android:background="#D1D1D1" />
+        android:background="@color/sheet_handle" />
 
     <TextView
         android:id="@+id/tvTitle"
@@ -24,70 +24,176 @@
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurface"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="14dp" />
 
-    <!-- Recherche (même style que activity_song_list) -->
+    <!-- BARRE DE SAISIE (identique au FihiranaFragment) -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cardCornerRadius="28dp"
-        app:strokeWidth="0dp">
+        android:layout_height="72dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:background="?attr/colorSurfaceVariant"
+            android:layout_height="match_parent"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_search"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
-            <EditText
-                android:id="@+id/etSearch"
-                android:layout_width="0dp"
+            <!-- GAUCHE : SÉLECTEUR DE SOKAJY -->
+            <LinearLayout
+                android:id="@+id/btnSelectCategory"
+                android:layout_width="110dp"
                 android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingStart="16dp"
+                android:background="?attr/selectableItemBackground">
+
+                <TextView
+                    android:id="@+id/tvCategorySelected"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Sokajy"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_arrow_drop_down"
+                    android:alpha="0.7"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@color/title_gray"
+                    android:alpha="0.15" />
+            </LinearLayout>
+
+            <!-- CENTRE : LE NUMÉRO -->
+            <TextView
+                android:id="@+id/tvSongNumber"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@null"
-                android:hint="Hikaroka hira..."
-                android:importantForAutofill="no"
-                android:inputType="text"
-                android:paddingHorizontal="12dp"
-                android:textColorHint="?attr/colorOnSurfaceVariant"
-                android:textSize="15sp" />
+                android:gravity="center"
+                android:text="---"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorSecondary"
+                android:letterSpacing="0.05" />
 
-            <ImageButton
-                android:id="@+id/btnClearSearch"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/ic_close"
-                android:visibility="gone"
-                app:tint="?attr/colorOnSurfaceVariant" />
+            <!-- DROITE : EFFACER UN CHIFFRE -->
+            <LinearLayout
+                android:layout_width="100dp"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <View
+                    android:layout_width="2dp"
+                    android:layout_height="24dp"
+                    android:background="@color/title_gray"
+                    android:alpha="0.15" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <ImageButton
+                    android:id="@+id/btnBackspace"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="28dp"
+                    android:src="@drawable/ic_backspace"
+                    android:scaleType="centerInside"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Mamafa"
+                    app:tint="#EF4444" />
+            </LinearLayout>
         </LinearLayout>
-
     </com.google.android.material.card.MaterialCardView>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerSongs"
+    <TextView
+        android:id="@+id/tvSongCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0 hira misy"
+        android:textSize="12sp"
+        android:alpha="0.6"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- CLAVIER NUMÉRIQUE (identique au FihiranaFragment) -->
+    <GridLayout
+        android:id="@+id/numPad"
         android:layout_width="match_parent"
-        android:layout_height="380dp"
-        android:layout_marginTop="8dp"
-        android:clipToPadding="false" />
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:alignmentMode="alignMargins"
+        android:useDefaultMargins="true">
+
+        <Button style="@style/NumPadButton" android:text="1" android:tag="1"/>
+        <Button style="@style/NumPadButton" android:text="2" android:tag="2"/>
+        <Button style="@style/NumPadButton" android:text="3" android:tag="3"/>
+        <Button style="@style/NumPadButton" android:text="4" android:tag="4"/>
+        <Button style="@style/NumPadButton" android:text="5" android:tag="5"/>
+        <Button style="@style/NumPadButton" android:text="6" android:tag="6"/>
+        <Button style="@style/NumPadButton" android:text="7" android:tag="7"/>
+        <Button style="@style/NumPadButton" android:text="8" android:tag="8"/>
+        <Button style="@style/NumPadButton" android:text="9" android:tag="9"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBackspacePad"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_columnWeight="1"
+            app:icon="@drawable/clear"
+            app:iconSize="26dp"
+            app:iconGravity="textStart"
+            app:iconTint="@color/danger"
+            app:backgroundTint="#26EF4444"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:cornerRadius="20dp" />
+
+        <Button style="@style/NumPadButton" android:text="0" android:tag="0"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnValidate"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_columnWeight="1"
+            app:icon="@drawable/ic_check1"
+            app:iconSize="26dp"
+            app:iconGravity="textStart"
+            app:backgroundTint="@color/success"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:cornerRadius="20dp" />
+    </GridLayout>
 
     <TextView
-        android:id="@+id/emptyState"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="Tsy misy hira hita"
-        android:textSize="14sp"
-        android:textColor="#9CA3AF"
-        android:padding="24dp"
-        android:visibility="gone" />
+        android:text="Safidio ny laharan'ny hira avy eo tsindrio ny fijerena"
+        android:textSize="12sp"
+        android:textColor="@color/muted"
+        android:layout_marginTop="16dp" />
 
 </LinearLayout>

@@ -224,7 +224,7 @@ public class AiSettingsActivity extends AppCompatActivity {
             holder.card.setStrokeWidth(selected ? dp(2) : dp(1));
             holder.card.setStrokeColor(selected
                     ? ContextCompat.getColor(AiSettingsActivity.this, R.color.green)
-                    : 0xFFE5E7EB);
+                    : ContextCompat.getColor(AiSettingsActivity.this, R.color.card_stroke));
         }
 
         private boolean isSelected(Option option) {

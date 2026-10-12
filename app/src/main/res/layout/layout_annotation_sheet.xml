@@ -12,7 +12,7 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="20dp"
-        android:background="#D1D1D1" />
+        android:background="@color/sheet_handle" />
 
     <TextView
         android:id="@+id/tvSheetTitle"
