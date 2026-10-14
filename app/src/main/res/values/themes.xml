@@ -67,21 +67,8 @@
         <item name="cornerSize">16dp</item>
     </style>
 
-    <!-- Style ultra-léger sans bordure -->
-    <style name="Widget.App.Button.LightToggle" parent="Widget.Material3.Button.TextButton">
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="strokeWidth">1dp</item> <!-- Supprime la bordure -->
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.LargeComponent</item>
-        <item name="materialThemeOverlay">@style/ThemeOverlay.App.Button.LightToggle</item>
-    </style>
-
-    <style name="ThemeOverlay.App.Button.LightToggle" parent="">
-        <!-- Couleur de fond quand SELECTIONNÉ : un rose très très pâle ou gris clair -->
-        <item name="colorPrimaryContainer">#FCE4EC</item>
-        <!-- Couleur du texte quand SELECTIONNÉ : votre couleur primaire -->
-        <item name="colorOnPrimaryContainer">#C40E5A</item>
-    </style>
+    <!-- (Style LightToggle supprimé : il n'était plus utilisé et son
+         rose pâle sur fond pâle rendait le texte invisible.) -->
 
     <style name="ShapeAppearance.LargeComponent" parent="ShapeAppearance.Material3.MediumComponent">
         <item name="cornerSize">12dp</item>
@@ -119,6 +106,14 @@
         <item name="materialThemeOverlay">@style/ThemeOverlay.App.Button.SettingsToggle</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
+        <!-- Non coché : GRIS (le colorPrimary rose du thème ne s'applique
+             qu'au bouton coché, fond plein). -->
+        <item name="android:textColor">@color/settings_toggle_text</item>
+        <item name="iconTint">@color/settings_toggle_text</item>
+        <!-- Fond explicite : sinon le sélecteur par défaut de Material peint
+             l'état non coché avec ?attr/colorContainer (jamais défini ici
+             → rose). Coché = colorSecondaryContainer, non coché = transparent. -->
+        <item name="backgroundTint">@color/settings_toggle_bg</item>
     </style>
 
     <style name="ThemeOverlay.App.Button.SettingsToggle" parent="">

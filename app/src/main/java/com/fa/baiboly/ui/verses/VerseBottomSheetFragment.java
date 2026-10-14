@@ -36,8 +36,9 @@ public class VerseBottomSheetFragment extends BottomSheetDialogFragment {
 
     private static final String ARG_REFERENCE = "arg_reference";
 
-    // Nombre max de versets affichés dans l'aperçu (au-delà, on tronque)
-    private static final int MAX_PREVIEW_VERSES = 4;
+    // Hauteur max de la zone de versets avant scroll (dp) : tous les
+    // versets sont affichés, la zone scrolle simplement si nécessaire.
+    private static final int MAX_SCROLL_HEIGHT_DP = 420;
 
     public static void display(FragmentManager fragmentManager, String reference) {
 
@@ -150,27 +151,46 @@ public class VerseBottomSheetFragment extends BottomSheetDialogFragment {
                 return;
             }
 
+            // TOUS les versets de la référence sont affichés (aucune
+            // troncature) ; la zone scrolle au-delà de la hauteur max.
             StringBuilder preview = new StringBuilder();
-            int limit = Math.min(verseList.size(), MAX_PREVIEW_VERSES);
 
-            for (int i = 0; i < limit; i++) {
+            for (int i = 0; i < verseList.size(); i++) {
                 Verse v = verseList.get(i);
 
                 preview.append(v.getNumber())
                         .append(". ")
                         .append(v.getText().replace("\n", " ").trim());
 
-                if (i < limit - 1) {
+                if (i < verseList.size() - 1) {
                     preview.append("  ");
                 }
             }
 
-            if (verseList.size() > MAX_PREVIEW_VERSES) {
-                preview.append(" …");
-            }
-
             textContent.setText(preview.toString());
             textContent.setVisibility(View.VISIBLE);
+
+            // Plafonne la hauteur de la zone scrollable APRÈS mesure du
+            // texte (un LayoutParams fixé avant la passe de layout serait
+            // écrasé par wrap_content) : si le contenu dépasse la limite,
+            // le NestedScrollView prend le relais, sinon height = wrap.
+            final View scroll = getView() != null
+                    ? getView().findViewById(R.id.scrollVerseContentSheet) : null;
+            if (scroll instanceof androidx.core.widget.NestedScrollView) {
+                textContent.post(() -> {
+                    float density = getResources().getDisplayMetrics().density;
+                    int maxPx = (int) (MAX_SCROLL_HEIGHT_DP * density);
+
+                    android.view.ViewGroup.LayoutParams lp =
+                            scroll.getLayoutParams();
+                    if (textContent.getHeight() > maxPx) {
+                        lp.height = maxPx;
+                    } else {
+                        lp.height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+                    }
+                    scroll.setLayoutParams(lp);
+                });
+            }
 
         } catch (Exception e) {
             // On ne bloque jamais l'ouverture du sheet pour un souci d'aperçu

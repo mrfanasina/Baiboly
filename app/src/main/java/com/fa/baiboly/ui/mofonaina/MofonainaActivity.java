@@ -291,6 +291,8 @@ public class MofonainaActivity extends AppCompatActivity {
 
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
+        com.fa.baiboly.ui.MenuHelper.enableOverflowIcons(this, menu);
+
         return true;
     }
 
@@ -300,6 +302,22 @@ public class MofonainaActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.action_settings) {
 
             openSettings();
+
+            return true;
+        }
+
+        // Chat IA générique (menu 3 points)
+        if (item.getItemId() == R.id.chat) {
+
+            com.fa.baiboly.ui.ai.AiExplanationActivity.startWithQuestion(this, "");
+
+            return true;
+        }
+
+        // Mombamomba
+        if (item.getItemId() == R.id.about) {
+
+            com.fa.baiboly.ui.MenuHelper.showAbout(this);
 
             return true;
         }
@@ -700,9 +718,13 @@ public class MofonainaActivity extends AppCompatActivity {
         //    références classiques restent détectées plus bas).
         // ---------------------------------------------------
 
-        Pattern andPattern = Pattern.compile(
-                "\\b(?:andininy|and)[ \\t]*[.:]?[ \\t]*(\\d+(?:[ \\t]?-[ \\t]?\\d+)?)"
-        );
+        // Marqueur "and" / "andininy" : pattern UNIQUE centralisé (liste
+        // "39b,42,44" et lettres d'article incluses — voir BibleRefParser).
+        // La référence utilisée est "<livre du jour> <chapitre>:<suffixe>"
+        // ex "Asa 2:39b,42,44" -> parsée par la liste discrète de
+        // BibleRefParser : versets 39 (complet), 42, 44 affichés, "b"
+        // conservé pur l'affichage du titre.
+        Pattern andPattern = BibleRefParser.AND_MARKER_PATTERN;
 
         if (dayBook != null && dayChapter > 0) {
 

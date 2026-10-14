@@ -19,10 +19,12 @@
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="Fikirakirana"
+        android:icon="@drawable/ic_settings"
         app:showAsAction="never" />
     <item
         android:id="@+id/about"
         android:orderInCategory="100"
         android:title="Mombamomba"
+        android:icon="@drawable/ic_info"
         app:showAsAction="never" />
 </menu>

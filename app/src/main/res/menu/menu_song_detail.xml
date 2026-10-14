@@ -13,15 +13,24 @@
         android:id="@+id/action_add_playback"
         android:orderInCategory="95"
         android:title="Playback"
+        android:icon="@drawable/ic_audio"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="Fikirakirana"
+        android:icon="@drawable/ic_settings"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/chat"
+        android:orderInCategory="100"
+        android:title="Hiresaka amin'ny IA"
+        android:icon="@drawable/ic_ai_chat"
         app:showAsAction="never" />
     <item
         android:id="@+id/about"
         android:orderInCategory="100"
         android:title="Mombamomba"
+        android:icon="@drawable/ic_info"
         app:showAsAction="never" />
 </menu>

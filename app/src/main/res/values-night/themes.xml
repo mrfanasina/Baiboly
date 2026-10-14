@@ -5,11 +5,12 @@
     <!-- ========================= -->
     <style name="Theme.Baiboly" parent="Theme.Material3.DayNight.NoActionBar">
 
-        <!-- Couleurs primaires (version pastel pour le sombre) -->
-        <item name="colorPrimary">#C97171</item>
-        <item name="colorOnPrimary">#E9DFDF</item>
-        <item name="colorPrimaryContainer">#004D40</item>
-        <item name="colorOnPrimaryContainer">#B2EBF2</item>
+        <!-- Couleurs primaires (version sombre lisible : accents clairs
+             sur fond sombre, texte foncé sur les accents) -->
+        <item name="colorPrimary">#FF8FB1</item>
+        <item name="colorOnPrimary">#3E001D</item>
+        <item name="colorPrimaryContainer">#5C1137</item>
+        <item name="colorOnPrimaryContainer">#FFD9E1</item>
 
         <!-- Couleurs secondaires  -->
         <item name="colorSecondary">#3B7AC7</item>
@@ -53,9 +54,9 @@
 
     <!-- 2. Le "Thème Overlay" qui définit les couleurs quand le bouton est COCHÉ -->
     <style name="ThemeOverlay.App.Button.ToggleContainer" parent="">
-        <!-- Couleur de fond du bouton sélectionné (Ici Rose/Bordeaux comme votre colorPrimary) -->
-        <item name="colorPrimaryContainer">#C40E5A</item>
-        <!-- Couleur du texte et de l'icône quand sélectionné (Blanc) -->
-        <item name="colorOnPrimaryContainer">#FFFFFF</item>
+        <!-- Sélectionné : fond = colorPrimary de la nuit, texte foncé dessus
+             (la palette beige/rose pâle rendait le texte illisible en sombre) -->
+        <item name="colorPrimaryContainer">?attr/colorPrimary</item>
+        <item name="colorOnPrimaryContainer">?attr/colorOnPrimary</item>
     </style>
 </resources>

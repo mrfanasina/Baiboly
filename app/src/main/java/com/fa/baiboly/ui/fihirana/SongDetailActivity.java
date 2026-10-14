@@ -223,6 +223,7 @@ public class SongDetailActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_song_detail, menu);
+        com.fa.baiboly.ui.MenuHelper.enableOverflowIcons(this, menu);
         return true;
     }
 
@@ -236,6 +237,18 @@ public class SongDetailActivity extends AppCompatActivity
         // Ouvre l'écran d'ajout de playback (feo)
         if (item.getItemId() == R.id.action_add_playback) {
             openAddPlayback();
+            return true;
+        }
+
+        // Chat IA générique (menu 3 points)
+        if (item.getItemId() == R.id.chat) {
+            com.fa.baiboly.ui.ai.AiExplanationActivity.startWithQuestion(this, "");
+            return true;
+        }
+
+        // Mombamomba
+        if (item.getItemId() == R.id.about) {
+            com.fa.baiboly.ui.MenuHelper.showAbout(this);
             return true;
         }
 

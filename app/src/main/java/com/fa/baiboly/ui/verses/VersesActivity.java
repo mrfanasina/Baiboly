@@ -896,6 +896,8 @@ public class VersesActivity extends AppCompatActivity
                 menu
         );
 
+        com.fa.baiboly.ui.MenuHelper.enableOverflowIcons(this, menu);
+
         return true;
     }
 
@@ -905,6 +907,22 @@ public class VersesActivity extends AppCompatActivity
         if (item.getItemId() == R.id.action_settings) {
 
             openSettings();
+
+            return true;
+        }
+
+        // Chat IA générique (menu 3 points)
+        if (item.getItemId() == R.id.chat) {
+
+            com.fa.baiboly.ui.ai.AiExplanationActivity.startWithQuestion(this, "");
+
+            return true;
+        }
+
+        // Mombamomba
+        if (item.getItemId() == R.id.about) {
+
+            com.fa.baiboly.ui.MenuHelper.showAbout(this);
 
             return true;
         }

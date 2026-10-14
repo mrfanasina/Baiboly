@@ -77,48 +77,103 @@
                         android:textStyle="bold"/>
                 </LinearLayout>
 
-                <com.google.android.material.button.MaterialButtonToggleGroup
+                <LinearLayout
                     android:id="@+id/themeToggleGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:singleSelection="true"
-                    app:selectionRequired="true"
-                    android:gravity="center">
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
 
-                    <com.google.android.material.button.MaterialButton
+                    <!-- MAZAVA (clair) -->
+                    <LinearLayout
                         android:id="@+id/btnThemeLight"
-                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Mazava"
-                        app:paddingStart="4dp"
-                        app:paddingEnd="4dp"
-                        app:icon="@drawable/ic_light_mode"/>
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/bg_theme_option"
+                        android:clickable="true"
+                        android:focusable="true">
 
-                    <com.google.android.material.button.MaterialButton
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_light_mode"
+                            app:tint="@color/theme_option_text"
+                            android:layout_marginBottom="4dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Mazava"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/theme_option_text"/>
+                    </LinearLayout>
+
+                    <!-- MAIZINA (sombre) -->
+                    <LinearLayout
                         android:id="@+id/btnThemeDark"
-                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Maizina"
-                        app:paddingStart="4dp"
-                        app:paddingEnd="4dp"
-                        app:icon="@drawable/ic_dark_mode"/>
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/bg_theme_option"
+                        android:clickable="true"
+                        android:focusable="true">
 
-                    <com.google.android.material.button.MaterialButton
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_dark_mode"
+                            app:tint="@color/theme_option_text"
+                            android:layout_marginBottom="4dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Maizina"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/theme_option_text"/>
+                    </LinearLayout>
+
+                    <!-- FINDAY (système) -->
+                    <LinearLayout
                         android:id="@+id/btnThemeSystem"
-                        style="@style/Widget.App.Button.SettingsToggle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Finday"
-                        app:paddingStart="4dp"
-                        app:paddingEnd="4dp"
-                        app:icon="@drawable/ic_auto_mode"/>
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:background="@drawable/bg_theme_option"
+                        android:clickable="true"
+                        android:focusable="true">
 
-                </com.google.android.material.button.MaterialButtonToggleGroup>
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_auto_mode"
+                            app:tint="@color/theme_option_text"
+                            android:layout_marginBottom="4dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Finday"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/theme_option_text"/>
+                    </LinearLayout>
+
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -341,6 +396,62 @@
 
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ========================= -->
+        <!-- VERSET À LA LIGNE (switch) -->
+        <!-- ========================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="20dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_text_format"
+                    app:tint="?attr/colorPrimary"
+                    android:layout_marginEnd="12dp"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mandingana andalana"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Hametraka andininy tsirairay amin'ny andalana manokana"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginTop="2dp"/>
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchVersePerLine"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

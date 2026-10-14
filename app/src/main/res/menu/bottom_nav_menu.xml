@@ -8,7 +8,7 @@
 
     <item
         android:id="@+id/navigation_dashboard"
-        android:icon="@drawable/book_bookmark_svgrepo_com"
+        android:icon="@drawable/menu_book"
         android:title="@string/title_dashboard" />
 
     <item
@@ -17,6 +17,6 @@
         android:title="@string/title_notifications" />
     <item
         android:id="@+id/fanekena"
-        android:icon="@drawable/book_open"
+        android:icon="@drawable/star_outline_svgrepo_com"
         android:title="Fanekena" />
 </menu>

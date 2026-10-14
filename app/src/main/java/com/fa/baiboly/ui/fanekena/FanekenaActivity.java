@@ -111,6 +111,7 @@ public class FanekenaActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_fanekena, menu);
+        com.fa.baiboly.ui.MenuHelper.enableOverflowIcons(this, menu);
         return true;
     }
 
@@ -130,8 +131,7 @@ public class FanekenaActivity extends AppCompatActivity
         }
 
         if (item.getItemId() == R.id.about) {
-            // Simple placeholder
-            android.widget.Toast.makeText(this, "Mombamomba", android.widget.Toast.LENGTH_SHORT).show();
+            com.fa.baiboly.ui.MenuHelper.showAbout(this);
             return true;
         }
 

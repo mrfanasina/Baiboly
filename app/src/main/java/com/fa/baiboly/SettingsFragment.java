@@ -48,6 +48,8 @@ public class SettingsFragment extends Fragment {
     public static final String KEY_TEXT_SIZE = "text_size";
     public static final String KEY_JUSTIFICATION = "justification_mode";
     public static final String KEY_HOME_CARD_ORDER = "home_card_order";
+    /** "Un verset par ligne" dans le lecteur (voir VerseTextRenderer). */
+    public static final String KEY_VERSE_PER_LINE = "verse_per_line";
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -72,6 +74,7 @@ public class SettingsFragment extends Fragment {
         setupColors();
         setupTextSizeRealTime();
         setupJustificationRealTime();
+        setupVersePerLine();
         setupCardOrder();
         setupWidgetButtons();
         setupAiSettingsEntry();
@@ -138,20 +141,34 @@ public class SettingsFragment extends Fragment {
     }
 
     // =========================
-    // THEME (REAL-TIME)
+    // THEME (REAL-TIME) : trois cartes tapables
     // =========================
     private void setupThemeChanger() {
-        binding.themeToggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (isChecked) {
-                int mode;
-                if (checkedId == R.id.btnThemeLight) mode = AppCompatDelegate.MODE_NIGHT_NO;
-                else if (checkedId == R.id.btnThemeDark) mode = AppCompatDelegate.MODE_NIGHT_YES;
-                else mode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
 
-                preferences.edit().putInt(KEY_THEME, mode).apply();
-                AppCompatDelegate.setDefaultNightMode(mode);
-            }
-        });
+        binding.btnThemeLight.setOnClickListener(v -> setThemeMode(AppCompatDelegate.MODE_NIGHT_NO));
+        binding.btnThemeDark.setOnClickListener(v -> setThemeMode(AppCompatDelegate.MODE_NIGHT_YES));
+        binding.btnThemeSystem.setOnClickListener(v -> setThemeMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM));
+    }
+
+    /** Enregistre, applique et met à jour l'état visuel des cartes. */
+    private void setThemeMode(int mode) {
+        preferences.edit().putInt(KEY_THEME, mode).apply();
+        AppCompatDelegate.setDefaultNightMode(mode);
+        refreshThemeSelection();
+    }
+
+    /** Reflète le mode actif sur les trois cartes (fond + couleur du contenu). */
+    private void refreshThemeSelection() {
+        int savedMode = preferences.getInt(KEY_THEME, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+
+        binding.btnThemeLight.setSelected(savedMode == AppCompatDelegate.MODE_NIGHT_NO);
+        binding.btnThemeDark.setSelected(savedMode == AppCompatDelegate.MODE_NIGHT_YES);
+        binding.btnThemeSystem.setSelected(savedMode == AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+
+        // Force les drawables d'état (fond, couleur du texte) à se retracer.
+        binding.btnThemeLight.jumpDrawablesToCurrentState();
+        binding.btnThemeDark.jumpDrawablesToCurrentState();
+        binding.btnThemeSystem.jumpDrawablesToCurrentState();
     }
 
     // =========================
@@ -292,14 +309,21 @@ public class SettingsFragment extends Fragment {
     }
 
     // =========================
+    // VERSE PER LINE (REAL-TIME)
+    // =========================
+    private void setupVersePerLine() {
+        binding.switchVersePerLine.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            preferences.edit().putBoolean(KEY_VERSE_PER_LINE, isChecked).apply();
+            notifyTextSettingsChanged();
+        });
+    }
+
+    // =========================
     // INITIAL LOAD
     // =========================
     private void loadAndApplySettings() {
         // Theme
-        int savedMode = preferences.getInt(KEY_THEME, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        if (savedMode == AppCompatDelegate.MODE_NIGHT_NO) binding.themeToggleGroup.check(R.id.btnThemeLight);
-        else if (savedMode == AppCompatDelegate.MODE_NIGHT_YES) binding.themeToggleGroup.check(R.id.btnThemeDark);
-        else binding.themeToggleGroup.check(R.id.btnThemeSystem);
+        refreshThemeSelection();
 
         // Text Size
         float size = preferences.getFloat(KEY_TEXT_SIZE, 18f);
@@ -309,6 +333,10 @@ public class SettingsFragment extends Fragment {
         // Justification
         boolean isJustified = preferences.getBoolean(KEY_JUSTIFICATION, true);
         binding.toggleJustification.check(isJustified ? R.id.btnAlignJustify : R.id.btnAlignLeft);
+
+        // Verse per line
+        binding.switchVersePerLine.setChecked(
+                preferences.getBoolean(KEY_VERSE_PER_LINE, false));
     }
 
     // =========================

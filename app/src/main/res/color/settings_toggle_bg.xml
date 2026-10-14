@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fond des boutons du toggle "Ankavia / Mitovy" :
+     coché = couleur secondaire pleine, non coché = transparent (look outlined,
+     la carte colorSurfaceVariant transparaît + bordure grise).
+     Remplace le sélecteur par défaut de Material qui utilise ?attr/colorContainer
+     (jamais défini dans ce thème → fond rose sur le bouton non coché). -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="?attr/colorSecondaryContainer"/>
+    <item android:color="@android:color/transparent"/>
+</selector>

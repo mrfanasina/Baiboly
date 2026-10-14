@@ -102,6 +102,7 @@ public class AinaOfDayActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        com.fa.baiboly.ui.MenuHelper.enableOverflowIcons(this, menu);
         return true;
     }
 
@@ -109,6 +110,14 @@ public class AinaOfDayActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_settings) {
             openSettings();
+            return true;
+        }
+        if (item.getItemId() == R.id.chat) {
+            com.fa.baiboly.ui.ai.AiExplanationActivity.startWithQuestion(this, "");
+            return true;
+        }
+        if (item.getItemId() == R.id.about) {
+            com.fa.baiboly.ui.MenuHelper.showAbout(this);
             return true;
         }
         return super.onOptionsItemSelected(item);

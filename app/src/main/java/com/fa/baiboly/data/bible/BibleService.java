@@ -182,6 +182,38 @@ import java.util.regex.Pattern;
     public List<Verse> getVerseObjectsFromReading(Reading reading) {
         if (reading == null) return new ArrayList<>();
 
+        // Forme "Lio 2:39b,42,44" : on charge le CHAPITRE ENTIER (la lettre
+        // "b" est purement décorative, le verset complet est affiché) puis
+        // on filtre sur les numéros demandés, dans l'ordre de la référence.
+        List<int[]> discrete = reading.getDiscreteVerses();
+
+        if (discrete != null && !discrete.isEmpty()) {
+
+            // Cache : clé = version liste (reading.toString() inclut la liste)
+            String discreteKey = reading.toString();
+
+            // Chapitre entier via une Reading pleine page (pas de cache partagé
+            // avec la clé discrète pour garder la liste ordonnée intacte).
+            Reading fullChapter = new Reading(
+                    reading.getBook(),
+                    reading.getStartChapter(), 1,
+                    reading.getStartChapter(), 999);
+
+            List<Verse> chapter = getVerseObjectsFromReading(fullChapter);
+
+            java.util.Map<Integer, Verse> byNumber = new java.util.HashMap<>();
+            for (Verse v : chapter) byNumber.put(v.getNumber(), v);
+
+            List<Verse> filtered = new ArrayList<>();
+            for (int[] pair : discrete) {
+                Verse v = byNumber.get(pair[0]);
+                if (v != null) filtered.add(v);
+            }
+
+            verseCache.put(discreteKey, filtered);
+            return filtered;
+        }
+
         // Check in-memory cache first
         String cacheKey = reading.toString();
         List<Verse> cached = verseCache.get(cacheKey);

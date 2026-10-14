@@ -71,17 +71,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     // DÉTECTION DE RÉFÉRENCES BIBLIQUES
     // =====================================================
 
-    // Marqueur "and" / "andininy" — le numéro devient OBLIGATOIRE :
-    // "and12", "and 12-13", "and:12", "andininy 5-6"... En revanche un
-    // simple emploi du mot dans une phrase ("andininy manontolo") ne
-    // matche pas, ce n'est pas une référence mais juste le mot malgache.
-    // NB : pas de \b APRÈS "and" — il n'y a PAS de frontière de mot entre
-    // "d" et un chiffre, "and12" ne matcherait jamais. [ \t]* (et non
-    // \s*) : jamais de saut de ligne, pour ne pas "traverser" un
-    // paragraphe.
-    private static final Pattern AND_MARKER_PATTERN = Pattern.compile(
-            "\\b(?:andininy|and)[ \\t]*[.:]?[ \\t]*(\\d+(?:[ \\t]?-[ \\t]?\\d+)?)"
-    );
+    // Marqueur "and" / "andininy" : pattern UNIQUE centralisé dans
+    // BibleRefParser (lettres d'article "39b", listes "39b,42,44"... voyez
+    // la doc du pattern là-bas). Un simple emploi du mot dans une phrase
+    // ("andininy manontolo") ne matche pas : numéro obligatoire.
+    private static final Pattern AND_MARKER_PATTERN =
+            BibleRefParser.AND_MARKER_PATTERN;
 
     // Références classiques : détection centralisée via BibleRefParser
     // (table des livres officielle, "Heb11,1", "1Kor13,4-7"...). L'ancienne
@@ -133,6 +128,14 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     public void addMessage(ChatMessage message) {
         messages.add(message);
         notifyItemInserted(messages.size() - 1);
+    }
+
+    /** Vide la conversation affichée (nouvelle discussion / restauration). */
+    public void clearMessages() {
+        int count = messages.size();
+        if (count == 0) return;
+        messages.clear();
+        notifyItemRangeRemoved(0, count);
     }
 
     public void setTextSize(float sp) {

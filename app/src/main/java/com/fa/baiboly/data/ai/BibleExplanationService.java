@@ -56,14 +56,54 @@ public class BibleExplanationService {
     }
 
     /**
+     * Reprise d'une conversation restaurée depuis l'historique :
+     * nouvelle session SDK, puis réinjection de tout l'historique en un
+     * unique message "contexte" (le SDK ne permet pas d'insérer des
+     * échanges dans un chat existant). Le résultat du message de contexte
+     * est jeté : la session est prête pour la vraie question suivante.
+     */
+    public void reprendreConversation(java.util.List<String[]> historique,
+                                      OnExplanationListener ignoredListener) {
+
+        chatSession = geminiClient.startChat();
+
+        if (historique == null || historique.isEmpty()) return;
+
+        StringBuilder ctx = new StringBuilder(
+                "Reprise d'une conversation précédente (contexte à mémoriser, "
+                        + "réponds juste \"ok\") :\n");
+
+        for (String[] pair : historique) {
+            // pair[0] = question user, pair[1] = réponse IA
+            ctx.append("Utilisateur : ").append(pair[0]).append("\n")
+               .append("Assistant : ").append(pair[1]).append("\n\n");
+        }
+
+        envoyerMessage(ctx.toString(), new OnExplanationListener() {
+            @Override
+            public void onSuccess(String text) {
+                // Contexte absorbé : on ignore la réponse
+            }
+
+            @Override
+            public void onError(String errorLog) {
+                // Sans contexte injecté, la session marche quand même :
+                // la suite partira simplement sans mémoire du passé
+            }
+        });
+    }
+
+    /**
      * Continue la conversation déjà démarrée (l'utilisateur pose une
      * question de suivi). L'historique est géré automatiquement par le SDK.
      */
     public void continuerConversation(String message, OnExplanationListener listener) {
 
+        // Session jamais créée (chat ouvert directement, sans verset ni
+        // question pré-démarrée) : on en crée une au lieu d'échouer —
+        // l'utilisateur ne doit JAMAIS voir "Aucune conversation en cours".
         if (chatSession == null) {
-            listener.onError("Aucune conversation en cours. Réouvrez l'écran d'explication.");
-            return;
+            chatSession = geminiClient.startChat();
         }
 
         envoyerMessage(message, listener);

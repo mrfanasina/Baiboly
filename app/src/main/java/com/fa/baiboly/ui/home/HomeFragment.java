@@ -3,7 +3,10 @@ package com.fa.baiboly.ui.home;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,6 +20,8 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+
+import com.google.android.material.color.MaterialColors;
 
 import com.fa.baiboly.MainActivity;
 import com.fa.baiboly.R;
@@ -268,6 +273,17 @@ public class HomeFragment extends Fragment {
             return date;
         }
     }
+    private static String formatDate(String date) {
+        try {
+            String[] parts = date.split("-");
+            int day = Integer.parseInt(parts[2]);
+            int month = Integer.parseInt(parts[1]);
+            int year = Integer.parseInt(parts[0]);
+            return day + "/" + month + "/" + year;
+        } catch (Exception e) {
+            return date;
+        }
+    }
 
     /**
      * Adds a perikopa row with liturgical color tinted background.
@@ -280,11 +296,12 @@ public class HomeFragment extends Fragment {
 
         tv.setText(text);
         tv.setTextColor(ContextCompat.getColor(requireContext(), R.color.textPrimary));
-        img.setImageResource(R.drawable.book_bookmark_svgrepo_com);
+        img.setImageResource(R.drawable.ic_bible);
+        img.setImageTintList(ColorStateList.valueOf(seasonColor));
 
         // Apply semi-transparent liturgical season color as background
         int bgColor = blendColor(seasonColor, 0.10f);
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        GradientDrawable bg = new GradientDrawable();
         bg.setColor(bgColor);
         bg.setCornerRadius(12f);
         row.setBackground(bg);
@@ -294,11 +311,6 @@ public class HomeFragment extends Fragment {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMargins(0, 0, 0, 6);
         row.setLayoutParams(lp);
-
-        // Color the icon with season color
-        if (img.getDrawable() != null) {
-            img.getDrawable().setTint(seasonColor);
-        }
 
         row.setOnClickListener(listener);
         container.addView(row);
@@ -371,7 +383,9 @@ public class HomeFragment extends Fragment {
                 requireActivity().runOnUiThread(() ->
                         binding.cardAina.setVisibility(View.VISIBLE)
                 );
+                binding.ainaDate.setText(formatDate(today.getDateIso()));
             }
+
         }).start();
     }
 
@@ -452,6 +466,17 @@ public class HomeFragment extends Fragment {
         // Store verseOfDay to compare with Vakiteny anio
         String verseOfDayStr = null;
 
+
+        // Adding Bible Reading 1 (hide if same as verseOfDay)
+        if (data.getBibleReading1() != null) {
+            String reading1 = data.getBibleReading1().toString();
+            if (verseOfDayStr == null || !reading1.equals(verseOfDayStr)) {
+                addPremiumRow(binding.mofonainaDetailsContainer, reading1,
+                        R.drawable.menu_book,
+                        v -> openHomeSession(GROUP_MOFONAINA, "verse", reading1));
+            }
+        }
+
         // Adding Daily Verse — PROMINENT
         if (data.getVerseOfDay() != null) {
             verseOfDayStr = data.getVerseOfDay().toString();
@@ -461,11 +486,14 @@ public class HomeFragment extends Fragment {
             ImageView verseIcon = verseRow.findViewById(R.id.rowIcon);
             verseTv.setText(verseOfDayStr);
             verseTv.setTextSize(15);
-            verseTv.setTypeface(null, android.graphics.Typeface.BOLD);
-            verseIcon.setImageResource(R.drawable.book_bookmark_svgrepo_com);
+            verseTv.setTypeface(null, Typeface.BOLD);
+            int primaryColor = MaterialColors.getColor(verseTv, androidx.appcompat.R.attr.colorPrimary);
+            verseTv.setTextColor(primaryColor);
+            verseIcon.setImageResource(R.drawable.ic_bible);
+            verseIcon.setImageTintList(ColorStateList.valueOf(primaryColor));
 
             // Prominent background
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            GradientDrawable bg = new GradientDrawable();
             bg.setColor(blendColor(Color.parseColor("#2E7D32"), 0.06f));
             bg.setCornerRadii(new float[]{12, 12, 12, 12, 12, 12, 12, 12});
             verseRow.setBackground(bg);
@@ -478,16 +506,6 @@ public class HomeFragment extends Fragment {
             verseRow.setOnClickListener(v ->
                     openHomeSession(GROUP_MOFONAINA, "verse", vRef));
             binding.mofonainaDetailsContainer.addView(verseRow);
-        }
-
-        // Adding Bible Reading 1 (hide if same as verseOfDay)
-        if (data.getBibleReading1() != null) {
-            String reading1 = data.getBibleReading1().toString();
-            if (verseOfDayStr == null || !reading1.equals(verseOfDayStr)) {
-                addPremiumRow(binding.mofonainaDetailsContainer, reading1,
-                        R.drawable.menu_book,
-                        v -> openHomeSession(GROUP_MOFONAINA, "verse", reading1));
-            }
         }
 
         // Adding Song 1
@@ -535,7 +553,7 @@ public class HomeFragment extends Fragment {
             for (History history : shown) {
                 if (displayed++ >= 5) break;
                 // Default values
-                int iconRes = android.R.drawable.ic_menu_recent_history;
+                int iconRes = R.drawable.history;
                 String displayTitle = history.getReading();
                 String historyType = history.getType();
 

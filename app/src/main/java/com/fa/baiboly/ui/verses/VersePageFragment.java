@@ -68,6 +68,10 @@ public class VersePageFragment extends Fragment implements VerseTextRenderer.Cal
 
     private VerseTextRenderer renderer;
 
+    /** Dernière valeur appliquée du réglage "un verset par ligne" :
+     *  permet de re-rendre le texte uniquement quand ce réglage change. */
+    private boolean lastVersePerLine = false;
+
     public static VersePageFragment newInstance(String reading) {
         VersePageFragment fragment = new VersePageFragment();
         Bundle args = new Bundle();
@@ -119,6 +123,8 @@ public class VersePageFragment extends Fragment implements VerseTextRenderer.Cal
                 this);
 
         loadAndDisplayVerses(bibleService, markService);
+
+        lastVersePerLine = VerseTextRenderer.isVersePerLine(requireContext());
 
         applyTextSettings();
 
@@ -373,6 +379,13 @@ public class VersePageFragment extends Fragment implements VerseTextRenderer.Cal
                     isJustified
                             ? LineBreaker.JUSTIFICATION_MODE_INTER_WORD
                             : LineBreaker.JUSTIFICATION_MODE_NONE);
+        }
+
+        // Réglage "un verset par ligne" changé -> reconstruire le texte.
+        boolean versePerLine = VerseTextRenderer.isVersePerLine(requireContext());
+        if (versePerLine != lastVersePerLine) {
+            lastVersePerLine = versePerLine;
+            refreshRendering();
         }
     }
 

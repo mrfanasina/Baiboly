@@ -45,6 +45,18 @@ public class ReadingParser {
             return null;
         }
 
+        // Forme "Lio 2:39b,42,44" : versets discrets d'un même chapitre.
+        // La lettre d'affichage ("b") est propagée pour le titre de page,
+        // mais le contenu reste le verset COMPLET (aucun filtrage par partie).
+        if (ref.discreteVerses != null && !ref.discreteVerses.isEmpty()) {
+            return new Reading(
+                    book,
+                    ref.startChapter,
+                    ref.discreteVerses,
+                    ref.discreteLetters
+            );
+        }
+
         return new Reading(
                 book,
                 ref.startChapter,

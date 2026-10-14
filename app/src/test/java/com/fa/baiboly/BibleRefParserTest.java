@@ -185,6 +185,94 @@ public class BibleRefParserTest {
         assertNull(BibleRefParser.parse("pahataperana 3"));
     }
 
+    @Test
+    public void listeDiscreteAvecLettre() {
+        // "and 39b,42,44" dans le chat IA -> référence "Lio 2:39b,42,44"
+        BibleRefParser.ParsedRef r = BibleRefParser.parse("Lio 2:39b,42,44");
+        assertNotNull(r);
+        assertEquals(42, r.bookNumber);
+        assertEquals(2, r.startChapter);
+        assertNotNull(r.discreteVerses);
+        assertEquals(3, r.discreteVerses.size());
+        assertEquals(39, r.discreteVerses.get(0)[0]);
+        assertEquals(42, r.discreteVerses.get(1)[0]);
+        assertEquals(44, r.discreteVerses.get(2)[0]);
+        // lettre d'affichage sur le 1er item uniquement : "b"
+        assertEquals("b", r.discreteLetters.get(0));
+        assertNull(r.discreteLetters.get(1));
+        assertNull(r.discreteLetters.get(2));
+        // Affichage : la lettre est conservée dans le titre de page
+        assertEquals("Lio 2:39b,42,44", BibleRefParser.format(r));
+    }
+
+    @Test
+    public void listeDiscreteAvecLettreA() {
+        BibleRefParser.ParsedRef r = BibleRefParser.parse("Lio 2:39a,42,44");
+        assertNotNull(r);
+        assertEquals(3, r.discreteVerses.size());
+        assertEquals("a", r.discreteLetters.get(0));
+        assertEquals("Lio 2:39a,42,44", BibleRefParser.format(r));
+    }
+
+    @Test
+    public void formeClassiquePrioritaireSurListe() {
+        // "Heb11,1" = ch. 11, v. 1 (pas de ':') -> PAS une liste discrete
+        BibleRefParser.ParsedRef r = BibleRefParser.parse("Heb11,1");
+        assertNotNull(r);
+        assertNull(r.discreteVerses);
+        assertEquals(11, r.startChapter);
+        assertEquals("Heb 11:1", BibleRefParser.format(r));
+
+        // "Jao 3:16-17" = plage (un seul item sans lettre) -> PAS une liste
+        BibleRefParser.ParsedRef p = BibleRefParser.parse("Jao 3:16-17");
+        assertNotNull(p);
+        assertNull(p.discreteVerses);
+        assertEquals("Jao 3:16-17", BibleRefParser.format(p));
+
+        // "1 Tesaloniana 5:16 - 25" : plage avec espaces -> PAS une liste
+        BibleRefParser.ParsedRef s = BibleRefParser.parse("1 Tesaloniana 5:16 - 25");
+        assertNotNull(s);
+        assertNull(s.discreteVerses);
+        assertEquals(16, s.startVerse);
+        assertEquals(25, s.endVerse);
+    }
+
+    @Test
+    public void andMarkerListeAvecLettreEtVirgules() {
+        java.util.regex.Matcher m = BibleRefParser.AND_MARKER_PATTERN
+                .matcher("... dia (and 39b,42,44).") ;
+        assertTrue(m.find());
+        assertEquals("39b,42,44", m.group(1));
+
+        // Espaces autour des virgules tolérés
+        java.util.regex.Matcher m2 = BibleRefParser.AND_MARKER_PATTERN
+                .matcher("and. 39a, 42, 44");
+        assertTrue(m2.find());
+        assertEquals("39a, 42, 44", m2.group(1));
+
+        // La référence "Lio 2:" + suffixe se parse en liste discrète
+        BibleRefParser.ParsedRef r = BibleRefParser.parse("Lio 2:39b,42,44");
+        assertNotNull(r);
+        assertEquals(3, r.discreteVerses.size());
+
+        // Le mot "and" sans numéro n'est pas une référence
+        java.util.regex.Matcher m3 = BibleRefParser.AND_MARKER_PATTERN
+                .matcher("andininy manontolo");
+        assertFalse(m3.find());
+    }
+
+    @Test
+    public void versetSeulAvecLettre() {
+        // "Jao 3:16b" : lettre d'article -> liste à 1 verset, complet affiché
+        BibleRefParser.ParsedRef r = BibleRefParser.parse("Jao 3:16b");
+        assertNotNull(r);
+        assertNotNull(r.discreteVerses);
+        assertEquals(1, r.discreteVerses.size());
+        assertEquals(16, r.discreteVerses.get(0)[0]);
+        assertEquals("b", r.discreteLetters.get(0));
+        assertEquals("Jao 3:16b", BibleRefParser.format(r));
+    }
+
     // =========================
     // Détection dans texte libre
     // =========================

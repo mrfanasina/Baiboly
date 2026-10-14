@@ -39,20 +39,26 @@
         android:textStyle="bold"
         android:textColor="?attr/colorPrimary" />
 
-    <!-- Aperçu du texte du verset -->
-    <TextView
-        android:id="@+id/textVerseContentSheet"
+    <!-- Aperçu du texte des versets : scrollable si la liste est longue
+         (tous les versets sont affichés, aucune troncature) -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollVerseContentSheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:textSize="16sp"
-        android:lineSpacingExtra="4dp"
-        android:maxLines="6"
-        android:ellipsize="end"
-        android:alpha="0.9"
-        android:visibility="gone"
-        tools:visibility="visible"
-        tools:text="1. Tamin'ny voalohany ny Teny, ary ny Teny tao amin'Andriamanitra, ary Andriamanitra ny Teny." />
+        android:layout_marginBottom="24dp">
+
+        <TextView
+            android:id="@+id/textVerseContentSheet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:lineSpacingExtra="4dp"
+            android:alpha="0.9"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:text="1. Tamin'ny voalohany ny Teny, ary ny Teny tao amin'Andriamanitra, ary Andriamanitra ny Teny." />
+
+    </androidx.core.widget.NestedScrollView>
 
     <LinearLayout
         android:layout_width="match_parent"

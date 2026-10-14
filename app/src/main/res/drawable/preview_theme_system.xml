@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Aperçu du mode "Finday" (suit le système) : moitié moitié claire/sombre. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fond clair -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="8dp"/>
+            <solid android:color="#FFFFFF"/>
+            <stroke android:width="1dp" android:color="#E0E0E0"/>
+        </shape>
+    </item>
+    <!-- Moitié basse sombre -->
+    <item android:top="21dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#1C1B1F"/>
+        </shape>
+    </item>
+</layer-list>

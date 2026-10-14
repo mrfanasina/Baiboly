@@ -227,17 +227,18 @@
                         android:src="@drawable/ina_sy_fihirany_fonony"
                         android:contentDescription="Aina sy Fahasalamana" />
 
-                    <!-- Chevron indicator -->
-                    <ImageView
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                    <TextView
+                        android:id="@+id/ainaDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:layout_gravity="end|top"
-                        android:layout_margin="12dp"
-                        android:src="@drawable/ic_chevron_right"
-                        android:background="@drawable/circle_dark_overlay"
-                        android:padding="4dp"
-                        app:tint="@color/white"
-                        android:contentDescription="Jereo" />
+                        android:text="24/10/2026"
+                        android:padding="6dp"
+                        android:layout_margin="8dp"
+                        android:textColor="@color/blue"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 

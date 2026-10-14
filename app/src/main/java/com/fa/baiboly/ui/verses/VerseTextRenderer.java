@@ -53,6 +53,16 @@ public final class VerseTextRenderer {
             "yellow", "green", "blue", "pink"
     };
 
+    /** Préférence "un verset par ligne" : true = chaque verset commence
+     *  sur une nouvelle ligne, false = texte courant (comportement initial). */
+    public static final String KEY_VERSE_PER_LINE = "verse_per_line";
+
+    /** Lit la préférence "verset à la ligne" (false par défaut). */
+    public static boolean isVersePerLine(@NonNull Context context) {
+        return context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+                .getBoolean(KEY_VERSE_PER_LINE, false);
+    }
+
     /** Callbacks du renderer, fournis par l'écran hôte. */
     public interface Callbacks {
 
@@ -184,7 +194,14 @@ public final class VerseTextRenderer {
                         startTitle, endTitle,
                         Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
-
+            // =====================================================
+            // TEXTE DU VERSET
+            // =====================================================
+            // Option "un verset par ligne" : saut de ligne AVANT chaque
+            // verset (pas avant le premier de la page).
+            if (isVersePerLine(context) && i > 0) {
+                builder.append("\n");
+            }
             // =====================================================
             // NUMÉRO DE VERSET
             // =====================================================
@@ -203,9 +220,8 @@ public final class VerseTextRenderer {
             builder.setSpan(new SuperscriptSpan(),
                     startNum, endNum, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 
-            // =====================================================
-            // TEXTE DU VERSET
-            // =====================================================
+
+
             String rawText = v.getText()
                     .replace("\n", " ")
                     .replace("\r", "")

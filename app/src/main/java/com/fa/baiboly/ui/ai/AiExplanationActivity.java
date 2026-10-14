@@ -9,6 +9,7 @@ import android.view.MenuItem;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -26,9 +27,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.ai.BibleExplanationService;
+import com.fa.baiboly.data.ai.ChatHistoryDbHelper;
 import com.fa.baiboly.ui.settings.AiSettingsActivity;
 import com.fa.baiboly.data.parser.BibleRefParser;
 import com.fa.baiboly.models.ChatMessage;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class AiExplanationActivity extends AppCompatActivity {
 
@@ -53,6 +58,32 @@ public class AiExplanationActivity extends AppCompatActivity {
 
     private boolean isUserAtBottom = true;
 
+    // Démarrage explicite (verset / question) : empêche la restauration
+    // d'historique de se déclencher et sert de contexte toute la vie de l'écran.
+    @Nullable private String reference;
+    @Nullable private String prefillQuestion;
+
+    // =====================================================
+    // HISTORIQUE + LIMITE DE CONTINUATION
+    // =====================================================
+
+    /** Persistance des discussions (SQLite ai_chat.db). */
+    private ChatHistoryDbHelper chatHistory;
+
+    /** Tiroir d'historique (burger à droite). */
+    private androidx.drawerlayout.widget.DrawerLayout drawerHistory;
+
+    private HistoryDrawerAdapter historyDrawerAdapter;
+
+    /** Conversation en cours (-1 = aucune, sera créée au 1er échange). */
+    private long currentConversationId = -1;
+
+    /** Limite d'échanges user/IA par conversation. */
+    public static final int MAX_EXCHANGES_PER_CHAT = 10;
+
+    /** Compteur d'échanges (paire user+IA) dans la conversation en cours. */
+    private int exchangeCount = 0;
+
     public static void start(Context context, String reference, String verseText) {
         Intent intent = new Intent(context, AiExplanationActivity.class);
         intent.putExtra(EXTRA_REFERENCE, reference);
@@ -69,9 +100,14 @@ public class AiExplanationActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        String reference = getIntent().getStringExtra(EXTRA_REFERENCE);
+        // Champs (et non variables locales) : la restauration d'historique
+        // doit savoir si l'écran a été ouvert avec un démarrage explicite.
+        this.reference = getIntent().getStringExtra(EXTRA_REFERENCE);
+        this.prefillQuestion = getIntent().getStringExtra(EXTRA_PREFILL_QUESTION);
         String verseText = getIntent().getStringExtra(EXTRA_VERSE_TEXT);
-        String prefillQuestion = getIntent().getStringExtra(EXTRA_PREFILL_QUESTION);
+
+        // Toolbar : retour (←) à gauche, burger (☰) à droite (menu item).
+        // Le burger ouvre le tiroir d'historique.
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle("Fanazavana AI");
@@ -84,6 +120,8 @@ public class AiExplanationActivity extends AppCompatActivity {
         btnSend = findViewById(R.id.btnSend);
         tvDisclaimer = findViewById(R.id.tvDisclaimer);
         chipNewMessage = findViewById(R.id.chipNewMessage);
+
+        setupHistoryDrawer();
 
         // Livre/chapitre de contexte pour résoudre "and" / "andininy" dans
         // les messages du chat — extraits de la référence de départ, si
@@ -109,19 +147,35 @@ public class AiExplanationActivity extends AppCompatActivity {
 
         explanationService = new BibleExplanationService(this);
 
+        chatHistory = new ChatHistoryDbHelper(this);
+
         setupSendButton();
+
+        // Restaurer la conversation la plus récente (historique persistant) :
+        // elle continue là où elle s'était arrêtée.
+        restoreLatestConversationIfNeeded();
 
         if (reference != null && verseText != null && !verseText.trim().isEmpty()) {
             demarrerAvecReference(reference, verseText);
         } else if (prefillQuestion != null && !prefillQuestion.trim().isEmpty()) {
             // Start a fresh chat session then send the prefill question
-            explanationService.demarrerAvecQuestion(prefillQuestion.trim(),
+            final String question = prefillQuestion.trim();
+            explanationService.demarrerAvecQuestion(question,
                     new BibleExplanationService.OnExplanationListener() {
                         @Override
                         public void onSuccess(String text) {
                             runOnUiThread(() -> {
                                 adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI, text));
-                                setInputEnabled(true);
+
+                                // Historique : le démarrage pré-rempli est un échange à part entière
+                                exchangeCount++;
+                                persistExchange(question, text);
+                                refreshHistoryDrawer();
+                                if (!canContinueConversation()) {
+                                    showConversationLimitReached();
+                                } else {
+                                    setInputEnabled(true);
+                                }
                                 onNewAiMessageAdded();
                             });
                         }
@@ -153,7 +207,181 @@ public class AiExplanationActivity extends AppCompatActivity {
     }
 
     // =====================================================
-    // MENU : bouton paramètres IA
+    // HISTORIQUE : restauration + sauvegarde
+    // =====================================================
+
+    /**
+     * Rouvre la conversation la plus récente (messages + compteur).
+     * Appelé à l'ouverture SI aucun verset/question n'a été passé :
+     * un écran ouvert délibérément avec une référence démarre une
+     * conversation NEUVE sur ce verset.
+     */
+    private void restoreLatestConversationIfNeeded() {
+
+        if (reference != null || prefillQuestion != null) {
+            return; // démarrage explicite -> conversation neuve
+        }
+
+        long latest = chatHistory.getLatestConversationId();
+        if (latest < 0) return;
+
+        List<ChatHistoryDbHelper.StoredMessage> stored =
+                chatHistory.getMessages(latest);
+        if (stored.isEmpty()) return;
+
+        currentConversationId = latest;
+
+        int userMsgs = 0;
+        java.util.List<String[]> pairs = new ArrayList<>();
+
+        String pendingUser = null;
+
+        for (ChatHistoryDbHelper.StoredMessage m : stored) {
+            if (m.type == ChatMessage.TYPE_USER) {
+                userMsgs++;
+                pendingUser = m.text;
+            } else if (m.type == ChatMessage.TYPE_AI) {
+                pairs.add(new String[]{
+                        pendingUser != null ? pendingUser : "",
+                        m.text});
+                pendingUser = null;
+            }
+
+            adapter.addMessage(new ChatMessage(
+                    m.type == 0 ? ChatMessage.TYPE_USER : ChatMessage.TYPE_AI,
+                    m.text));
+        }
+
+        // Le nombre d'échanges persisté re-conditionne la limite.
+        exchangeCount = userMsgs;
+
+        // Réinjecte l'historique dans la session SDK (mémoire du modèle).
+        explanationService.reprendreConversation(pairs,
+                new BibleExplanationService.OnExplanationListener() {
+                    @Override
+                    public void onSuccess(String text) {
+                        // contexte absorbé
+                    }
+
+                    @Override
+                    public void onError(String errorLog) {
+                        // sans mémoire, la conversation repart à zéro côté
+                        // modèle mais la vue reste utilisable
+                    }
+                });
+
+        recyclerChat.post(() ->
+                recyclerChat.scrollToPosition(adapter.getItemCount() - 1));
+    }
+
+    /**
+     * Persiste un échange complet (question + réponse) une fois les deux
+     * disponibles. Appelé unique au onSuccess de l'IA.
+     */
+    private void persistExchange(String userQuestion, String aiAnswer) {
+
+        if (chatHistory == null) return;
+
+        try {
+            // Titre : référence biblique si la question en contient une
+            // ("Jao 3:16", "Sal 96:7-10"...), sinon le début de la question,
+            // nettoyé (majuscule + coupe au premier saut de ligne).
+            String titre = buildConversationTitle(userQuestion);
+
+            currentConversationId = chatHistory.appendExchange(
+                    currentConversationId,
+                    userQuestion,
+                    aiAnswer,
+                    titre);
+        } catch (Exception e) {
+            // L'historique ne doit jamais casser le chat
+        }
+    }
+
+    /**
+     * Titre pertinent de conversation : priorité à la référence biblique
+     * détectée (via BibleRefParser — zéro faux positif), sinon la question
+     * recadrée. Fallback neutre si la question est vide/illisible.
+     */
+    private String buildConversationTitle(String userQuestion) {
+
+        if (userQuestion == null) return "Resaka";
+
+        String q = userQuestion.trim();
+
+        // Le bouton "Hazavao" affiche "Hazavao Jao 3:16" -> titre = référence seule.
+        if (q.startsWith("Hazavao ") && q.length() <= 60) {
+            q = q.substring("Hazavao ".length()).trim();
+        }
+
+        // 1) Référence biblique complète dans la question ?
+        List<BibleRefParser.DetectedRef> refs =
+                BibleRefParser.detectReferences(q);
+        if (!refs.isEmpty()) {
+            return refs.get(0).reference;
+        }
+
+        // 2) Question lisible : première phrase, recadrée.
+        q = q.replaceFirst("^Hazavao\\s+", "")
+                .replaceFirst("^[\"«]", "")
+                .trim();
+        int cut = Math.min(q.length(), 45);
+        q = q.substring(0, cut);
+        int pointCut = q.indexOf("\n");
+        if (pointCut > 5) q = q.substring(0, pointCut);
+
+        if (q.length() > 0) {
+            q = Character.toUpperCase(q.charAt(0)) + q.substring(1);
+            return q + (userQuestion.length() > 45 ? "…" : "");
+        }
+
+        return "Resaka";
+    }
+
+    /**
+     * Crée une nouvelle conversation : vide la vue, reset le compteur,
+     * repart d'une session IA neuve.
+     */
+    private void startNewConversation() {
+
+        currentConversationId = -1;
+        exchangeCount = 0;
+
+        adapter.clearMessages();
+
+        explanationService = new BibleExplanationService(this);
+
+        afficherMessageBienvenue();
+        setInputEnabled(true);
+    }
+
+    // =====================================================
+    // LIMITE DE CONTINUATION
+    // =====================================================
+
+    /** true si l'utilisateur peut encore poser une question de suivi. */
+    private boolean canContinueConversation() {
+        return exchangeCount < MAX_EXCHANGES_PER_CHAT;
+    }
+
+    /**
+     * Affiche le message de fin de conversation (limite atteinte) :
+     * bulle IA + saisie désactivée + menu "Resaka vaovao".
+     */
+    private void showConversationLimitReached() {
+
+        adapter.removeLoadingIfPresent();
+        adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI,
+                "⛔ Voafetra ny fifanakalozan-draharaha (" + MAX_EXCHANGES_PER_CHAT
+                        + " fanontaniana farafahabetsahana). Sokafy ny resaka vaovao"
+                        + " mba hanohizana."));
+        onNewAiMessageAdded();
+        setInputEnabled(false);
+        etMessage.setHint("Voafetra ny fifanakalozana — sokafy vaovao");
+    }
+
+    // =====================================================
+    // MENU : historique + nouvelle discussion + paramètres IA
     // =====================================================
 
     @Override
@@ -164,11 +392,161 @@ public class AiExplanationActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_ai_settings) {
-            startActivity(new Intent(this, AiSettingsActivity.class));
+
+        if (item.getItemId() == R.id.action_ai_open_drawer) {
+            // Burger (☰) à droite : ouvre le tiroir d'historique.
+            drawerHistory.openDrawer(androidx.core.view.GravityCompat.END);
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed() {
+
+        // Tiroir ouvert -> le back le ferme au lieu de quitter l'écran.
+        if (drawerHistory != null
+                && drawerHistory.isDrawerOpen(androidx.core.view.GravityCompat.END)) {
+            drawerHistory.closeDrawer(androidx.core.view.GravityCompat.END);
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    // =====================================================
+    // HISTORIQUE : tiroir de droite (burger)
+    // =====================================================
+
+    /**
+     * Branche le tiroir : liste des conversations (tap = rouvrir,
+     * poubelle = supprimer), bouton "+ Resaka vaovao" et réglages IA.
+     */
+    private void setupHistoryDrawer() {
+
+        drawerHistory = findViewById(R.id.drawerHistory);
+
+        View drawerContent = findViewById(R.id.historyDrawerContent);
+
+        android.view.ViewParent parent = drawerContent != null
+                ? drawerContent.getParent() : null;
+
+        // NB : <include> est dans le NavigationView -> les ids sont
+        // trouvés directement par findViewById depuis l'activity (pas de
+        // besoin de drawerContent.findViewById, mais on garde les deux
+        // pour la robustesse).
+        androidx.recyclerview.widget.RecyclerView recyclerHistory =
+                findViewById(R.id.recyclerHistoryDrawer);
+        if (recyclerHistory == null && drawerContent != null) {
+            recyclerHistory = drawerContent.findViewById(R.id.recyclerHistoryDrawer);
+        }
+
+        View btnNewChat = findViewById(R.id.btnDrawerNewChat);
+        if (btnNewChat == null && drawerContent != null) {
+            btnNewChat = drawerContent.findViewById(R.id.btnDrawerNewChat);
+        }
+
+        View btnSettings = findViewById(R.id.btnDrawerSettings);
+        if (btnSettings == null && drawerContent != null) {
+            btnSettings = drawerContent.findViewById(R.id.btnDrawerSettings);
+        }
+
+        historyDrawerAdapter = new HistoryDrawerAdapter(
+                conversationId -> {
+                    // Tap = rouvrir + fermer le tiroir
+                    drawerHistory.closeDrawer(androidx.core.view.GravityCompat.END);
+                    openConversation(conversationId);
+                },
+                entry -> new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                        .setTitle("Fafao io resaka io?")
+                        .setMessage(entry.title)
+                        .setPositiveButton("Fafao", (d, w) -> {
+                            chatHistory.deleteConversation(entry.id);
+                            refreshHistoryDrawer();
+                            // Si on supprimait la conversation affichée,
+                            // on repart sur une discussion neuve.
+                            if (entry.id == currentConversationId) {
+                                startNewConversation();
+                            }
+                        })
+                        .setNegativeButton("TSIA", null)
+                        .show()
+        );
+
+        if (recyclerHistory != null) {
+            recyclerHistory.setLayoutManager(
+                    new androidx.recyclerview.widget.LinearLayoutManager(this));
+            recyclerHistory.setAdapter(historyDrawerAdapter);
+        }
+
+        if (btnNewChat != null) {
+            btnNewChat.setOnClickListener(v -> {
+                drawerHistory.closeDrawer(androidx.core.view.GravityCompat.END);
+                startNewConversation();
+            });
+        }
+
+        if (btnSettings != null) {
+            btnSettings.setOnClickListener(v -> {
+                drawerHistory.closeDrawer(androidx.core.view.GravityCompat.END);
+                startActivity(new Intent(this, AiSettingsActivity.class));
+            });
+        }
+
+        refreshHistoryDrawer();
+    }
+
+    /** Recharge la liste du tiroir depuis la base. */
+    private void refreshHistoryDrawer() {
+        if (historyDrawerAdapter != null && chatHistory != null) {
+            historyDrawerAdapter.submit(chatHistory.listConversations());
+        }
+    }
+    private void openConversation(long conversationId) {
+
+        List<ChatHistoryDbHelper.StoredMessage> stored =
+                chatHistory.getMessages(conversationId);
+        if (stored.isEmpty()) return;
+
+        adapter.clearMessages();
+        currentConversationId = conversationId;
+
+        int userMsgs = 0;
+        java.util.List<String[]> pairs = new ArrayList<>();
+        String pendingUser = null;
+
+        for (ChatHistoryDbHelper.StoredMessage m : stored) {
+            if (m.type == ChatMessage.TYPE_USER) {
+                userMsgs++;
+                pendingUser = m.text;
+            } else if (m.type == ChatMessage.TYPE_AI) {
+                pairs.add(new String[]{
+                        pendingUser != null ? pendingUser : "",
+                        m.text});
+                pendingUser = null;
+            }
+            adapter.addMessage(new ChatMessage(
+                    m.type == 0 ? ChatMessage.TYPE_USER : ChatMessage.TYPE_AI,
+                    m.text));
+        }
+
+        exchangeCount = userMsgs;
+
+        explanationService = new BibleExplanationService(this);
+        explanationService.reprendreConversation(pairs,
+                new BibleExplanationService.OnExplanationListener() {
+                    @Override
+                    public void onSuccess(String text) { /* contexte absorbé */ }
+                    @Override
+                    public void onError(String errorLog) { /* toléré */ }
+                });
+
+        recyclerChat.post(() ->
+                recyclerChat.scrollToPosition(adapter.getItemCount() - 1));
+
+        if (!canContinueConversation()) {
+            setInputEnabled(false);
+            etMessage.setHint("Voafetra ny fifanakalozana — sokafy vaovao");
+        }
     }
 
     // =====================================================
@@ -266,6 +644,8 @@ public class AiExplanationActivity extends AppCompatActivity {
 
         setInputEnabled(false);
 
+        final String shownRef = reference;
+
         explanationService.demarrerConversation(reference, verseText,
                 new BibleExplanationService.OnExplanationListener() {
 
@@ -274,7 +654,16 @@ public class AiExplanationActivity extends AppCompatActivity {
                         runOnUiThread(() -> {
                             adapter.removeLoadingIfPresent();
                             adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI, text));
-                            setInputEnabled(true);
+
+                            // Historique : le 1er échange de la conversation
+                            exchangeCount++;
+                            persistExchange(shownRef, text);
+                            refreshHistoryDrawer();
+                            if (!canContinueConversation()) {
+                                showConversationLimitReached();
+                            } else {
+                                setInputEnabled(true);
+                            }
                             onNewAiMessageAdded();
                         });
                     }
@@ -354,11 +743,21 @@ public class AiExplanationActivity extends AppCompatActivity {
 
     private void envoyerMessageUtilisateur(String message) {
 
+        // LIMITE DE CONTINUATION : au-delà de MAX_EXCHANGES_PER_CHAT échanges
+        // dans la conversation en cours, on stoppe et on propose une
+        // nouvelle discussion.
+        if (!canContinueConversation()) {
+            showConversationLimitReached();
+            return;
+        }
+
         adapter.addMessage(new ChatMessage(ChatMessage.TYPE_USER, message));
         adapter.addMessage(new ChatMessage(ChatMessage.TYPE_LOADING, ""));
         scrollToBottomForced();
 
         setInputEnabled(false);
+
+        final String question = message;
 
         explanationService.continuerConversation(message,
                 new BibleExplanationService.OnExplanationListener() {
@@ -368,7 +767,17 @@ public class AiExplanationActivity extends AppCompatActivity {
                         runOnUiThread(() -> {
                             adapter.removeLoadingIfPresent();
                             adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI, text));
-                            setInputEnabled(true);
+
+                            // Historique : sauvegarde de l'échange complet
+                            exchangeCount++;
+                            persistExchange(question, text);
+                            refreshHistoryDrawer();
+
+                            if (canContinueConversation()) {
+                                setInputEnabled(true);
+                            } else {
+                                showConversationLimitReached();
+                            }
                             onNewAiMessageAdded();
                         });
                     }

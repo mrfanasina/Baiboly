@@ -199,6 +199,17 @@ public final class BibleRefParser {
         /** true si au moins un nombre (chapitre/verset) a été trouvé. */
         public boolean hasNumbers;
 
+        /**
+         * Forme "Lio 2:39,42,44" : versets d'un même chapitre listés
+         * discrètement, dans le bruit de la notation "and 39b,42" (le
+         * 'b' indique une 2e partie du verset, ignorée pour la lecture
+         * mais conservée purement pour l'affichage).
+         */
+        public List<int[]> discreteVerses;
+
+        /** Lettres d'affichage associées à discreteVerses ("b", "a"... ou null). */
+        public List<String> discreteLetters;
+
         public boolean isFullChapter() {
             return startVerse <= 1 && endVerse >= 999;
         }
@@ -236,6 +247,13 @@ public final class BibleRefParser {
         if (input == null) return null;
         String s = input.trim();
         if (s.isEmpty()) return null;
+
+        // Forme "Lio 2:39b,42,44" (liste de versets discrets) : testée sur
+        // la chaîne brute, car la normalisation ',' -> '.' qui suit
+        // détruirait la distinction "liste" / "chapitre.verset"
+        // ("Heb11,1" = ch. 11, v. 1 doit rester prioritaire).
+        ParsedRef discrete = tryParseDiscreteList(s);
+        if (discrete != null) return discrete;
 
         // Normalisation : tirets unicode -> '-', virgule -> point (séparateur
         // chapitre:verset), puis détachement des nombres collés au livre.
@@ -351,7 +369,109 @@ public final class BibleRefParser {
             ref.endChapter = Integer.parseInt(m.group(3));
         }
         return ref;
+    }    // =====================================================
+    // MARQUEUR "and" / "andininy" (lecture du jour)
+    // =====================================================
+
+    // Marqueur "and" / "andininy" — numéro OBLIGATOIRE. Captures étendues :
+    //   - suffixe de partie : "and 39b", "and 39a" (lettre d'article,
+    //     purement décorative — le verset COMPLET est affiché)
+    //   - listes séparées par des virgules : "and 39b,42,44" (espaces
+    //     autour des virgules tolérés)
+    //   - plages : "and 12-13", "and:12"
+    // NB : pas de \b APRÈS "and" — pas de frontière de mot entre "d" et un
+    // chiffre ("and12" ne matcherait jamais sinon). [ \t]* et non \s* :
+    // jamais de saut de ligne, pour ne pas "traverser" un paragraphe.
+    // Groupe 1 = suffixe de versets ("39b,42,44").
+    // Pattern UNIQUE partagé par ChatAdapter et MofonainaActivity.
+    public static final Pattern AND_MARKER_PATTERN = Pattern.compile(
+            "\\b(?:andininy|and)[ \\t]*[.:]?[ \\t]*"
+                    + "(\\d+(?:[ \\t]?-[ \\t]?\\d+)?[a-zA-Z]?"
+                    + "(?:[ \\t]*,[ \\t]*\\d+(?:[ \\t]?-[ \\t]?\\d+)?[a-zA-Z]?)*)"
+    );
+
+    // =====================================================
+    // LISTE DE VERSETS DISCRETS : "Lio 2:39b,42,44"
+    // =====================================================
+
+    /** Un item de liste : numéro + lettre optionnelle (+ plage via rangeEnd). */
+    private static final Pattern DISCRETE_ITEM =
+            Pattern.compile("(\\d+)([a-zA-Z])?"
+                    + "(?:\\s*-\\s*(\\d+)(?:[a-zA-Z])?)?");
+
+    /**
+     * Détecte la forme "Lio 2:39b,42,44" sur la chaîne BRUTE (les
+     * virgules ne sont PAS encore normalisées).
+     */
+    public static ParsedRef tryParseDiscreteList(String s) {
+
+        int colon = s.indexOf(':');
+        if (colon < 0) return null;
+
+        Matcher chap = CHAPTER_BEFORE_COLON.matcher(s.substring(0, colon).trim());
+        if (!chap.matches()) return null;
+
+        String listPart = s.substring(colon + 1).trim();
+        if (!isListBody(listPart)) return null;
+
+        Integer bookNumber = resolveBookText(null, chap.group(1));
+        if (bookNumber == null) return null;
+
+        ParsedRef ref = new ParsedRef();
+        ref.bookNumber = bookNumber;
+        ref.bookName = chap.group(1).trim();
+        ref.hasNumbers = true;
+        ref.discreteVerses = new ArrayList<>();
+        ref.discreteLetters = new ArrayList<>();
+
+        for (String raw : listPart.split(",")) {
+            Matcher item = DISCRETE_ITEM.matcher(raw.trim());
+            if (!item.matches()) return null;
+
+            int n1 = Integer.parseInt(item.group(1));
+            String letter = item.group(2);
+            int n2 = (item.group(3) != null)
+                    ? Integer.parseInt(item.group(3)) : n1;
+            if (n2 < n1) { int t = n1; n1 = n2; n2 = t; }
+
+            for (int n = n1; n <= n2; n++) {
+                // La lettre d'article n'habille que le premier verset de
+                // l'item (les versets expansés d'une plage restent nus).
+                ref.discreteVerses.add(new int[]{n});
+                ref.discreteLetters.add(n == n1 ? letter : null);
+            }
+        }
+
+        if (ref.discreteVerses.isEmpty()) return null;
+
+        ref.startChapter = Integer.parseInt(chap.group(2));
+        ref.endChapter = ref.startChapter;
+        // Bornes dérivées de la liste (repli affichage classique).
+        ref.startVerse = ref.discreteVerses.get(0)[0];
+        ref.endVerse = ref.discreteVerses.get(ref.discreteVerses.size() - 1)[0];
+        return ref;
     }
+
+    /** Chapter + ':' + liste (items n, nb, n-nb...) matché en entier. */
+    private static boolean isListBody(String listPart) {
+        if (listPart == null || listPart.isEmpty()) return false;
+
+        boolean hasComma = listPart.indexOf(',') >= 0;
+
+        // Un item seul n'est accepté que si une lettre d'article est
+        // présente ("39b") : les formes classiques "3:16-17" (plage) et
+        // "3:16" (verset simple) gardent sinon préséance via TAIL_PATTERN.
+        if (!hasComma && !listPart.matches(".*\\d[a-zA-Z].*")) return false;
+
+        for (String item : listPart.split(",")) {
+            if (!DISCRETE_ITEM.matcher(item.trim()).matches()) return false;
+        }
+        return true;
+    }
+
+    /** Livre (éventuel préfixe 1-3) + chapitre entier juste avant le ':'. */
+    private static final Pattern CHAPTER_BEFORE_COLON =
+            Pattern.compile("^(.*?)(\\d+)\\s*$");
 
     /**
      * Référence normalisée affichable : "Heb 11:1", "Jao 3:16-17",
@@ -371,10 +491,25 @@ public final class BibleRefParser {
         } else {
             sb.append(':').append(ref.startVerse);
             if (ref.endChapter != ref.startChapter) {
-                sb.append('-').append(ref.endChapter).append(':')
-                        .append(ref.endVerse);
+                    sb.append('-').append(ref.endChapter).append(':')
+                            .append(ref.endVerse);
             } else if (ref.endVerse != ref.startVerse) {
                 sb.append('-').append(ref.endVerse);
+            }
+        }
+        // Forme liste explicite : remplace la fin standard
+        // ("Lio 2:39b,42,44" — lettres conservées pour l'affichage).
+        if (ref.discreteVerses != null && !ref.discreteVerses.isEmpty()) {
+            sb = new StringBuilder(shortNameOf(ref.bookNumber))
+                    .append(' ')
+                    .append(ref.startChapter)
+                    .append(':');
+            for (int i = 0; i < ref.discreteVerses.size(); i++) {
+                int[] pair = ref.discreteVerses.get(i);
+                String letter = ref.discreteLetters.get(i);
+                if (i > 0) sb.append(',');
+                sb.append(pair[0]);
+                if (letter != null) sb.append(letter);
             }
         }
         return sb.toString();
