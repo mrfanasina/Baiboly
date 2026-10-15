@@ -299,6 +299,19 @@ public class MofonainaActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
+        // Downloads (écran voasintona / data serveur)
+        if (item.getItemId() == R.id.downloads) {
+            com.fa.baiboly.ui.download.DownloadCenterActivity.open(this);
+            return true;
+        }
+
+        // Transfert WiFi (send/receive, QR)
+        if (item.getItemId() == R.id.transfer) {
+            startActivity(new android.content.Intent(
+                    this, com.fa.baiboly.ui.transfer.TransferActivity.class));
+            return true;
+        }
+
         if (item.getItemId() == R.id.action_settings) {
 
             openSettings();

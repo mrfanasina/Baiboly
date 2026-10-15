@@ -112,6 +112,19 @@ public class AinaOfDayActivity extends AppCompatActivity {
             openSettings();
             return true;
         }
+
+        // Downloads (écran voasintona / data serveur)
+        if (item.getItemId() == R.id.downloads) {
+            com.fa.baiboly.ui.download.DownloadCenterActivity.open(this);
+            return true;
+        }
+
+        // Transfert WiFi (send/receive, QR)
+        if (item.getItemId() == R.id.transfer) {
+            startActivity(new android.content.Intent(
+                    this, com.fa.baiboly.ui.transfer.TransferActivity.class));
+            return true;
+        }
         if (item.getItemId() == R.id.chat) {
             com.fa.baiboly.ui.ai.AiExplanationActivity.startWithQuestion(this, "");
             return true;

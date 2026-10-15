@@ -80,4 +80,9 @@ dependencies {
     implementation("io.noties.markwon:ext-tables:4.6.2")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
+    // Transfert WiFi local : serveur HTTP embarqué + QR code
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
+    implementation("com.google.zxing:core:3.4.1")
+    implementation("com.journeyapps:zxing-android-embedded:3.6.0")
+
 }

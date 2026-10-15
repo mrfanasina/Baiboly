@@ -3,6 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.fa.baiboly.MainActivity">
     <item
+        android:id="@+id/transfer"
+        android:orderInCategory="60"
+        android:title="Transferto (WiFi)"
+        android:icon="@drawable/ic_download"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/downloads"
+        android:orderInCategory="50"
+        android:title="Downloads"
+        android:icon="@drawable/ic_download"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_settings"
         android:orderInCategory="100"
         android:title="Fikirakirana"

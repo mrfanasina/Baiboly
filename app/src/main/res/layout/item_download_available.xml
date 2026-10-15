@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ligne "Misy hisintona" : élément téléchargeable du serveur -->
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="5dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/card_stroke"
+    android:foreground="?attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp"
+        android:paddingVertical="12dp">
+
+        <!-- Pastille iconée -->
+        <FrameLayout
+            android:layout_width="46dp"
+            android:layout_height="46dp">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_download_chip"
+                android:alpha="0.18" />
+
+            <ImageView
+                android:id="@+id/itemIcon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_gravity="center"
+                app:tint="?attr/colorPrimary" />
+        </FrameLayout>
+
+        <!-- Titre + sous-titre -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <TextView
+                android:id="@+id/textTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/textSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Bouton téléchargement -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDownload"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginStart="10dp"
+            android:minWidth="0dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Sintomina"
+            android:textSize="13sp"
+            app:icon="@drawable/ic_download"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconSize="16dp"
+            app:cornerRadius="20dp" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

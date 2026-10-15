@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 🎨 Écran Transfera : envoi (hotspot + QR, sélection libre en session) et réception.
+     Les listes défilent DANS leur propre zone (recyclage) : fluide même avec des centaines d'items. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bgColor">
+
+    <!-- TOOLBAR -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        app:elevation="0dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_back">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Transfera WiFi"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_gravity="center_vertical" />
+        </androidx.appcompat.widget.Toolbar>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Choix du mode -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModeSend"
+            style="@style/Widget.App.Button.SettingsToggle"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="46dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Alefa"
+            android:textSize="14sp"
+            app:cornerRadius="14dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnModeReceive"
+            style="@style/Widget.App.Button.SettingsToggle"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="46dp"
+            android:layout_marginStart="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Andray"
+            android:textSize="14sp"
+            app:cornerRadius="14dp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="18dp"
+        android:layout_marginTop="8dp"
+        android:textSize="12sp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:gravity="center" />
+
+    <!-- ======================================================== -->
+    <!-- 🧩 CORPS : un seul panel visible, il remplit l'écran -->
+    <!-- ======================================================== -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- ✈️ MODE ALEFA -->
+        <LinearLayout
+            android:id="@+id/sendPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- 🔴 Session active : QR + arrêt (visible après démarrage) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/qrCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="10dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/card_stroke"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="12dp">
+
+                    <ImageView
+                        android:id="@+id/qrImage"
+                        android:layout_width="190dp"
+                        android:layout_height="190dp" />
+
+                    <TextView
+                        android:id="@+id/textServerInfo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnToggleQr"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="Afeno ny QR"
+                            android:textSize="12sp"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStopServer"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="10dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="Ajanona ny fampifandraisana"
+                            android:textSize="12sp"
+                            app:cornerRadius="14dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 🚀 Démarrer la session (avant même de choisir) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnShowQr"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="10dp"
+                android:text="Hanomboka fampifandraisana (hotspot + QR)"
+                app:icon="@drawable/ic_download"
+                app:cornerRadius="16dp" />
+
+            <!-- ⚙️ Réglages du réseau de transfert (compact) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/apOptionsCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/card_stroke">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="8dp">
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchOpen"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Misokatra (tsy misy teny miafina)"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipBand"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipBand24"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="2,4"
+                            android:textSize="11sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipBand5"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="5"
+                            android:textSize="11sp" />
+                    </com.google.android.material.chip.ChipGroup>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="GHz"
+                        android:textSize="11sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 🔎 Recherche + 🗂️ catégories (zone filtre, hauteur fixe) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp">
+
+                <EditText
+                    android:id="@+id/editSearch"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="42dp"
+                    android:background="@drawable/bg_search_input"
+                    android:hint="Hikaroka: anarana na laharana…"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:paddingHorizontal="12dp"
+                    android:textSize="13sp" />
+
+                <HorizontalScrollView
+                    android:id="@+id/scrollCats"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipCats"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true"
+                        app:chipSpacingHorizontal="6dp" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
+            <!-- Sélection rapide -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/textSelectCount"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="0 voasafidy"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSelectAll"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="Safidio rehetra"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClearAll"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="Tsy misy"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- 📜 La liste scrolle DANS sa zone : recyclage réel -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerSend"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="4dp"
+                android:clipToPadding="false"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:id="@+id/textSendEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="Tsy misy azo alefa voahita"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 📲 MODE ANDRAY -->
+        <LinearLayout
+            android:id="@+id/receivePanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="10dp"
+                android:text="Ny namana mandefa hita ao amin'ny tambajotra : tsindrio mba hifandray"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="10dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnJoinWifi"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="44dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Fikirana WiFi"
+                    android:textSize="13sp"
+                    app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRefreshSenders"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="10dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Fitadiavana indray"
+                    android:textSize="13sp"
+                    app:cornerRadius="14dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textSendersTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="12dp"
+                android:text="🔍 Mpandefa hita"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerSenders"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:nestedScrollingEnabled="false" />
+
+            <TextView
+                android:id="@+id/textSendersEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="4dp"
+                android:text="Tsy misy mpandefa hita : scan-eo ny QR."
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progressSenders"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="8dp"
+                android:indeterminate="true"
+                app:trackCornerRadius="4dp"
+                android:visibility="gone" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="10dp"
+                android:background="@color/card_stroke" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="Na scan-eo ny QR-n'ilay namana"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnScan"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Scan QR"
+                    android:textSize="13sp"
+                    app:icon="@drawable/ic_search"
+                    app:cornerRadius="14dp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textReceiveState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="8dp"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <!-- 📜 La liste reçue scrolle DANS sa zone -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerReceive"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="4dp"
+                android:clipToPadding="false"
+                android:paddingBottom="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDownloadSelected"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="10dp"
+                android:text="Haka ny voasafidy"
+                app:cornerRadius="16dp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>

@@ -138,6 +138,27 @@ public class PlaybackStore extends SQLiteOpenHelper {
         return all.isEmpty() ? null : all.get(0);
     }
 
+    /**
+     * Tous les playbacks de toutes les catégories (transfert WiFi :
+     * liste de ce qui peut être envoyé à un autre téléphone).
+     */
+    public List<Playback> getAllPlaybacks() {
+        List<Playback> list = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor c = db.rawQuery(
+                "SELECT id, category, number, title, file_path, source, created_at, "
+                        + "label, doc_uri FROM " + TABLE
+                        + " ORDER BY category ASC, number ASC, created_at DESC",
+                null);
+        if (c.moveToFirst()) {
+            do {
+                list.add(read(c));
+            } while (c.moveToNext());
+        }
+        c.close();
+        return list;
+    }
+
     // =========================
     // ÉCRITURE
     // =========================
