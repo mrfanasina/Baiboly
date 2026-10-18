@@ -95,11 +95,35 @@ public final class TransferClient {
     // =========================================================
     // ⬇️ TÉLÉCHARGEMENT D'UN ITEM
     // =========================================================
+
+    /** Téléchargement annulé par l'utilisateur (file d'attente). */
+    public static class CancelledException extends Exception {
+        public CancelledException() {
+            super("Annulé");
+        }
+    }
+
+    /** Suivi de progression pendant un téléchargement. */
+    public interface Progress {
+        /**
+         * @param received octets reçus, total taille totale (-1 si inconnue).
+         * @return false pour ANNULER le téléchargement.
+         */
+        boolean onProgress(long received, long total);
+    }
+
+    public static File downloadItem(String itemUrl, String displayName, File destDir)
+            throws Exception {
+        return downloadItem(itemUrl, displayName, destDir, null);
+    }
+
     /**
      * Télécharge un item et écrit un fichier dans destDir.
      * itemUrl = base de l'appel item : http://ip:port/q?t=TOKEN&i=N
+     * progress peut annuler en cours de route (CancelledException).
      */
-    public static File downloadItem(String itemUrl, String displayName, File destDir)
+    public static File downloadItem(String itemUrl, String displayName,
+                                    File destDir, Progress progress)
             throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(itemUrl).openConnection();
         conn.setConnectTimeout(4000);
@@ -108,6 +132,8 @@ public final class TransferClient {
         try {
             int code = conn.getResponseCode();
             if (code != 200) throw new Exception("HTTP " + code);
+
+            long total = conn.getContentLength();
 
             // json → .json, sinon .mp3 (ext affinée via le manifest côté récepteur)
             String ct = conn.getContentType() == null ? "" : conn.getContentType();
@@ -119,11 +145,28 @@ public final class TransferClient {
             InputStream in = conn.getInputStream();
             OutputStream os = new FileOutputStream(out);
             byte[] buffer = new byte[8192];
+            long received = 0;
             int len;
-            while ((len = in.read(buffer)) > 0) os.write(buffer, 0, len);
-            os.flush();
-            os.close();
-            in.close();
+            try {
+                while ((len = in.read(buffer)) > 0) {
+                    os.write(buffer, 0, len);
+                    received += len;
+                    if (progress != null
+                            && !progress.onProgress(received, total)) {
+                        throw new CancelledException();
+                    }
+                }
+                os.flush();
+            } finally {
+                try {
+                    os.close();
+                } catch (Exception ignored) {
+                }
+                try {
+                    in.close();
+                } catch (Exception ignored) {
+                }
+            }
             return out;
         } finally {
             conn.disconnect();

@@ -39,27 +39,121 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public final class SenderDiscovery {
 
-    /** Un sender trouvé sur le réseau. */
+    /** Un sender trouvé sur le réseau, OU un réseau Baiboly scanné en WiFi. */
     public static class Sender {
         public final String ip;
         public final int port;
         public String device;
         public boolean secured;
+        /** Non null = réseau WiFi Baiboly scanné (pas encore connecté). */
+        public String ssid;
 
         public Sender(String ip, int port, String device, boolean secured) {
+            this(ip, port, device, secured, null);
+        }
+
+        public Sender(String ip, int port, String device, boolean secured,
+                      String ssid) {
             this.ip = ip;
             this.port = port;
             this.device = device;
             this.secured = secured;
+            this.ssid = ssid;
+        }
+
+        /** true = c'est un réseau WiFi scanné (pas encore un sender joignable). */
+        public boolean isWifiNetwork() {
+            return ssid != null;
         }
 
         public String url() {
+            if (ip == null) return null;
             return "http://" + ip + ":" + port + "/q";
         }
     }
 
     public interface Listener {
         void onResult(List<Sender> senders);
+    }
+
+    /**
+     * Scan les réseaux WiFi "BAIBOLY_SHARE_*" voisins — même quand le
+     * téléphone n'est connecté à AUCUN réseau : c'est comme ça qu'on
+     * trouve un sender qu'on ne partage pas encore de WiFi avec.
+     * Résultat sur le thread UI, coupé par {@link #stop()}.
+     */
+    public static void scanWifiNetworks(Context context, long timeoutMs,
+                                        Listener listener) {
+        final Context app = context.getApplicationContext();
+        sRunning = true;
+        new Thread(() -> {
+            List<Sender> result = new ArrayList<>();
+            try {
+                android.net.wifi.WifiManager wm =
+                        (android.net.wifi.WifiManager) app.getSystemService(
+                                Context.WIFI_SERVICE);
+                if (wm != null) {
+                    long deadline = System.currentTimeMillis()
+                            + Math.max(2000L, timeoutMs);
+                    boolean first = true;
+                    while (sRunning && System.currentTimeMillis() < deadline) {
+                        try {
+                            wm.startScan();
+                        } catch (Exception ignored) {
+                        }
+                        try {
+                            //noinspection BusyWait
+                            Thread.sleep(first ? 1500 : 2500);
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+                        first = false;
+                        collectBaibolyNetworks(wm, result);
+                        if (!result.isEmpty()) break;
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            final List<Sender> finalList = result;
+            if (sRunning && listener != null) {
+                MAIN.post(() -> listener.onResult(finalList));
+            }
+        }, "baiboly-wifi-scan").start();
+    }
+
+    /** Ajoute les SSID Baiboly des résultats de scan (dédoublonnés). */
+    private static void collectBaibolyNetworks(
+            android.net.wifi.WifiManager wm, List<Sender> out) {
+        try {
+            List<android.net.wifi.ScanResult> results = wm.getScanResults();
+            for (android.net.wifi.ScanResult r : results) {
+                String ssid = r.SSID;
+                if (ssid == null || ssid.isEmpty()) continue;
+                if (!TransferHotspot.isBaibolySsid(ssid)) continue;
+                boolean secured = isSecured(r.capabilities);
+                boolean known = false;
+                for (Sender s : out) {
+                    if (ssid.equals(s.ssid)) {
+                        // vue répétée : on garde "protégé" si une des vues
+                        // dit qu'il a un mot de passe
+                        s.secured = s.secured || secured;
+                        known = true;
+                        break;
+                    }
+                }
+                if (!known) {
+                    out.add(new Sender(null, -1, ssid, secured, ssid));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Un réseau chiffré (WPA/WPA2/WPA3/WEP) a besoin d'un mot de passe. */
+    private static boolean isSecured(String capabilities) {
+        if (capabilities == null) return false;
+        String c = capabilities.toUpperCase(java.util.Locale.ROOT);
+        return c.contains("WEP") || c.contains("WPA") || c.contains("SAE");
     }
 
     /** Plage de ports du serveur de transfert (mêmes valeurs que l'activité). */

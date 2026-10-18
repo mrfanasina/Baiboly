@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 🎨 Écran Transfera : envoi (hotspot + QR, sélection libre en session) et réception.
-     Les listes défilent DANS leur propre zone (recyclage) : fluide même avec des centaines d'items. -->
+<!-- 🎨 Écran Famindrana refondu :
+     • LISTE ÉPURÉE (Handefa) : uniquement la liste + sélection + groupement
+       par sokajy — pas de QR, pas de bouton parasite : TOUT l'espace pour la liste ;
+     • UN SEUL BOUTON FLOTTANT : ouvre la fenêtre de choix Handefa / Handray.
+       Handefa démarre DIRECTEMENT le partage + le QR (fenêtre dédiée) ;
+     • EN COURS : file d'attente des deux côtés (envoi / réception) ;
+     • HANDRAY : découverte + scan QR (réception automatique).
+     Le QR vit dans dialog_transfer_qr : bande 2,4/5 GHz visible, code
+     couleur du QR, verrouillage une fois le premier appareil connecté. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -24,225 +31,46 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Transfera WiFi"
+                android:text="@string/transfer_title"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_gravity="center_vertical" />
         </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Choix du mode -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnModeSend"
-            style="@style/Widget.App.Button.SettingsToggle"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="46dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="Alefa"
-            android:textSize="14sp"
-            app:cornerRadius="14dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnModeReceive"
-            style="@style/Widget.App.Button.SettingsToggle"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="46dp"
-            android:layout_marginStart="10dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:text="Andray"
-            android:textSize="14sp"
-            app:cornerRadius="14dp" />
-    </LinearLayout>
-
     <TextView
         android:id="@+id/textStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="18dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:textSize="12sp"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:gravity="center" />
 
     <!-- ======================================================== -->
-    <!-- 🧩 CORPS : un seul panel visible, il remplit l'écran -->
+    <!-- 🧩 CORPS : un seul écran visible, il remplit l'espace     -->
     <!-- ======================================================== -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- ✈️ MODE ALEFA -->
+        <!-- ✈️ 1) HANDEFA : liste épurée — sélection + groupement, RIEN d'autre -->
         <LinearLayout
             android:id="@+id/sendPanel"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:orientation="vertical">
 
-            <!-- 🔴 Session active : QR + arrêt (visible après démarrage) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/qrCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="10dp"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/card_stroke"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="12dp">
-
-                    <ImageView
-                        android:id="@+id/qrImage"
-                        android:layout_width="190dp"
-                        android:layout_height="190dp" />
-
-                    <TextView
-                        android:id="@+id/textServerInfo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnToggleQr"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="40dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="Afeno ny QR"
-                            android:textSize="12sp"
-                            app:cornerRadius="14dp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnStopServer"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="0dp"
-                            android:layout_weight="1"
-                            android:layout_height="40dp"
-                            android:layout_marginStart="10dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="Ajanona ny fampifandraisana"
-                            android:textSize="12sp"
-                            app:cornerRadius="14dp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- 🚀 Démarrer la session (avant même de choisir) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnShowQr"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="10dp"
-                android:text="Hanomboka fampifandraisana (hotspot + QR)"
-                app:icon="@drawable/ic_download"
-                app:cornerRadius="16dp" />
-
-            <!-- ⚙️ Réglages du réseau de transfert (compact) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/apOptionsCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/card_stroke">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="8dp">
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchOpen"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:text="Misokatra (tsy misy teny miafina)"
-                        android:textSize="12sp" />
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipBand"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:singleSelection="true"
-                        app:selectionRequired="true">
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipBand24"
-                            style="@style/Widget.Material3.Chip.Filter"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true"
-                            android:text="2,4"
-                            android:textSize="11sp" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipBand5"
-                            style="@style/Widget.Material3.Chip.Filter"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="5"
-                            android:textSize="11sp" />
-                    </com.google.android.material.chip.ChipGroup>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:text="GHz"
-                        android:textSize="11sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- 🔎 Recherche + 🗂️ catégories (zone filtre, hauteur fixe) -->
+            <!-- 🔎 Recherche + 🗂️ groupement par sokajy -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <EditText
                     android:id="@+id/editSearch"
@@ -250,7 +78,7 @@
                     android:layout_weight="1"
                     android:layout_height="42dp"
                     android:background="@drawable/bg_search_input"
-                    android:hint="Hikaroka: anarana na laharana…"
+                    android:hint="@string/transfer_search_hint"
                     android:inputType="text"
                     android:maxLines="1"
                     android:paddingHorizontal="12dp"
@@ -277,18 +105,18 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="4dp">
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/textSelectCount"
                     android:layout_width="0dp"
-                    android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="0 voasafidy"
-                    android:textSize="13sp"
+                    android:layout_weight="1"
+                    android:text="@string/transfer_select_count_zero"
+                    android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -300,7 +128,7 @@
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
-                    android:text="Safidio rehetra"
+                    android:text="@string/transfer_select_all"
                     android:textSize="12sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -312,34 +140,138 @@
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
-                    android:text="Tsy misy"
+                    android:text="@string/transfer_select_none"
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- 📜 La liste scrolle DANS sa zone : recyclage réel -->
+            <!-- 📜 La liste : TOUT l'espace restant -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerSend"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
                 android:clipToPadding="false"
-                android:paddingBottom="8dp" />
+                android:paddingBottom="88dp" />
 
             <TextView
                 android:id="@+id/textSendEmpty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="18dp"
                 android:gravity="center"
-                android:text="Tsy misy azo alefa voahita"
+                android:text="@string/transfer_send_empty"
                 android:textSize="13sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- 📲 MODE ANDRAY -->
+        <!-- 🔴 2) EN COURS : file d'attente (envoi ET réception) -->
+        <LinearLayout
+            android:id="@+id/progressPanel"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- 🟢 Session active : infos + fenêtre QR + arrêt -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/sessionCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="?attr/colorSurface"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/card_stroke"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/textServerInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnViewQr"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/transfer_show_qr"
+                            android:textSize="12sp"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStopServer"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="10dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/transfer_stop_session"
+                            android:textSize="12sp"
+                            app:cornerRadius="14dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 📊 LA FILE : terminé / en cours / en attente, annulable -->
+            <TextView
+                android:id="@+id/textProgressTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/transfer_progress_title"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerProgress"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="4dp"
+                android:clipToPadding="false"
+                android:paddingBottom="14dp" />
+
+            <TextView
+                android:id="@+id/textProgressEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="18dp"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="@string/transfer_progress_empty"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- 📲 3) HANDRAY : découverte + scan (la réception est AUTO) -->
         <LinearLayout
             android:id="@+id/receivePanel"
             android:layout_width="match_parent"
@@ -352,16 +284,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="18dp"
                 android:layout_marginTop="10dp"
-                android:text="Ny namana mandefa hita ao amin'ny tambajotra : tsindrio mba hifandray"
+                android:text="@string/transfer_receive_instruction"
                 android:textSize="13sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnJoinWifi"
@@ -371,7 +303,7 @@
                     android:layout_height="44dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="Fikirana WiFi"
+                    android:text="@string/transfer_wifi_settings"
                     android:textSize="13sp"
                     app:cornerRadius="14dp" />
 
@@ -384,7 +316,7 @@
                     android:layout_marginStart="10dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="Fitadiavana indray"
+                    android:text="@string/transfer_refresh_search"
                     android:textSize="13sp"
                     app:cornerRadius="14dp" />
             </LinearLayout>
@@ -395,7 +327,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="18dp"
                 android:layout_marginTop="12dp"
-                android:text="🔍 Mpandefa hita"
+                android:text="@string/transfer_senders_title"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface" />
@@ -404,7 +336,7 @@
                 android:id="@+id/recyclerSenders"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false" />
 
             <TextView
@@ -413,7 +345,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="18dp"
                 android:layout_marginTop="4dp"
-                android:text="Tsy misy mpandefa hita : scan-eo ny QR."
+                android:text="@string/transfer_senders_empty"
                 android:textSize="12sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone" />
@@ -438,16 +370,16 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
                 android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="10dp">
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
-                    android:text="Na scan-eo ny QR-n'ilay namana"
+                    android:text="@string/transfer_or_scan_qr"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
@@ -459,7 +391,7 @@
                     android:layout_height="42dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:text="Scan QR"
+                    android:text="@string/transfer_scan_qr_btn"
                     android:textSize="13sp"
                     app:icon="@drawable/ic_search"
                     app:cornerRadius="14dp" />
@@ -470,29 +402,32 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="18dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
                 android:textSize="12sp"
                 android:textColor="?attr/colorOnSurfaceVariant" />
-
-            <!-- 📜 La liste reçue scrolle DANS sa zone -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerReceive"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:layout_marginTop="4dp"
-                android:clipToPadding="false"
-                android:paddingBottom="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDownloadSelected"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginBottom="10dp"
-                android:text="Haka ny voasafidy"
-                app:cornerRadius="16dp"
-                android:visibility="gone" />
         </LinearLayout>
+
+        <!-- 🧭 UN SEUL BOUTON FLOTTANT : fenêtre de choix Handefa / Handray -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabNav"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="18dp"
+            android:contentDescription="@string/transfer_fab_desc"
+            android:src="@drawable/ic_transfer"
+            app:tint="?attr/colorOnPrimaryContainer" />
     </FrameLayout>
+
+    <!-- ======================================================== -->
+    <!-- 🧭 NAVIGATION BASSE (même principe que l'accueil)         -->
+    <!-- ======================================================== -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/navTransfer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/transfer_nav_menu" />
 </LinearLayout>

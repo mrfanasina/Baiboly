@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 
 import java.lang.reflect.Method;
 import java.util.Random;
+import java.util.concurrent.Executor;
 
 /**
  * 📡 Création automatique du point d'accès (comme Xender) :
@@ -31,9 +32,16 @@ public final class TransferHotspot {
     public static final int BAND_2_4GHZ = 1;
     public static final int BAND_5GHZ = 2;
 
+    /** Préfixe des hotspots créés par l'app (le récepteur les scanne). */
+    public static final String SSID_PREFIX = "BAIBOLY_SHARE_";
+
     /** Résultat du démarrage du point d'accès. */
     public interface Listener {
-        /** AP créé : ssid/pass (pass null = réseau ouvert). */
+        /**
+         * AP créé : ssid/pass (pass null = réseau ouvert).
+         * {@code secured} = mode demandé par l'utilisateur — c'est lui qui
+         * décide si le token du QR est obligatoire.
+         */
         void onStarted(String ssid, @Nullable String pass, boolean secured);
 
         /** Impossible de créer l'AP automatiquement : secours manuel. */
@@ -42,6 +50,16 @@ public final class TransferHotspot {
 
     /** Dernière réservation active (pour l'arrêter en quittant). */
     private static WifiManager.LocalOnlyHotspotReservation sReservation;
+
+    /**
+     * false = ce téléphone impose un mot de passe au point d'accès :
+     * le switch "Misokatra" n'a alors plus aucun sens et l'UI le grise.
+     */
+    private static volatile boolean sOpenSupported = true;
+
+    public static boolean isOpenSupported() {
+        return sOpenSupported;
+    }
 
     private TransferHotspot() {
     }
@@ -59,7 +77,13 @@ public final class TransferHotspot {
 
     /** SSID aléatoire (utilisé aussi par le secours manuel). */
     public static String randomSsid() {
-        return "BAIBOLY-" + randomSuffix();
+        return SSID_PREFIX + randomSuffix();
+    }
+
+    /** Un SSID est-il un hotspot Baiboly (ancien ou nouveau préfixe) ? */
+    public static boolean isBaibolySsid(String ssid) {
+        if (ssid == null || ssid.isEmpty()) return false;
+        return ssid.startsWith(SSID_PREFIX) || ssid.startsWith("BAIBOLY-");
     }
 
     /** Mot de passe aléatoire (utilisé aussi par le secours manuel). */
@@ -90,7 +114,7 @@ public final class TransferHotspot {
         Context app = context.getApplicationContext();
         WifiManager wm = (WifiManager) app.getSystemService(Context.WIFI_SERVICE);
 
-        String ssid = "BAIBOLY-" + randomSuffix();
+        String ssid = randomSsid();
         String pass = secured ? randomPass() : null;
 
         if (wm == null) {
@@ -98,16 +122,20 @@ public final class TransferHotspot {
             return;
         }
 
-        // 1) Config complète (essai par réflexion, Android 13+)
-        if (startConfigured(wm, ssid, pass, band, listener)) {
+        // 1) Config complète (SSID/bande/ouverture exactement demandés),
+        //    API cachée dispo uniquement depuis Android 13.
+        if (Build.VERSION.SDK_INT >= 33
+                && startConfigured(wm, ssid, pass, band, secured, listener)) {
             return;
         }
 
-        // 2) AP local sécurisé aléatoire (Android 8+)
+        // 2) AP local aléatoire du système (Android 8+) — il est
+        //    SÉCURISÉ par défaut : on ne l'accepte que si un mot de passe
+        //    est demandé (le callback le vérifie).
         if (Build.VERSION.SDK_INT >= 26) {
             try {
                 wm.startLocalOnlyHotspot(
-                        getCallback(true, null, null, listener),
+                        getCallback(true, null, null, secured, listener),
                         new Handler(Looper.getMainLooper()));
                 return;
             } catch (Exception e) {
@@ -115,7 +143,10 @@ public final class TransferHotspot {
             }
         }
 
-        manual("Le téléphone n'autorise pas le hotspot auto", listener);
+        manual(secured
+                        ? "Le téléphone n'autorise pas le hotspot auto"
+                        : "Hotspot ouvert non supporté par ce téléphone",
+                listener);
     }
 
     // =========================================================
@@ -123,7 +154,7 @@ public final class TransferHotspot {
     // =========================================================
     private static boolean startConfigured(WifiManager wm, String ssid,
                                            String pass, int band,
-                                           Listener listener) {
+                                           boolean secured, Listener listener) {
         try {
             Class<?> cfgClass = Class.forName("android.net.wifi.SoftApConfiguration");
             Class<?> builderClass =
@@ -133,29 +164,47 @@ public final class TransferHotspot {
             builderClass.getMethod("setSsid", String.class).invoke(builder, ssid);
 
             if (pass != null) {
-                Object wpa2 = cfgClass.getField("KEY_MGMT_WPA2_PSK").get(null);
-                builderClass.getMethod("setPassphrase", String.class, int.class)
-                        .invoke(builder, pass, wpa2);
+                // setPassphrase(String, int securityType) depuis Android 13 ;
+                // setPassphrase(String) si la 2e signature n'existe pas.
+                boolean ok = false;
+                try {
+                    int wpa2 = cfgClass.getField("SECURITY_TYPE_WPA2_PSK").getInt(null);
+                    builderClass.getMethod("setPassphrase", String.class, int.class)
+                            .invoke(builder, pass, wpa2);
+                    ok = true;
+                } catch (NoSuchMethodException ignored) {
+                }
+                if (!ok) {
+                    builderClass.getMethod("setPassphrase", String.class)
+                            .invoke(builder, pass);
+                }
             } else {
-                Object open = cfgClass.getField("SECURITY_TYPE_OPEN").get(null);
+                // Réseau OUVERT : aucun mot de passe, jamais.
+                int open = cfgClass.getField("SECURITY_TYPE_OPEN").getInt(null);
                 builderClass.getMethod("setSecurityType", int.class)
                         .invoke(builder, open);
             }
 
             if (band == BAND_2_4GHZ) {
                 builderClass.getMethod("setBand", int.class).invoke(builder,
-                        cfgClass.getField("BAND_2GHZ").get(null));
+                        cfgClass.getField("BAND_2GHZ").getInt(null));
             } else if (band == BAND_5GHZ && wm.is5GHzBandSupported()) {
                 builderClass.getMethod("setBand", int.class).invoke(builder,
-                        cfgClass.getField("BAND_5GHZ").get(null));
+                        cfgClass.getField("BAND_5GHZ").getInt(null));
             }
 
             Object config = builderClass.getMethod("build").invoke(builder);
 
+            // Signature réelle : startLocalOnlyHotspot(SoftApConfiguration,
+            // Executor, LocalOnlyHotspotCallback) — l'ancienne signature
+            // avec Handler n'existe pas : c'est pour ça que ça retombait
+            // toujours sur le hotspot aléatoire (donc TOUJOURS un mdp).
+            Executor direct = Runnable::run;
             Method start = WifiManager.class.getMethod("startLocalOnlyHotspot",
-                    cfgClass, Handler.class, WifiManager.LocalOnlyHotspotCallback.class);
-            start.invoke(wm, config, new Handler(Looper.getMainLooper()),
-                    getCallback(false, ssid, pass, listener));
+                    cfgClass, Executor.class,
+                    WifiManager.LocalOnlyHotspotCallback.class);
+            start.invoke(wm, config, direct,
+                    getCallback(false, ssid, pass, secured, listener));
             return true;
         } catch (Throwable t) {
             // API non exposée ou champs absents : retry via legacy path
@@ -169,7 +218,8 @@ public final class TransferHotspot {
      */
     private static WifiManager.LocalOnlyHotspotCallback getCallback(
             final boolean readReservationConfig, final String ssid,
-            final String pass, final Listener listener) {
+            final String pass, final boolean secured,
+            final Listener listener) {
         return new WifiManager.LocalOnlyHotspotCallback() {
             @Override
             public void onStarted(WifiManager.LocalOnlyHotspotReservation reservation) {
@@ -186,14 +236,29 @@ public final class TransferHotspot {
                         }
                     } catch (Exception ignored) {
                     }
+                    // Mode OUVERT demandé mais le système a imposé un mot de
+                    // passe : on REFUSE, l'utilisateur a dit "misokatra".
+                    if (!secured && p != null) {
+                        try {
+                            reservation.close();
+                        } catch (Exception ignored) {
+                        }
+                        sReservation = null;
+                        // Capacité du téléphone : on grise le switch à vie.
+                        sOpenSupported = false;
+                        manual("Ce téléphone impose un mot de passe au hotspot",
+                                listener);
+                        return;
+                    }
                 }
                 if (s == null) {
                     // SSID non lisible (Android récent) : l'QR ne pourrait pas
                     // connecter automatiquement → secours manuel.
                     manual("SSID du hotspot non lisible", listener);
+                    return;
                 }
-                if (listener != null && s != null) {
-                    listener.onStarted(s, p, p != null);
+                if (listener != null) {
+                    listener.onStarted(s, p, secured);
                 }
             }
 
@@ -225,9 +290,8 @@ public final class TransferHotspot {
     private static String randomSuffix() {
         Random r = new Random();
         StringBuilder sb = new StringBuilder();
-        String alpha = "ABCDEFHJKMNPQRSTUVWXYZ23456789";
-        for (int i = 0; i < 4; i++) {
-            sb.append(alpha.charAt(r.nextInt(alpha.length())));
+        for (int i = 0; i < 6; i++) {
+            sb.append(r.nextInt(10));
         }
         return sb.toString();
     }

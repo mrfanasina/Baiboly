@@ -41,6 +41,55 @@ public class TransferServer extends NanoHTTPD {
     /** true = QR/token obligatoire ; false = réseau ouvert, accès libre. */
     private final boolean requireToken;
 
+    /** Où rendre compte de l'envoi (file d'attente côté émetteur). */
+    public interface ServeListener {
+        void onItemServed(int index, boolean ok);
+    }
+
+    private volatile ServeListener serveListener;
+
+    public void setServeListener(ServeListener listener) {
+        this.serveListener = listener;
+    }
+
+    /**
+     * 🔒 Appelé à CHAQUE requête d'un appareil récepteur : le premier
+     * appel signale qu'un appareil s'est connecté au hotspot — la bande
+     * 2,4/5 GHz ne peut alors plus être modifiée.
+     */
+    public interface ClientListener {
+        void onClientConnected(int clientCount);
+    }
+
+    private volatile ClientListener clientListener;
+    private final java.util.concurrent.atomic.AtomicInteger clientCount =
+            new java.util.concurrent.atomic.AtomicInteger();
+
+    public void setClientListener(ClientListener listener) {
+        this.clientListener = listener;
+    }
+
+    private void markClient() {
+        if (clientListener == null) return; // pas d'écoute : pas de comptage
+        try {
+            clientListener.onClientConnected(
+                    clientCount.incrementAndGet());
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** Clé stable de l'item à l'index donné (pour mapper la file). */
+    public String itemKeyAt(int index) {
+        List<TransferItem> list = items;
+        if (list == null || index < 0 || index >= list.size()) return null;
+        return list.get(index).key();
+    }
+
+    private void notifyServed(int index, boolean ok) {
+        ServeListener l = serveListener;
+        if (l != null) l.onItemServed(index, ok);
+    }
+
     public TransferServer(int port, String token, String deviceName,
                           List<TransferItem> items, Context context,
                           boolean requireToken) {
@@ -85,10 +134,12 @@ public class TransferServer extends NanoHTTPD {
         }
 
         if ("/q".equals(uri)) {
+            markClient();
             return manifestResponse();
         }
 
         if ("/q/item".equals(uri)) {
+            markClient();
             return itemResponse(first(params, "i"));
         }
 
@@ -153,10 +204,12 @@ public class TransferServer extends NanoHTTPD {
         if (TransferItem.TYPE_PROGRAM.equals(it.type)) {
             try {
                 JSONObject json = TransferData.programToJson(it.program);
+                notifyServed(index, true);
                 return newFixedLengthResponse(
                         Status.OK, "application/json; charset=utf-8",
                         json.toString());
             } catch (Exception e) {
+                notifyServed(index, false);
                 return error(e);
             }
         }
@@ -187,13 +240,63 @@ public class TransferServer extends NanoHTTPD {
                     ? it.contentType
                     : mimeType(it.ext);
 
+            // On suit le flux pour savoir VRAIMENT quand l'audio a fini
+            // d'être envoyé (NanoHTTPD le consomme après serve()).
+            InputStream tracked = trackStream(in, index);
             if (size > 0) {
-                return newFixedLengthResponse(Status.OK, mime, in, size);
+                return newFixedLengthResponse(Status.OK, mime, tracked, size);
             }
-            return newChunkedResponse(Status.OK, mime, in);
+            return newChunkedResponse(Status.OK, mime, tracked);
         } catch (Exception e) {
+            notifyServed(index, false);
             return error(e);
         }
+    }
+
+    /** Flux qui prévient quand l'item a réellement été servi (ou échoué). */
+    private InputStream trackStream(InputStream in, final int index) {
+        return new java.io.FilterInputStream(in) {
+            private boolean reported;
+
+            private void report(boolean ok) {
+                if (reported) return;
+                reported = true;
+                notifyServed(index, ok);
+            }
+
+            @Override
+            public int read() throws java.io.IOException {
+                try {
+                    int b = super.read();
+                    if (b == -1) report(true);
+                    return b;
+                } catch (java.io.IOException e) {
+                    report(false);
+                    throw e;
+                }
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws java.io.IOException {
+                try {
+                    int n = super.read(b, off, len);
+                    if (n == -1) report(true);
+                    return n;
+                } catch (java.io.IOException e) {
+                    report(false);
+                    throw e;
+                }
+            }
+
+            @Override
+            public void close() throws java.io.IOException {
+                try {
+                    super.close();
+                } finally {
+                    report(true);
+                }
+            }
+        };
     }
 
     // =========================================================
