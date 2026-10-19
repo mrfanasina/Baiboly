@@ -29,7 +29,7 @@ Baiboly est une application Android complète d'étude biblique en **malgache** 
 - `AinaOfDayActivity` — rubrique *Aina sy Fahasalamana*.
 - Contenu disponible **en ligne** (scraping via `MofonainaScraper` avec Jsoup) **et hors ligne** (`MofonainaRepository`, `MofonainaCache`).
 
-### 🤖 Fanekena
+### 🤖 Fanekempinoana
 - `FanekenaActivity` — consultation des conventions/alliances avec contenu récupéré par `FanekenaRepository` / `FanekenaService`.
 
 ### 🔧 Utilitaires et partage (Utilities and sharing)
