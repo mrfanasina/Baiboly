@@ -10,6 +10,12 @@
         android:icon="@drawable/ic_lock_open"
         app:showAsAction="always" />
     <item
+        android:id="@+id/action_note"
+        android:orderInCategory="93"
+        android:title="@string/notes_title"
+        android:icon="@drawable/ic_note"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_add_playback"
         android:orderInCategory="95"
         android:title="Playback"

@@ -234,6 +234,20 @@ public class SongDetailActivity extends AppCompatActivity
             return true;
         }
 
+        // 📝 Note attachée au chant courant (FFPM 49…)
+        if (item.getItemId() == R.id.action_note) {
+            String songId = getIntent() != null
+                    ? getIntent().getStringExtra("songId") : null;
+            String refLabel = currentSongTitle != null
+                    && !currentSongTitle.isEmpty()
+                    ? currentSongTitle
+                    : (songId != null ? songId.toUpperCase().replace("_", " ") : "Fihira");
+            com.fa.baiboly.ui.notes.NoteEditorActivity.open(this, null,
+                    com.fa.baiboly.models.Note.TYPE_SONG, refLabel,
+                    "song:" + (songId == null ? "" : songId), null);
+            return true;
+        }
+
         // Ouvre l'écran d'ajout de playback (feo)
         if (item.getItemId() == R.id.action_add_playback) {
             openAddPlayback();

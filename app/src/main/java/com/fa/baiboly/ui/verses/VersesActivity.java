@@ -793,6 +793,41 @@ public class VersesActivity extends AppCompatActivity
             clearSelection();
         });
 
+        // 📝 NOTE sur la sélection courante (lecture proposée en citation)
+        binding.btnFloatNote.setOnClickListener(v -> {
+            String book = getCurrentBookShortName();
+            List<int[]> selection = getSortedSelection();
+            if (selection.isEmpty()) {
+                Toast.makeText(this, "Misafidiana andininy aloha",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int firstChapter = selection.get(0)[0];
+            int firstVerse = selection.get(0)[1];
+            int lastChapter = selection.get(selection.size() - 1)[0];
+            int lastVerse = selection.get(selection.size() - 1)[1];
+
+            String refLabel = book + " " + firstChapter + ":" + firstVerse
+                    + ((lastChapter != firstChapter || lastVerse != firstVerse)
+                    ? "-" + lastVerse : "");
+            String refKey = "verse:" + book + ":" + firstChapter + ":"
+                    + firstVerse + ":" + lastVerse;
+
+            StringBuilder quoted = new StringBuilder();
+            for (int[] pair : selection) {
+                String verseText = findVerseText(book, pair[0], pair[1]);
+                if (verseText != null && !verseText.trim().isEmpty()) {
+                    quoted.append(verseText.trim()).append(" ");
+                }
+            }
+
+            com.fa.baiboly.ui.notes.NoteEditorActivity.open(
+                    VersesActivity.this, null, com.fa.baiboly.models.Note.TYPE_VERSE,
+                    refLabel, refKey, quoted.toString().trim());
+            clearSelection();
+        });
+
         int[] colorButtonIds = {
                 R.id.colorYellow, R.id.colorGreen,
                 R.id.colorBlue, R.id.colorPink

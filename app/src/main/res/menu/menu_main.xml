@@ -3,6 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.fa.baiboly.MainActivity">
     <item
+        android:id="@+id/notes"
+        android:orderInCategory="55"
+        android:title="Fanamarihana (Notes)"
+        android:icon="@drawable/ic_note"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/transfer"
         android:orderInCategory="60"
         android:title="Transferto (WiFi)"

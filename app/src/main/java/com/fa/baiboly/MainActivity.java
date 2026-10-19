@@ -252,6 +252,12 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        // 📝 Notes de lecture (écran central : recherche + épinglage)
+        if (item.getItemId() == R.id.notes) {
+            com.fa.baiboly.ui.notes.NotesActivity.open(this);
+            return true;
+        }
+
         // Transfert WiFi (send/receive, QR)
         if (item.getItemId() == R.id.transfer) {
             startActivity(new Intent(this, com.fa.baiboly.ui.transfer.TransferActivity.class));

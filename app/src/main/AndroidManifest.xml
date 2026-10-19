@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <!-- Mise à jour auto de l'app depuis l'écran Downloads (installation APK). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"
@@ -93,6 +95,16 @@
             android:label="Mofonaina" />
         <activity android:name=".ui.fihirana.SolfaActivity" />
         <activity android:name=".ui.fanekena.FanekenaActivity" />
+        <!-- 📝 Notes de lecture : écran central + éditeur enrichi -->
+        <activity
+            android:name=".ui.notes.NotesActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:label="Fanamarihana (Notes)" />
+        <activity
+            android:name=".ui.notes.NoteEditorActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.ai.AiExplanationActivity"
             android:exported="false"
@@ -122,6 +134,17 @@
             android:configChanges="orientation|screenSize"
             android:screenOrientation="portrait"
             android:label="Transferto (WiFi)" />
+        <!-- ✈️ Share du fichier téléchargé (APK de mise à jour, data…)
+             via l'écran Downloads. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.fa.baiboly.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
         <!-- Écran de scan QR : PORTRAIT forcé + cadre de scan plus grand
              (layout zxing_capture.xml surchargé) -->
         <activity

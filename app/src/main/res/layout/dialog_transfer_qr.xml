@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 🤳 FENÊTRE DÉDIÉE DU QR (Handefa) :
+     • QR coloré : 2,4 GHz (encre foncée) / 5 GHz (encre violette) ;
+     • bande 2,4 / 5 GHz : modifiable TANT QUE personne n'a scanné ;
+       verrouillée dès qu'un appareil est connecté ;
+     • infos de connexion : SSID + mot de passe + URL ;
+     • la session continue même si la fenêtre est fermée. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingHorizontal="18dp"
+        android:paddingVertical="10dp">
+
+        <ImageView
+            android:id="@+id/qrDialogImage"
+            android:layout_width="216dp"
+            android:layout_height="216dp"
+            android:contentDescription="@string/transfer_show_qr"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/textQrDialogState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <!-- 🎛️ Paramètres du réseau : bande 2,4 / 5 GHz + ouverture -->
+        <LinearLayout
+            android:id="@+id/bandRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/transfer_band_title"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipBand"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                app:singleSelection="true"
+                app:selectionRequired="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBand24"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="@string/transfer_band_24"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBand5"
+                    style="@style/Widget.Material3.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/transfer_band_5"
+                    android:textSize="11sp" />
+            </com.google.android.material.chip.ChipGroup>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="@string/transfer_band_unit"
+                android:textSize="11sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchOpen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/transfer_open_network"
+            android:textSize="12sp" />
+
+        <!-- 🔒 Indication : changeable / verrouillé -->
+        <TextView
+            android:id="@+id/textBandLock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="@string/transfer_band_changeable"
+            android:textSize="11sp"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="10dp"
+            android:background="@color/card_stroke" />
+
+        <!-- 🔑 Infos de connexion à taper à la main si besoin -->
+        <TextView
+            android:id="@+id/textQrPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface" />
+
+        <TextView
+            android:id="@+id/textQrInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+    </LinearLayout>
+</ScrollView>

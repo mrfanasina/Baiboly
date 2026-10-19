@@ -197,6 +197,20 @@ public class ProgramDetailActivity extends AppCompatActivity {
         return true;
     }
 
+    // 📝 Note attachée à ce programme (fandaharana)
+    @Override
+    public boolean onOptionsItemSelected(@NonNull android.view.MenuItem item) {
+        if (item.getItemId() == R.id.action_note) {
+            String refLabel = programName != null && !programName.isEmpty()
+                    ? programName : "Fandaharana";
+            com.fa.baiboly.ui.notes.NoteEditorActivity.open(this, null,
+                    com.fa.baiboly.models.Note.TYPE_PROGRAM, refLabel,
+                    "program:" + programId, null);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void applyFilter() {
         visibleItems.clear();
         if (searchQuery == null || searchQuery.trim().isEmpty()) {

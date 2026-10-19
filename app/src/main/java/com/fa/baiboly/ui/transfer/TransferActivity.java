@@ -18,11 +18,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
@@ -49,6 +51,8 @@ import com.fa.baiboly.models.Playback;
 import com.fa.baiboly.models.Program;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -64,22 +68,23 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Transfert WiFi local de programmes (fandaharana) et playbacks :
+ * Transfert WiFi local de programmes (fandaharana) et playbacks — REFONTE :
  *
- * ✈️ ALEFA (send) : on démarre D'ABORD la session (hotspot auto +
- *    serveur + QR), la sélection n'est PAS requise ; on continue ensuite
- *    à cocher/décocher pendant que la session tourne — le serveur
- *    reflète le choix en direct, et la sélection d'avant reste en place.
- *    Le QR contient les identifiants WiFi + l'URL : le scan connecte
- *    l'autre téléphone automatiquement. Mode OUVERT possible (sans mot
- *    de passe ni QR).
+ * 🧭 UN SEUL BOUTON FLOTTANT : ouvre la fenêtre de choix
+ *    Handefa (QR direct) / Handray (recevoir).
  *
- * 📲 ANDRAY (receive) : liste auto des senders du réseau (🔓 direct,
- *    🔒 scan QR) ou scan du QR → sélection → téléchargement + import.
+ * ✈️ HANDEFA : démarre DIRECTEMENT le partage de connexion + le QR dans
+ *    une FENÊTRE DÉDIÉE (dialog_transfer_qr) :
+ *    • bande 2,4 GHz par défaut, changeable en 5 GHz (QR violet) TANT QUE
+ *      personne n'a scanné ;
+ *    • dès qu'un appareil se connecte : bande + ouverture VERROUILLÉES,
+ *      la session continue (d'autres peuvent encore rejoindre) ;
+ *    • la liste reste accessible : sélection + groupement par sokajy,
+ *      le serveur reflète le choix en direct.
  *
- * TOUS les playbacks sont transférables : ceux importés depuis les
- * dossiers sont streamés directement (content://), sans copie.
- * La liste longue se filtre par sokajy (chips) et par recherche.
+ * 📲 HANDRAY : liste auto des senders (🔓 direct, 🔒 scan QR) ou scan du
+ *    QR → connexion AUTOMATIQUE et fiable au WiFi du partage
+ *    (WifiNetworkSpecifier, Android 10+) → téléchargement + import.
  */
 public class TransferActivity extends AppCompatActivity {
 
@@ -93,8 +98,17 @@ public class TransferActivity extends AppCompatActivity {
     private static final int REQ_WIFI_PERMS = 101;
     private static final int REQ_DISCOVER_PERMS = 102;
 
-    /** Préfixe des hotspots créés par l'app (scan auto côté récepteur). */
-    private static final String HOTSPOT_PREFIX = "BAIBOLY-";
+    /** 🎨 Couleurs du QR : 2,4 GHz = encre foncée, 5 GHz = encre violette. */
+    private static final int QR_INK_2_4GHZ = 0xFF263238;
+    private static final int QR_INK_5GHZ = 0xFF7B1FA2;
+
+    /** Préfixe des hotspots créés par l'app : {@link TransferHotspot#SSID_PREFIX}.
+     *  Les deux formes ("BAIBOLY_SHARE_xxx" et l'ancien "BAIBOLY-xxx")
+     *  sont reconnues par {@link TransferHotspot#isBaibolySsid}. */
+    private static boolean isBaibolyNetwork(SenderDiscovery.Sender s) {
+        return s != null && s.isWifiNetwork()
+                && TransferHotspot.isBaibolySsid(s.ssid);
+    }
 
     private static final String PREFS_TRANSFER = "transfer_prefs";
     private static final String KEY_SELECTION = "selected_keys";
@@ -125,13 +139,77 @@ public class TransferActivity extends AppCompatActivity {
     private int serverPort;
     private String qrUrlBase;
 
+    // 🧭 REFONTE : réglages verrouillables de la session
+    /** Bande du hotspot : 2,4 GHz par défaut, changeable avant le scan. */
+    private int currentBand = TransferHotspot.BAND_2_4GHZ;
+    /** false = hotspot WPA2 (défaut), true = réseau ouvert. */
+    private boolean sessionOpen;
+    /** true dès qu'un appareil s'est connecté : les réglages se verrouillent. */
+    private boolean sessionLocked;
+    /** true pendant la recréation du hotspot (changement de bande/ouverture). */
+    private boolean sessionRestarting;
+    /** true pendant la création du hotspot (empêche un double démarrage). */
+    private boolean sessionStarting;
+    private String sessionSsid;
+    private String sessionPass;
+    private Bitmap currentQr;
+
+    // 🤳 Fenêtre dédiée du QR
+    private AlertDialog qrDialog;
+    private View dialogRoot;
+    private ImageView dialogQr;
+    private Chip dialogChip24;
+    private Chip dialogChip5;
+    private SwitchMaterial dialogSwitchOpen;
+    private TextView dialogState;
+    private TextView dialogBandLock;
+    private TextView dialogQrPassword;
+    private TextView dialogQrInfo;
+
     // RECEIVE
     private TransferClient.Manifest receivedManifest;
     private String receivedQr;
     /** Hotspot Baiboly rejoint via le scan auto (pour nettoyage après). */
     private String joinedBaibolySsid;
-    private final Set<Integer> receivedChecked = new HashSet<>();
+
+    // =========================================================
+    // 📊 FILE D'ATTENTE (envoi ET réception)
+    // =========================================================
+    /** Une ligne de la file : titre + statut + progression. */
+    public static class ProgressEntry {
+        static final int WAITING = 0;
+        static final int RUNNING = 1;
+        static final int DONE = 2;
+        static final int FAILED = 3;
+        static final int CANCELLED = 4;
+
+        public final String title;
+        public final String subtitle;
+        public int status = WAITING;
+        public int progress;
+        /** Côté réception : index de l'item dans le manifest. */
+        public int index = -1;
+        /** Côté émission : clé stable de l'item. */
+        public String key;
+
+        ProgressEntry(String title, String subtitle) {
+            this.title = title;
+            this.subtitle = subtitle == null ? "" : subtitle;
+        }
+    }
+
+    /** File côté émission (ce qui part) / côté réception (ce qui arrive). */
+    private final List<ProgressEntry> sendQueue = new ArrayList<>();
+    private final List<ProgressEntry> receiveQueue = new ArrayList<>();
+    /** Index de téléchargements annulés par l'utilisateur. */
+    private final Set<Integer> receiveCancelled = new HashSet<>();
     private final List<SenderDiscovery.Sender> sendersFound = new ArrayList<>();
+
+    // Découverte en 2 temps : senders du réseau courant + réseaux Baiboly scannés
+    private int discoveryGeneration;
+    private int discoveryStepsLeft;
+    private List<SenderDiscovery.Sender> pendingSenders;
+    private List<SenderDiscovery.Sender> pendingNetworks;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,19 +234,14 @@ public class TransferActivity extends AppCompatActivity {
         }
         binding.toolbar.setNavigationOnClickListener(v -> finish());
 
-        binding.btnModeSend.setOnClickListener(v -> setMode(true));
-        binding.btnModeReceive.setOnClickListener(v -> setMode(false));
+        // 🧭 UN SEUL BOUTON FLOTTANT : fenêtre de choix Handefa / Handray
+        binding.fabNav.setOnClickListener(v -> showNavChooser());
 
-        // Alefa : session avant même la sélection
-        binding.btnShowQr.setOnClickListener(v -> startTransferSession());
+        // 🔴 Session : revoir le QR / arrêter
+        binding.btnViewQr.setOnClickListener(v -> showQrDialog());
         binding.btnStopServer.setOnClickListener(v -> stopServer());
-        binding.btnToggleQr.setOnClickListener(v -> {
-            boolean show = binding.qrImage.getVisibility() == View.GONE;
-            binding.qrImage.setVisibility(show ? View.VISIBLE : View.GONE);
-            binding.btnToggleQr.setText(show ? "Afeno ny QR" : "Asehoy ny QR");
-        });
 
-        // Filtrage
+        // Sélection rapide
         binding.btnSelectAll.setOnClickListener(v -> {
             for (TransferItem it : filteredSendItems) sendChecked.add(it.key());
             notifySendChanged();
@@ -189,19 +262,95 @@ public class TransferActivity extends AppCompatActivity {
             }
         });
 
-        // 5 GHz seulement si le téléphone le supporte
-        if (!TransferHotspot.is5GHzSupported(this)) {
-            binding.chipBand5.setEnabled(false);
-        }
-
         // Andray
         binding.btnScan.setOnClickListener(v -> launchScanner());
-        binding.btnDownloadSelected.setOnClickListener(v -> downloadSelectedItems());
         binding.btnRefreshSenders.setOnClickListener(v -> refreshDiscovery());
         binding.btnJoinWifi.setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS)));
 
-        setMode(true);
+        // 🧭 NAVIGATION BASSE (même principe que l'accueil)
+        binding.navTransfer.setOnItemSelectedListener(item -> {
+            if (navInternal) return true;
+            int id = item.getItemId();
+            if (id == R.id.nav_send) selectNav(NAV_SEND);
+            else if (id == R.id.nav_progress) selectNav(NAV_PROGRESS);
+            else if (id == R.id.nav_receive) selectNav(NAV_RECEIVE);
+            return true;
+        });
+
+        selectNav(NAV_SEND);
+    }
+
+    // =========================================================
+    // 🧭 NAVIGATION : HANDEFA / EN COURS / HANDRAY
+    // =========================================================
+    private static final int NAV_SEND = 0;
+    private static final int NAV_PROGRESS = 1;
+    private static final int NAV_RECEIVE = 2;
+
+    private int navIndex = NAV_SEND;
+    /** Empêche la boucle selectNav ⇄ setSelectedItemId. */
+    private boolean navInternal;
+
+    private void selectNav(int index) {
+        boolean enteringReceive = index == NAV_RECEIVE && navIndex != NAV_RECEIVE;
+        boolean leavingReceive = navIndex == NAV_RECEIVE && index != NAV_RECEIVE;
+
+        navIndex = index;
+        // "En cours" garde le côté courant ; seuls les 2 bouts changent le sens.
+        if (index == NAV_SEND) sendMode = true;
+        else if (index == NAV_RECEIVE) sendMode = false;
+
+        binding.sendPanel.setVisibility(index == NAV_SEND ? View.VISIBLE : View.GONE);
+        binding.progressPanel.setVisibility(index == NAV_PROGRESS ? View.VISIBLE : View.GONE);
+        binding.receivePanel.setVisibility(index == NAV_RECEIVE ? View.VISIBLE : View.GONE);
+
+        int menuId = index == NAV_SEND ? R.id.nav_send
+                : index == NAV_PROGRESS ? R.id.nav_progress : R.id.nav_receive;
+        if (binding.navTransfer.getSelectedItemId() != menuId) {
+            navInternal = true;
+            binding.navTransfer.setSelectedItemId(menuId);
+            navInternal = false;
+        }
+
+        if (leavingReceive) stopDiscovery();
+
+        if (index == NAV_SEND && sendItems.isEmpty()) loadSendList();
+
+        if (enteringReceive) {
+            receivedManifest = null;
+            binding.textReceiveState.setText(
+                    getString(R.string.transfer_receive_initial_state));
+            refreshDiscovery();
+        }
+
+        if (index == NAV_PROGRESS) renderProgress();
+    }
+
+    // =========================================================
+    // 🧭 UN SEUL BOUTON FLOTTANT → fenêtre de choix Handefa / Handray
+    // =========================================================
+    private void showNavChooser() {
+        if (qrDialog != null && qrDialog.isShowing()) return;
+
+        boolean sessionRunning = server != null;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(R.string.transfer_chooser_title))
+                .setItems(new CharSequence[]{
+                        getString(sessionRunning
+                                ? R.string.transfer_chooser_send_resume
+                                : R.string.transfer_chooser_send),
+                        getString(R.string.transfer_chooser_receive)
+                }, (d, which) -> {
+                    if (which == 0) {
+                        if (server != null) showQrDialog();
+                        else startTransferSession();
+                    } else {
+                        selectNav(NAV_RECEIVE);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void applyGlobalTheme() {
@@ -213,29 +362,6 @@ public class TransferActivity extends AppCompatActivity {
         ColorManager.applyTheme(this);
     }
 
-    // =========================================================
-    // 🔀 MODE UNIQUE ÉCRAN
-    // =========================================================
-    private void setMode(boolean isSend) {
-        sendMode = isSend;
-        binding.sendPanel.setVisibility(isSend ? View.VISIBLE : View.GONE);
-        binding.receivePanel.setVisibility(isSend ? View.GONE : View.VISIBLE);
-        binding.btnModeSend.setChecked(isSend);
-        binding.btnModeReceive.setChecked(!isSend);
-
-        if (isSend) {
-            stopDiscovery();
-            loadSendList();
-        } else {
-            receivedManifest = null;
-            receivedChecked.clear();
-            binding.textReceiveState.setText(
-                    "Scan ny QR na tsindrio ny namana ao amin'ny lisitra");
-            binding.recyclerReceive.setAdapter(null);
-            binding.btnDownloadSelected.setVisibility(View.GONE);
-            refreshDiscovery();
-        }
-    }
 
     @Override
     protected void onDestroy() {
@@ -251,10 +377,10 @@ public class TransferActivity extends AppCompatActivity {
     }
 
     // =========================================================
-    // ✈️ ALEFA : LISTE + FILTRES + SÉLECTION PERSISTANTE
+    // ✈️ ALEFA : LISTE ÉPURÉE (sélection + groupement, rien d'autre)
     // =========================================================
     private void loadSendList() {
-        binding.textStatus.setText("Maka ny lisitra…");
+        binding.textStatus.setText(getString(R.string.transfer_loading_list));
         new Thread(() -> {
             List<Program> programs = fandaharanaService.getAllPrograms();
             List<Playback> playbacks = playbackStore.getAllPlaybacks();
@@ -280,11 +406,9 @@ public class TransferActivity extends AppCompatActivity {
                 applyFilter();
 
                 if (skippedCount == 1) {
-                    binding.textStatus.setText(
-                            "⚠ 1 playback tsy azo alefa (fichier tsy misy)");
+                    binding.textStatus.setText(getString(R.string.transfer_skipped_one));
                 } else if (skippedCount > 1) {
-                    binding.textStatus.setText(skippedCount
-                            + " playbacks tsy azo alefa");
+                    binding.textStatus.setText(getString(R.string.transfer_skipped_multiple, skippedCount));
                 } else if (server != null) {
                     binding.textStatus.setText("");
                 }
@@ -304,7 +428,7 @@ public class TransferActivity extends AppCompatActivity {
 
         binding.chipCats.removeAllViews();
         chipIdsByCat.clear();
-        addCategoryChip(CAT_ALL, "REHETRA · " + sendItems.size());
+        addCategoryChip(CAT_ALL, getString(R.string.transfer_cat_all, sendItems.size()));
         for (String c : cats) {
             addCategoryChip(c, upper(c) + " · " + countCategory(c));
         }
@@ -401,20 +525,85 @@ public class TransferActivity extends AppCompatActivity {
     }
 
     private void updateSelectCount() {
-        binding.textSelectCount.setText(
-                sendChecked.size() + " voasafidy"
-                        + (server != null ? " · efa vonona ho alefa" : ""));
+        String offered = server != null ? getString(R.string.transfer_offered_suffix) : "";
+        binding.textSelectCount.setText(getString(R.string.transfer_select_count_fmt, sendChecked.size(), offered));
         binding.textSelectCount.requestLayout();
     }
 
+    /** Sélection courante (items dont la clé est cochée). */
+    private List<TransferItem> currentSelection() {
+        List<TransferItem> list = new ArrayList<>();
+        for (TransferItem it : sendItems) {
+            if (sendChecked.contains(it.key())) list.add(it);
+        }
+        return list;
+    }
+
+    /** Sélection modifiée pendant la session → serveur + file mis à jour. */
+    private void updateServerSelection() {
+        if (server != null) {
+            server.setItems(currentSelection());
+            syncSendQueue();
+        }
+    }
+
+    /**
+     * La file d'émission suit la sélection : les éléments retirés disparaissent,
+     * les statuts déjà atteints sont conservés.
+     */
+    private void syncSendQueue() {
+        List<TransferItem> selection = currentSelection();
+        List<ProgressEntry> next = new ArrayList<>();
+        for (TransferItem it : selection) {
+            ProgressEntry found = null;
+            for (ProgressEntry e : sendQueue) {
+                if (it.key().equals(e.key)) {
+                    found = e;
+                    break;
+                }
+            }
+            if (found == null) {
+                found = new ProgressEntry(it.title, it.subtitle);
+                found.key = it.key();
+            }
+            next.add(found);
+        }
+        sendQueue.clear();
+        sendQueue.addAll(next);
+        renderProgress();
+    }
+
+    /** Un item a réellement été servi (ou a échoué) : la file le montre. */
+    private void onItemServed(int index, boolean ok) {
+        String key = server == null ? null : server.itemKeyAt(index);
+        if (key == null) return;
+        for (ProgressEntry e : sendQueue) {
+            if (key.equals(e.key)) {
+                if (e.status != ProgressEntry.CANCELLED) {
+                    e.status = ok ? ProgressEntry.DONE : ProgressEntry.FAILED;
+                    if (ok) e.progress = 100;
+                }
+                break;
+            }
+        }
+        renderProgress();
+    }
+
     // =========================================================
-    // ✈️ ALEFA : SESSION HOTSPOT + SERVEUR + QR (avant sélection)
+    // 🤳 FENÊTRE DÉDIÉE DU QR (Handefa)
     // =========================================================
+
+    /**
+     * ✈️ HANDEFA : démarre DIRECTEMENT le partage + QR.
+     * La bande est l'état courant (2,4 GHz par défaut) et le mode ouvert
+     * l'état courant du switch.
+     */
     private void startTransferSession() {
         if (server != null) {
-            focusQr();
+            showQrDialog();
             return;
         }
+        if (sessionStarting) return;
 
         // Permissions WiFi : fine location (< Android 13) + nearby (13+)
         List<String> missing = new ArrayList<>();
@@ -434,16 +623,16 @@ public class TransferActivity extends AppCompatActivity {
             return;
         }
 
-        boolean secured = !binding.switchOpen.isChecked();
-        int band = TransferHotspot.BAND_AUTO;
-        if (binding.chipBand24.isChecked()) band = TransferHotspot.BAND_2_4GHZ;
-        else if (binding.chipBand5.isChecked() && binding.chipBand5.isEnabled())
-            band = TransferHotspot.BAND_5GHZ;
+        if (currentBand == TransferHotspot.BAND_5GHZ
+                && !TransferHotspot.is5GHzSupported(this)) {
+            currentBand = TransferHotspot.BAND_2_4GHZ;
+        }
+        boolean secured = !sessionOpen;
 
-        binding.btnShowQr.setEnabled(false);
-        binding.textStatus.setText("Mamorona hotspot…");
+        sessionStarting = true;
+        binding.textStatus.setText(getString(R.string.transfer_creating_hotspot));
 
-        TransferHotspot.start(this, secured, band, new TransferHotspot.Listener() {
+        TransferHotspot.start(this, secured, currentBand, new TransferHotspot.Listener() {
             @Override
             public void onStarted(String ssid, String pass, boolean apSecured) {
                 runOnUiThread(() -> beginServing(ssid, pass, apSecured));
@@ -451,85 +640,291 @@ public class TransferActivity extends AppCompatActivity {
 
             @Override
             public void onManualFallback(String reason) {
-                runOnUiThread(() -> fallbackDirect(reason));
+                runOnUiThread(() -> {
+                    sessionStarting = false;
+                    // Si le téléphone vient d'imposer un mot de passe au
+                    // point d'accès, le switch "Misokatra" devient faux.
+                    applyOpenSwitchAvailability();
+                    fallbackDirect(reason);
+                });
             }
         });
     }
 
+    /** Changement du réseau de transfert (bande ou ouverture) pendant la session. */
+    private void restartSession() {
+        if (sessionLocked) return;
+        sessionRestarting = true;
+        stopServer();
+        binding.textStatus.setText(getString(R.string.transfer_rebuilding));
+        if (dialogState != null) dialogState.setText(R.string.transfer_rebuilding);
+        startTransferSession();
+    }
+
     /** Hotspot prêt (auto ou manuel) : serveur + annonce + QR. */
     private void beginServing(String ssid, String pass, boolean secured) {
-        token = TransferUtils.newToken();
-        boolean requireToken = secured;
+        sessionSsid = ssid;
+        sessionPass = pass;
+        sessionOpen = !secured;
 
-        int chosenPort = -1;
-        TransferServer started = null;
-        for (int port = PORT_MIN; port <= PORT_MAX && started == null; port++) {
-            try {
-                TransferServer s = new TransferServer(
-                        port, token, Build.MODEL,
-                        currentSelection(), this, requireToken);
-                s.startDaemon();
-                started = s;
-                chosenPort = port;
-                qrUrlBase = "http://" + TransferUtils.localIpAddress() + ":" + port;
-            } catch (Exception ignored) {
+        token = TransferUtils.newToken();
+        final boolean requireToken = secured;
+        final List<TransferItem> initial = currentSelection();
+
+        new Thread(() -> {
+            // ⚠️ L'interface du hotspot (ap*/swlan*) n'a pas encore son
+            // adresse au moment du callback : sans attente on construisait
+            // "http://null:8619" dans le QR. On relit jusqu'à ce que l'IP
+            // arrive, puis on monte le serveur.
+            String ip = TransferUtils.localIpAddress(TransferActivity.this, 8000);
+
+            TransferServer started = null;
+            int chosenPort = -1;
+            String base = null;
+            if (ip != null) {
+                for (int port = PORT_MIN; port <= PORT_MAX && started == null; port++) {
+                    try {
+                        TransferServer s = new TransferServer(
+                                port, token, Build.MODEL,
+                                initial, TransferActivity.this, requireToken);
+                        s.startDaemon();
+                        started = s;
+                        chosenPort = port;
+                        base = "http://" + ip + ":" + port;
+                    } catch (Exception ignored) {
+                    }
+                }
             }
-        }
-        if (started == null) {
-            binding.btnShowQr.setEnabled(true);
-            Toast.makeText(this, "Nisy olana amin'ny serveur", Toast.LENGTH_SHORT).show();
+            final TransferServer srv = started;
+            final int boundPort = chosenPort;
+            final String urlBase = base;
+            runOnUiThread(() -> onSessionReady(srv, boundPort, urlBase,
+                    ssid, pass, requireToken));
+        }, "transfer-session").start();
+    }
+
+    /** Serveur démarré (ou échec) : construction du QR + fenêtre dédiée. */
+    private void onSessionReady(TransferServer started, int port, String urlBase,
+                                String ssid, String pass, boolean requireToken) {
+        if (started == null || urlBase == null) {
+            TransferHotspot.stop();
+            sessionStarting = false;
+            sessionRestarting = false;
+            String msg = getString(urlBase == null
+                    ? R.string.transfer_url_error
+                    : R.string.transfer_server_error);
+            binding.textStatus.setText(msg);
+            if (dialogState != null) dialogState.setText(msg);
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
             return;
         }
+
         server = started;
-        serverPort = chosenPort;
+        serverPort = port;
+        qrUrlBase = urlBase;
 
         if (announcer == null) announcer = new SenderAnnouncer();
         announcer.announce(serverPort, Build.MODEL, requireToken);
 
         String qr = TransferUtils.qrContent(
-                qrUrlBase + "/q?t=" + token, ssid, pass);
-        Bitmap bitmap = TransferUtils.qrBitmap(qr, 600);
-        binding.qrImage.setImageBitmap(bitmap);
+                urlBase + "/q?t=" + token, ssid, pass);
+        currentQr = TransferUtils.qrBitmap(qr, 600, qrInkColor());
+        if (currentQr == null) {
+            sessionStarting = false;
+            stopServer();
+            binding.textStatus.setText(getString(R.string.transfer_server_error));
+            Toast.makeText(this, getString(R.string.transfer_server_error),
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // La file d'émission : chaque élément servi passe en "Vita"
+        started.setServeListener((index, ok) ->
+                runOnUiThread(() -> onItemServed(index, ok)));
+        // 🔒 Premier appareil connecté → réglages verrouillés
+        started.setClientListener(count ->
+                runOnUiThread(() -> onFirstClient(count)));
+        syncSendQueue();
+
+        String openText = pass == null
+                ? getString(R.string.transfer_info_open)
+                : getString(R.string.transfer_info_secured, ssid);
         binding.textServerInfo.setText(
-                Build.MODEL + " · " + qrUrlBase
-                        + (pass == null
-                        ? "\n🔓 Misokatra : tsy misy teny miafina"
-                        : "\n🔒 Misy teny miafina (" + ssid + ")")
-                        + "\nEfa misokatra ny fampifandraisana : fidio izay ho alefa");
-        binding.qrCard.setVisibility(View.VISIBLE);
-        binding.qrImage.setVisibility(View.VISIBLE);
-        binding.btnToggleQr.setText("Afeno ny QR");
-        binding.btnShowQr.setVisibility(View.GONE);
-        binding.btnShowQr.setEnabled(true);
-        updateSelectCount();
+                getString(R.string.transfer_server_info_fmt,
+                        Build.MODEL, urlBase, openText,
+                        getString(R.string.transfer_info_list_ready)));
+        binding.sessionCard.setVisibility(View.VISIBLE);
 
-        // Le QR en haut : proche du lecteur de l'autre téléphone
-        focusQr();
         binding.textStatus.setText("");
+        sessionStarting = false;
+        sessionRestarting = false;
+
+        updateSelectCount();
+        showQrDialog();
+        selectNav(NAV_PROGRESS);
     }
 
-    /** Remonte la liste et centre le QR (session déjà affichée en haut). */
-    private void focusQr() {
-        if (binding.recyclerSend.getLayoutManager() != null) {
-            binding.recyclerSend.smoothScrollToPosition(0);
+    /**
+     * 🔐 Premier appareil connecté à la session : la bande 2,4/5 GHz et
+     * l'ouverture se verrouillent (on ne peut plus détruire/reconstruire
+     * le réseau) — d'autres personnes peuvent toujours rejoindre.
+     */
+    private void onFirstClient(int count) {
+        if (count <= 0 || sessionLocked) return;
+        sessionLocked = true;
+        if (dialogBandLock != null) {
+            dialogBandLock.setText(R.string.transfer_band_locked);
+            dialogBandLock.setTextColor(
+                    ContextCompat.getColor(this, R.color.green));
         }
-        binding.qrImage.setVisibility(View.VISIBLE);
-        binding.btnToggleQr.setText("Afeno ny QR");
+        if (dialogChip24 != null) dialogChip24.setEnabled(false);
+        if (dialogChip5 != null) dialogChip5.setEnabled(false);
+        if (dialogSwitchOpen != null) dialogSwitchOpen.setEnabled(false);
     }
 
-    /** Sélection courante (items dont la clé est cochée). */
-    private List<TransferItem> currentSelection() {
-        List<TransferItem> list = new ArrayList<>();
-        for (TransferItem it : sendItems) {
-            if (sendChecked.contains(it.key())) list.add(it);
+    /** 🎨 Couleur du QR : 5 GHz = violet, 2,4 GHz = encre foncée. */
+    private int qrInkColor() {
+        if (currentBand == TransferHotspot.BAND_5GHZ
+                && TransferHotspot.is5GHzSupported(this)) {
+            return QR_INK_5GHZ;
         }
-        return list;
+        return QR_INK_2_4GHZ;
     }
 
-    /** Sélection modifiée pendant la session → serveur mis à jour. */
-    private void updateServerSelection() {
+    /**
+     * Ouvre (ou met à jour) la fenêtre dédiée : QR coloré, bande 2,4/5,
+     * switch "Misokatra", infos SSID/mot de passe/URL.
+     */
+    private void showQrDialog() {
+        if (dialogRoot == null) {
+            dialogRoot = LayoutInflater.from(this)
+                    .inflate(R.layout.dialog_transfer_qr, null);
+            dialogQr = dialogRoot.findViewById(R.id.qrDialogImage);
+            dialogChip24 = dialogRoot.findViewById(R.id.chipBand24);
+            dialogChip5 = dialogRoot.findViewById(R.id.chipBand5);
+            dialogSwitchOpen = dialogRoot.findViewById(R.id.switchOpen);
+            dialogState = dialogRoot.findViewById(R.id.textQrDialogState);
+            dialogBandLock = dialogRoot.findViewById(R.id.textBandLock);
+            dialogQrPassword = dialogRoot.findViewById(R.id.textQrPassword);
+            dialogQrInfo = dialogRoot.findViewById(R.id.textQrInfo);
+
+            boolean fiveOk = TransferHotspot.is5GHzSupported(this);
+            dialogChip5.setEnabled(fiveOk);
+
+            attachDialogListeners();
+
+            qrDialog = new MaterialAlertDialogBuilder(this)
+                    .setTitle(getString(R.string.transfer_qr_title))
+                    .setView(dialogRoot)
+                    .setPositiveButton(getString(R.string.transfer_close), null)
+                    .setNegativeButton(getString(R.string.transfer_stop_session),
+                            (d, w) -> stopServer())
+                    .create();
+        }
+        refreshQrDialogContent();
+        qrDialog.show();
+    }
+
+    /** Remplit la fenêtre QR avec l'état courant de la session. */
+    private void refreshQrDialogContent() {
+        if (dialogRoot == null) return;
+
+        dialogChip24.setOnCheckedChangeListener(null);
+        dialogChip5.setOnCheckedChangeListener(null);
+        dialogChip24.setChecked(
+                currentBand != TransferHotspot.BAND_5GHZ);
+        dialogChip5.setChecked(
+                currentBand == TransferHotspot.BAND_5GHZ
+                        && TransferHotspot.is5GHzSupported(this));
+        dialogSwitchOpen.setOnCheckedChangeListener(null);
+        dialogSwitchOpen.setChecked(sessionOpen);
+
+        if (currentQr != null) {
+            dialogQr.setImageBitmap(currentQr);
+            dialogQr.setVisibility(View.VISIBLE);
+            dialogState.setText("");
+        } else {
+            dialogState.setText(
+                    server == null
+                            ? getString(R.string.transfer_creating_hotspot)
+                            : getString(R.string.transfer_server_error));
+        }
+
+        if (sessionLocked) {
+            dialogChip24.setEnabled(false);
+            dialogChip5.setEnabled(false);
+            dialogSwitchOpen.setEnabled(false);
+        } else {
+            dialogChip24.setEnabled(true);
+            dialogChip5.setEnabled(TransferHotspot.is5GHzSupported(this));
+            dialogSwitchOpen.setEnabled(TransferHotspot.isOpenSupported());
+        }
+        dialogBandLock.setText(sessionLocked
+                ? R.string.transfer_band_locked
+                : R.string.transfer_band_changeable);
+
+        // 🔑 Identifiants du réseau, à taper à la main si besoin
+        String ssid = sessionSsid;
+        if (server == null) {
+            dialogQrPassword.setText("");
+            dialogQrInfo.setText("");
+        } else if (ssid == null) {
+            dialogQrPassword.setText(R.string.transfer_qr_no_hotspot);
+        } else if (sessionPass == null || sessionPass.isEmpty()) {
+            dialogQrPassword.setText(
+                    getString(R.string.transfer_qr_wifi_open, ssid));
+        } else {
+            dialogQrPassword.setText(
+                    getString(R.string.transfer_qr_wifi_pass, ssid, sessionPass));
+        }
         if (server != null) {
-            server.setItems(currentSelection());
+            String openText = sessionPass == null
+                    ? getString(R.string.transfer_info_open)
+                    : getString(R.string.transfer_info_secured, ssid);
+            dialogQrInfo.setText(
+                    getString(R.string.transfer_server_info_fmt,
+                            Build.MODEL, qrUrlBase, openText, ""));
+        }
+
+        attachDialogListeners();
+    }
+
+    /** Rattache les listeners de la fenêtre (après setChecked massif). */
+    private void attachDialogListeners() {
+        dialogChip24.setOnCheckedChangeListener((b, checked) -> {
+            if (checked && currentBand != TransferHotspot.BAND_2_4GHZ) {
+                currentBand = TransferHotspot.BAND_2_4GHZ;
+                if (server != null && !sessionLocked) restartSession();
+                else refreshQrDialogContent();
+            }
+        });
+        dialogChip5.setOnCheckedChangeListener((b, checked) -> {
+            if (checked && currentBand != TransferHotspot.BAND_5GHZ
+                    && TransferHotspot.is5GHzSupported(this)) {
+                currentBand = TransferHotspot.BAND_5GHZ;
+                if (server != null && !sessionLocked) restartSession();
+                else refreshQrDialogContent();
+            }
+        });
+        dialogSwitchOpen.setOnCheckedChangeListener((b, checked) -> {
+            sessionOpen = checked;
+            if (server != null && !sessionLocked) restartSession();
+            else refreshQrDialogContent();
+        });
+    }
+
+    /**
+     * Ce téléphone impose-t-il un mot de passe au point d'accès ?
+     * Auquel cas le switch "Misokatra" est grisé et décoché : il ne
+     * pourrait de toute façon pas être honoré.
+     */
+    private void applyOpenSwitchAvailability() {
+        if (TransferHotspot.isOpenSupported()) return;
+        if (dialogSwitchOpen != null && dialogSwitchOpen.isEnabled()) {
+            dialogSwitchOpen.setOnCheckedChangeListener(null);
+            dialogSwitchOpen.setChecked(false);
+            sessionOpen = false;
+            dialogSwitchOpen.setEnabled(false);
         }
     }
 
@@ -541,11 +936,11 @@ public class TransferActivity extends AppCompatActivity {
      * son bouton "Réglages WiFi". Aucun modal, aucune mise en attente.
      */
     private void fallbackDirect(String reason) {
-        binding.btnShowQr.setEnabled(true);
-        binding.textStatus.setText(
-                "Hotspot tsy mety (" + reason
-                        + ") : amin'ny WiFi iray ihany ianareo");
-        beginServing(null, null, !binding.switchOpen.isChecked());
+        String msg = getString(R.string.transfer_fallback_direct, reason);
+        binding.textStatus.setText(msg);
+        if (dialogState != null) dialogState.setText(msg);
+        sessionRestarting = false;
+        beginServing(null, null, !sessionOpen);
     }
 
     private void stopServer() {
@@ -560,9 +955,13 @@ public class TransferActivity extends AppCompatActivity {
             announcer.stop();
         }
         TransferHotspot.stop();
-        binding.btnShowQr.setVisibility(View.VISIBLE);
-        binding.qrCard.setVisibility(View.GONE);
+        sessionLocked = false;
+        currentQr = null;
+        binding.sessionCard.setVisibility(View.GONE);
         updateSelectCount();
+        if (!sessionRestarting && qrDialog != null) {
+            qrDialog.dismiss();
+        }
     }
 
     // =========================================================
@@ -583,34 +982,58 @@ public class TransferActivity extends AppCompatActivity {
     // =========================================================
     // 📲 ANDRAY : DÉCOVERTE AUTO DES SENDERS
     //  1) découverte réseau (UDP + TCP) de ce qui est déjà joignable ;
-    //  2) si rien : scan WiFi des hotspots "BAIBOLY-…" ouverts voisins
-    //     → connexion auto → nouvelle découverte → la liste s'affiche
-    //     SANS scanner de QR. Les 🔒 demandent le QR (token secret).
+    //  2) EN PARALLÈLE : scan des réseaux WiFi "BAIBOLY_SHARE_*" voisins,
+    //     même si on n'est connecté à AUCUN réseau — ils apparaissent
+    //     dans la liste et un clic suffit :
+    //       • réseau ouvert → connexion auto puis liste des senders ;
+    //       • réseau protégé → scan du QR (il fournit le mot de passe)
+    //         puis connexion WiFi automatique.
     // =========================================================
     private void refreshDiscovery() {
         stopDiscovery();
         binding.progressSenders.setVisibility(View.VISIBLE);
         binding.textSendersEmpty.setVisibility(View.GONE);
         binding.recyclerSenders.setAdapter(null);
-        binding.textSendersTitle.setText("🔍 Mikaroka ny mpandefa…");
+        binding.textSendersTitle.setText(getString(R.string.transfer_searching_senders));
+
+        final int gen = ++discoveryGeneration;
+        boolean canScan = canScoutNetworks();
+        if (!canScan) requestScoutPerms();
+
+        pendingSenders = null;
+        pendingNetworks = null;
+        discoveryStepsLeft = canScan ? 2 : 1;
 
         SenderDiscovery.discover(this, senders -> {
-            if (!senders.isEmpty()) {
-                presentSenders(senders);
-                return;
-            }
-            // Rien sur le réseau courant : tenter de rejoindre un hotspot
-            // "BAIBOLY-*" ouvert à proximité (nécessite la permission).
-            if (!canScoutNetworks()) {
-                presentSenders(senders);
-                requestScoutPerms();
-                return;
-            }
-            runOnUiThread(() -> binding.textSendersTitle
-                    .setText("📶 Mikaroka ny WiFi Baiboly manodidina…"));
-            scoutAndJoin(() ->
-                    SenderDiscovery.discover(this, this::presentSenders));
+            if (gen != discoveryGeneration) return;
+            pendingSenders = senders;
+            discoveryStepDone(gen);
         });
+
+        if (canScan) {
+            runOnUiThread(() -> {
+                if (gen == discoveryGeneration) binding.textSendersTitle
+                        .setText(getString(R.string.transfer_scouting_wifi));
+            });
+            SenderDiscovery.scanWifiNetworks(this, 7000, networks -> {
+                if (gen != discoveryGeneration) return;
+                pendingNetworks = networks;
+                discoveryStepDone(gen);
+            });
+        }
+    }
+
+    /** Les 2 moitiés de la découverte arrivent → affichage progressif. */
+    private void discoveryStepDone(int gen) {
+        if (gen != discoveryGeneration) return;
+        discoveryStepsLeft--;
+        List<SenderDiscovery.Sender> merged = new ArrayList<>();
+        if (pendingSenders != null) merged.addAll(pendingSenders);
+        if (pendingNetworks != null) merged.addAll(pendingNetworks);
+        // On n'affiche pas un écran vide alors que d'autres résultats
+        // sont encore en cours — sauf si c'est tout ce qu'on aura.
+        if (discoveryStepsLeft > 0 && merged.isEmpty()) return;
+        presentSenders(merged);
     }
 
     /** Affiche (ou vide) la liste des senders trouvés. */
@@ -620,11 +1043,11 @@ public class TransferActivity extends AppCompatActivity {
         boolean empty = sendersFound.isEmpty();
         binding.progressSenders.setVisibility(View.GONE);
         binding.textSendersTitle.setText(empty
-                ? "🔍 Tsy misy mpandefa hita"
-                : "🔍 Mpandefa " + sendersFound.size() + " hita");
+                ? getString(R.string.transfer_no_senders_found)
+                : getString(R.string.transfer_senders_found_count, sendersFound.size()));
         binding.textSendersEmpty.setText(empty
-                ? "Tsy maintsy ao amin'ny 'Alefa' ny namana ary amin'ny WiFi iray ihany ianareo."
-                : "Tsy misy mpandefa hita : scan-eo ny QR.");
+                ? getString(R.string.transfer_senders_empty_help)
+                : getString(R.string.transfer_senders_empty_scan));
         binding.textSendersEmpty.setVisibility(
                 empty ? View.VISIBLE : View.GONE);
         binding.recyclerSenders.setLayoutManager(new LinearLayoutManager(this));
@@ -656,77 +1079,52 @@ public class TransferActivity extends AppCompatActivity {
     }
 
     /**
-     * Scan les SSID "BAIBOLY-*" alentour (hotspots ouverts de l'app) et
-     * se connecte au premier trouvé. {
-     * Covenant appelle done().
+     * Réseau Baiboly ouvert repéré dans la liste : connexion directe,
+     * sans mot de passe ni QR, puis découverte des senders de ce réseau.
      */
-    private void scoutAndJoin(Runnable done) {
-        new Thread(() -> {
-            try {
-                android.net.wifi.WifiManager wm =
-                        (android.net.wifi.WifiManager)
-                                getApplicationContext()
-                                        .getSystemService(Context.WIFI_SERVICE);
-                if (wm == null || !wm.isWifiEnabled()) {
-                    runOnUiThread(done);
-                    return;
-                }
-                try {
-                    wm.startScan();
-                } catch (Exception ignored) {
-                }
+    private void connectToWifiNetwork(SenderDiscovery.Sender s) {
+        final String ssid = s.ssid;
+        if (ssid == null) return;
 
-                String candidate = null;
-                long deadline = System.currentTimeMillis() + 8000;
-                while (candidate == null
-                        && System.currentTimeMillis() < deadline) {
-                    // Demande de scan périodique (le premier peut être vide)
-                    try {
-                        //noinspection BusyWait
-                        Thread.sleep(800);
-                    } catch (InterruptedException e) {
-                        runOnUiThread(done);
-                        return;
-                    }
-                    try {
-                        List<android.net.wifi.ScanResult> results =
-                                wm.getScanResults();
-                        for (android.net.wifi.ScanResult r : results) {
-                            if (r.SSID != null
-                                    && r.SSID.startsWith(HOTSPOT_PREFIX)) {
-                                candidate = r.SSID;
-                                break;
-                            }
-                        }
-                    } catch (Exception ignored) {
-                    }
-                    if (candidate == null) {
-                        try {
-                            wm.startScan();
-                        } catch (Exception ignored) {
-                        }
-                    }
-                }
+        if (currentSsidEquals(ssid)) {
+            joinedBaibolySsid = ssid;
+            discoverOnCurrentNetwork();
+            return;
+        }
 
-                String ssid = candidate;
-                if (ssid == null || currentSsidEquals(ssid)) {
-                    runOnUiThread(done);
-                    return;
-                }
-
-                runOnUiThread(() -> binding.textSendersTitle.setText(
-                        "📶 Mifandray amin'ny " + ssid + " …"));
-                // Réseau ouvert de l'app : pas de mot de passe
-                TransferWifiConnect.connect(this, ssid, null, wcResult -> {
-                    if (wcResult != null && wcResult.connected) {
-                        joinedBaibolySsid = ssid;
-                    }
-                    runOnUiThread(done);
-                });
-            } catch (Exception e) {
-                runOnUiThread(done);
+        binding.textReceiveState.setText(
+                getString(R.string.transfer_connecting_to_ssid, ssid));
+        TransferWifiConnect.connect(this, ssid, null, wcResult -> {
+            if (wcResult != null && wcResult.connected) {
+                joinedBaibolySsid = ssid;
+                discoverOnCurrentNetwork();
+            } else {
+                binding.textReceiveState.setText(
+                        getString(R.string.transfer_wifi_connect_failed));
             }
-        }, "baiboly-scout").start();
+        });
+    }
+
+    /**
+     * Déjà sur le bon réseau : on ne fait que chercher les senders de ce
+     * réseau (rapide, sans relancer le scan WiFi).
+     */
+    private void discoverOnCurrentNetwork() {
+        stopDiscovery();
+        binding.progressSenders.setVisibility(View.VISIBLE);
+        binding.textSendersEmpty.setVisibility(View.GONE);
+        binding.recyclerSenders.setAdapter(null);
+        binding.textSendersTitle.setText(getString(R.string.transfer_searching_senders));
+
+        final int gen = ++discoveryGeneration;
+        pendingSenders = null;
+        pendingNetworks = null;
+        discoveryStepsLeft = 1;
+        SenderDiscovery.discover(this, senders -> {
+            if (gen != discoveryGeneration) return;
+            pendingSenders = senders;
+            discoveryStepDone(gen);
+        });
     }
 
     private void stopDiscovery() {
@@ -747,7 +1145,7 @@ public class TransferActivity extends AppCompatActivity {
         IntentIntegrator integrator = new IntentIntegrator(this);
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
         integrator.setCaptureActivity(PortraitCaptureActivity.class);
-        integrator.setPrompt("Tondroy ny QR amin'ny findraman'ny namana");
+        integrator.setPrompt(getString(R.string.transfer_scan_prompt));
         integrator.setBeepEnabled(false);
         integrator.initiateScan();
     }
@@ -765,9 +1163,8 @@ public class TransferActivity extends AppCompatActivity {
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startTransferSession();
             } else {
-                binding.btnShowQr.setEnabled(true);
                 Toast.makeText(this,
-                        "Lalana (permission) WiFi ilaina ho an'ny hotspot",
+                        getString(R.string.transfer_perm_wifi_hotspot),
                         Toast.LENGTH_SHORT).show();
             }
         } else if (requestCode == REQ_DISCOVER_PERMS) {
@@ -776,11 +1173,11 @@ public class TransferActivity extends AppCompatActivity {
                 refreshDiscovery();
             } else {
                 Toast.makeText(this,
-                        "Lalana WiFi : tsy afaka mifandray ho azy amin'ny WiFi Baiboly",
+                        getString(R.string.transfer_perm_wifi_disabled),
                         Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(this, "Tsy misy fahatalanjona amin'ny kamera",
+            Toast.makeText(this, getString(R.string.transfer_perm_camera_denied),
                     Toast.LENGTH_SHORT).show();
         }
     }
@@ -797,30 +1194,38 @@ public class TransferActivity extends AppCompatActivity {
     }
 
     /**
-     * QR scanné : si les identifiants WiFi y sont → connexion auto au
-     * réseau de transfert, puis récupération du manifest. Sinon direct.
+     * QR scanné : connexion AUTOMATIQUE au WiFi du QR (identifiants dedans),
+     * puis récupération automatique du manifest — même si Android n'a pas
+     * encore confirmé la connexion, on tente le serveur de toute façon
+     * (le réseau se rattare souvent 1–2 s plus tard).
      */
     private void handleScannedQr(String qrContent) {
         String[] parsed = TransferUtils.parseQr(qrContent);
-        if (parsed != null && parsed[2] != null
-                && TransferClient.parseTransferUrl(qrContent) != null) {
-            String ssid = parsed[0];
-            String wifiPass = parsed[1];
-            String url = parsed[2];
-
-            if (ssid != null && !ssid.isEmpty() && !currentSsidEquals(ssid)) {
-                binding.textReceiveState.setText(
-                        "📶 Mifandray amin'ny WiFi " + ssid + "…");
-                TransferWifiConnect.connect(this, ssid, wifiPass, wcResult -> {
-                    fetchReceivedManifest(qrContent, url, wcResult.connected);
-                });
-                return;
-            }
-            fetchReceivedManifest(qrContent, url, true);
-        } else {
-            Toast.makeText(this, "QR tsy mety (URL hafo)",
+        if (parsed == null || parsed[2] == null
+                || TransferClient.parseTransferUrl(qrContent) == null) {
+            Toast.makeText(this, getString(R.string.transfer_invalid_qr),
                     Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        final String ssid = parsed[0];
+        final String wifiPass = parsed[1];
+        final String url = parsed[2];
+
+        // Déjà sur le bon réseau (ou QR sans bloc WiFi) : rien à connecter.
+        if (ssid == null || ssid.isEmpty() || currentSsidEquals(ssid)) {
+            if (ssid != null && !ssid.isEmpty()) joinedBaibolySsid = ssid;
+            fetchReceivedManifest(qrContent, url, true);
+            return;
+        }
+
+        binding.textReceiveState.setText(
+                getString(R.string.transfer_connecting_wifi_ssid, ssid));
+        TransferWifiConnect.connect(this, ssid, wifiPass, wcResult -> {
+            boolean ok = wcResult != null && wcResult.connected;
+            if (ok) joinedBaibolySsid = ssid;
+            fetchReceivedManifest(qrContent, url, ok);
+        });
     }
 
     /** SSID actuel déjà bon ? (évite une reconnexion inutile) */
@@ -840,106 +1245,137 @@ public class TransferActivity extends AppCompatActivity {
 
     private void fetchReceivedManifest(String qrContent, String url,
                                        boolean connectedOk) {
-        if (!connectedOk) {
-            binding.textReceiveState.setText(
-                    "📶 Tsy nety ny WiFi : sokafy ny fikirana WiFi, mifidiana ny "
-                            + "WiFi'n'ny namana, dia andramo indray");
-            return;
-        }
-
         String manifestUrl = TransferClient.manifestUrl(url);
         if (manifestUrl == null) {
-            Toast.makeText(this, "QR tsy mety (URL fohy loatra)",
+            Toast.makeText(this, getString(R.string.transfer_invalid_qr),
                     Toast.LENGTH_SHORT).show();
             return;
         }
         receivedQr = qrContent;
-        binding.textReceiveState.setText("Mikaroka… " + manifestUrl);
+        binding.textReceiveState.setText(
+                getString(R.string.transfer_fetching_manifest, manifestUrl));
 
         new Thread(() -> {
             TransferClient.Manifest manifest = null;
             Exception error = null;
-            for (int attempt = 0; attempt < 3 && manifest == null; attempt++) {
+            // On réessaie même si la connexion WiFi n'est pas encore
+            // confirmée : le réseau arrive souvent juste après.
+            for (int attempt = 0; attempt < 4 && manifest == null; attempt++) {
                 try {
                     manifest = TransferClient.fetchManifest(manifestUrl);
                 } catch (Exception e) {
                     error = e;
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(1200);
                     } catch (InterruptedException ignored) {
                         return;
                     }
                 }
             }
-            TransferClient.Manifest m = manifest;
-            Exception e = error;
+            final TransferClient.Manifest m = manifest;
+            final Exception e = error;
             runOnUiThread(() -> {
                 if (m != null) {
                     showReceivedManifest(m);
+                } else if (!connectedOk) {
+                    // Jamais connecté au réseau du QR → vrai problème WiFi
+                    binding.textReceiveState.setText(
+                            getString(R.string.transfer_wifi_connect_failed));
                 } else {
                     binding.textReceiveState.setText(
-                            "Tsy neken'ny namana : "
-                                    + (e == null ? "tsy fantatra" : e.getMessage()));
+                            getString(R.string.transfer_connection_refused,
+                                    (e == null ? getString(R.string.transfer_unknown_error) : e.getMessage())));
                 }
             });
         }).start();
     }
 
+    /**
+     * Manifest reçu → PLUS DE BOUTON : tout est mis dans la file et
+     * téléchargé automatiquement. L'écran bascule sur "En cours" pour
+     * montrer arriver chaque élément (avec annulation possible).
+     */
     private void showReceivedManifest(TransferClient.Manifest manifest) {
         receivedManifest = manifest;
-        receivedChecked.clear();
+        receiveQueue.clear();
+        receiveCancelled.clear();
+
         for (int i = 0; i < manifest.items.size(); i++) {
-            receivedChecked.add(i);
+            TransferClient.ReceivedItem it = manifest.items.get(i);
+            String label = it.title == null || it.title.isEmpty()
+                    ? it.type : it.title;
+            String sub = it.isProgram()
+                    ? getString(R.string.transfer_program_type_label)
+                    : TransferData.humanSize(it.size) + " · "
+                    + it.category.toUpperCase() + " " + it.number;
+            ProgressEntry entry = new ProgressEntry(label, sub);
+            entry.index = i;
+            receiveQueue.add(entry);
         }
+
         binding.textReceiveState.setText(
-                "Misy " + manifest.items.size() + " avy amin'ny "
-                        + manifest.deviceName
-                        + (manifest.secured ? " 🔒" : " 🔓"));
-        binding.recyclerReceive.setLayoutManager(new LinearLayoutManager(this));
-        binding.recyclerReceive.setAdapter(new ReceiveAdapter());
-        binding.btnDownloadSelected.setVisibility(
-                manifest.items.isEmpty() ? View.GONE : View.VISIBLE);
+                getString(R.string.transfer_received_manifest_summary,
+                        manifest.items.size(), manifest.deviceName,
+                        manifest.secured ? getString(R.string.transfer_secured_tag)
+                                : getString(R.string.transfer_open_tag)));
+
+        sendMode = false;
+        selectNav(NAV_PROGRESS);
+        binding.textReceiveState.setText(getString(R.string.transfer_auto_receiving));
+        renderProgress();
+        startReceiveQueue();
     }
 
     // =========================================================
-    // 📲 ANDRAY : TÉLÉCHARGER + IMPORTER
+    // 📲 ANDRAY : RÉCEPTION AUTOMATIQUE + IMPORT
     // =========================================================
-    private void downloadSelectedItems() {
-        if (receivedManifest == null) return;
+    private void startReceiveQueue() {
+        if (receivedManifest == null || receivedQr == null) return;
 
-        binding.btnDownloadSelected.setEnabled(false);
-        binding.textReceiveState.setText("Mihakatra…");
+        final TransferClient.Manifest manifest = receivedManifest;
+        final String qr = receivedQr;
 
         new Thread(() -> {
-            int ok = 0;
-            List<String> fails = new ArrayList<>();
-            StringBuilder progress = new StringBuilder();
-
-            File tempDir = ServerManifestClient.downloadsDir(this);
-            String[] parsedUrl = TransferClient.parseTransferUrl(receivedQr);
+            String[] parsedUrl = TransferClient.parseTransferUrl(qr);
+            if (parsedUrl == null) {
+                runOnUiThread(this::onReceiveQueueFinished);
+                return;
+            }
             String base = parsedUrl[0];
             String tokenValue = parsedUrl[1];
             String tokenParam = tokenValue == null ? "" : "t=" + tokenValue + "&";
+            File tempDir = ServerManifestClient.downloadsDir(TransferActivity.this);
 
-            for (Integer idxObj : receivedChecked) {
-                int idx = idxObj;
-                if (idx < 0 || idx >= receivedManifest.items.size()) continue;
-                TransferClient.ReceivedItem it = receivedManifest.items.get(idx);
+            for (int i = 0; i < receiveQueue.size(); i++) {
+                final ProgressEntry entry = receiveQueue.get(i);
+                final int idx = entry.index;
+                if (idx < 0 || idx >= manifest.items.size()) continue;
+
+                if (entry.status != ProgressEntry.WAITING
+                        || receiveCancelled.contains(idx)) {
+                    continue;
+                }
+                markEntry(entry, ProgressEntry.RUNNING, 0);
+
+                TransferClient.ReceivedItem it = manifest.items.get(idx);
                 String label = it.title == null || it.title.isEmpty()
                         ? it.type : it.title;
-
+                File downloaded = null;
                 try {
-                    File downloaded = TransferClient.downloadItem(
+                    downloaded = TransferClient.downloadItem(
                             base + tokenParam + "i=" + idx,
-                            label, tempDir);
+                            label, tempDir,
+                            (received, size) -> {
+                                if (receiveCancelled.contains(idx)) return false;
+                                int pct = size > 0
+                                        ? (int) (received * 100 / size) : -1;
+                                if (pct >= 0) markEntry(entry, ProgressEntry.RUNNING, pct);
+                                return true;
+                            });
 
                     if (it.isProgram()) {
                         JSONObject json = new JSONObject(readAsText(downloaded));
-                        String imported = TransferData.importProgram(this, json);
-                        //noinspection ResultOfMethodCallIgnored
-                        downloaded.delete();
-                        ok++;
-                        progress.append("✓ ").append(imported).append("\n");
+                        TransferData.importProgram(this, json);
                     } else {
                         String ext = (it.ext != null && !it.ext.isEmpty())
                                 ? it.ext : "mp3";
@@ -950,51 +1386,65 @@ public class TransferActivity extends AppCompatActivity {
                             downloaded.renameTo(renamed);
                             downloaded = renamed;
                         }
-                        String imported = TransferData.importPlayback(
-                                this, downloaded, it.category, it.number,
+                        TransferData.importPlayback(
+                                this, renamed, it.category, it.number,
                                 it.playTitle, it.label);
+                        downloaded = renamed;
+                    }
+                    markEntry(entry, ProgressEntry.DONE, 100);
+                } catch (TransferClient.CancelledException ce) {
+                    markEntry(entry, ProgressEntry.CANCELLED, 0);
+                } catch (Exception ex) {
+                    markEntry(entry, ProgressEntry.FAILED, 0);
+                } finally {
+                    if (downloaded != null) {
                         //noinspection ResultOfMethodCallIgnored
                         downloaded.delete();
-                        ok++;
-                        progress.append("✓ ").append(imported).append("\n");
                     }
-                } catch (Exception ex) {
-                    fails.add(label);
-                    progress.append("✗ ").append(label).append("\n");
                 }
-
-                String status = "… " + (ok + fails.size()) + "/"
-                        + receivedManifest.items.size();
-                runOnUiThread(() -> binding.textReceiveState.setText(status));
             }
 
-            String finalProgress = progress.toString();
-            final int finalOk = ok;
-            runOnUiThread(() -> {
-                binding.btnDownloadSelected.setEnabled(true);
-                binding.textReceiveState.setText(
-                        (finalOk > 0 ? "Voaray : " + finalProgress : "")
-                                + (fails.isEmpty() ? "Voaray daholo ✓"
-                                : "Nisy " + fails.size() + " tsy nety")
-                                + "\n📶 Miverina amin'ny WiFi mahazatra…");
-                Toast.makeText(this,
-                        finalOk + " voaray, " + fails.size() + " tsy nety",
-                        Toast.LENGTH_SHORT).show();
-                // Le transfert est fini : on libère le réseau de transfert
-                cleanupTransferNetwork();
-            });
-        }).start();
+            runOnUiThread(this::onReceiveQueueFinished);
+        }, "transfer-receive").start();
+    }
+
+    /** Passe une entrée de la file à un statut (sur le thread UI). */
+    private void markEntry(ProgressEntry entry, int status, int progress) {
+        runOnUiThread(() -> {
+            entry.status = status;
+            entry.progress = progress;
+            renderProgress();
+        });
+    }
+
+    /** Réception terminée : bilan + libération du réseau de transfert. */
+    private void onReceiveQueueFinished() {
+        int ok = 0;
+        int failed = 0;
+        for (ProgressEntry e : receiveQueue) {
+            if (e.status == ProgressEntry.DONE) ok++;
+            else if (e.status == ProgressEntry.FAILED) failed++;
+        }
+        binding.textReceiveState.setText(ok + "/" + receiveQueue.size()
+                + " " + getString(R.string.transfer_returning_home_wifi));
+        Toast.makeText(this,
+                getString(R.string.transfer_summary_toast, ok, failed),
+                Toast.LENGTH_SHORT).show();
+        // Le transfert est fini : on libère le réseau de transfert
+        cleanupTransferNetwork();
     }
 
     /**
      * Transfert terminé : on retire la suggestion du réseau Baiboly
-     * (créée par le scan QR). Android repart automatiquement sur le WiFi
-     * d'origine — le récepteur n'est déconnecté que le temps de l'envoi.
+     * (créée par le scan QR) et on libère le réseau spécifié — Android
+     * repart automatiquement sur le WiFi d'origine — le récepteur n'est
+     * déconnecté que le temps de l'envoi.
      */
     private void cleanupTransferNetwork() {
+        TransferWifiConnect.release(getApplicationContext());
         if (android.os.Build.VERSION.SDK_INT < 29) return;
         // Identifiants du réseau de transfert : du QR scanné, ou du scan
-        // auto des hotspots BAIBOLY-\* (réseau ouvert).
+        // auto des hotspots BAIBOLY-* (réseau ouvert).
         String ssid = null;
         String pass = null;
         try {
@@ -1098,55 +1548,163 @@ public class TransferActivity extends AppCompatActivity {
         }
     }
 
-    class ReceiveAdapter extends RecyclerView.Adapter<ReceiveAdapter.VH> {
+    // =========================================================
+    // 📊 LA FILE D'ATTENTE (envoi ET réception)
+    // =========================================================
+    /** La file du côté courant : ce qui part, ou ce qui arrive. */
+    private List<ProgressEntry> activeQueue() {
+        return sendMode ? sendQueue : receiveQueue;
+    }
+
+    /** Résumé + liste de la file. */
+    private void renderProgress() {
+        List<ProgressEntry> queue = activeQueue();
+        if (binding.recyclerProgress.getLayoutManager() == null) {
+            binding.recyclerProgress.setLayoutManager(new LinearLayoutManager(this));
+        }
+        if (binding.recyclerProgress.getAdapter() == null) {
+            binding.recyclerProgress.setAdapter(new ProgressAdapter());
+        } else {
+            binding.recyclerProgress.getAdapter().notifyDataSetChanged();
+        }
+        // La liste a tout le poids restant : si la file est vide on la masque,
+        // sinon le message "vide" serait écrasé au bas de l'écran.
+        boolean empty = queue.isEmpty();
+        binding.recyclerProgress.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.textProgressEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        binding.textProgressTitle.setText(progressSummary(queue));
+    }
+
+    private String progressSummary(List<ProgressEntry> queue) {
+        int done = 0;
+        int running = 0;
+        int waiting = 0;
+        for (ProgressEntry e : queue) {
+            if (e.status == ProgressEntry.DONE) done++;
+            else if (e.status == ProgressEntry.RUNNING) running++;
+            else if (e.status == ProgressEntry.WAITING) waiting++;
+        }
+        return getString(R.string.transfer_progress_title) + "  ·  "
+                + getString(R.string.transfer_queue_summary, done, running, waiting);
+    }
+
+    /**
+     * Annulation d'une ligne : côté réception on coupe le téléchargement,
+     * côté émission on retire l'élément de la sélection (donc du manifest).
+     */
+    private void cancelEntry(int position) {
+        List<ProgressEntry> queue = activeQueue();
+        if (position < 0 || position >= queue.size()) return;
+        ProgressEntry entry = queue.get(position);
+        if (entry.status == ProgressEntry.DONE
+                || entry.status == ProgressEntry.FAILED
+                || entry.status == ProgressEntry.CANCELLED) return;
+
+        entry.status = ProgressEntry.CANCELLED;
+        if (sendMode) {
+            if (entry.key != null) {
+                sendChecked.remove(entry.key);
+                updateServerSelection();
+                saveSelection();
+            }
+        } else {
+            receiveCancelled.add(entry.index);
+        }
+        renderProgress();
+        Toast.makeText(this, getString(R.string.transfer_removed_from_queue),
+                Toast.LENGTH_SHORT).show();
+    }
+
+    class ProgressAdapter extends RecyclerView.Adapter<ProgressAdapter.VH> {
 
         @NonNull
         @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_transfer_select, parent, false);
+                    .inflate(R.layout.item_transfer_progress, parent, false);
             return new VH(view);
         }
 
         @Override
         public void onBindViewHolder(@NonNull VH holder, int position) {
-            if (receivedManifest == null
-                    || position >= receivedManifest.items.size()) return;
-            TransferClient.ReceivedItem it = receivedManifest.items.get(position);
-            boolean isProgram = it.isProgram();
+            List<ProgressEntry> queue = activeQueue();
+            if (position >= queue.size()) return;
+            final int pos = position;
+            ProgressEntry entry = queue.get(position);
 
-            holder.itemIcon.setImageResource(isProgram
-                    ? R.drawable.ic_dashboard_black_24dp
-                    : R.drawable.ic_music_note);
-            holder.textTitle.setText(it.title);
-            holder.textSubtitle.setText(isProgram
-                    ? "Fandaharana"
-                    : TransferData.humanSize(it.size) + " · "
-                    + it.category.toUpperCase() + " " + it.number);
-            holder.checkItem.setOnCheckedChangeListener(null);
-            holder.checkItem.setChecked(receivedChecked.contains(position));
-            holder.checkItem.setOnCheckedChangeListener((b, c) -> {
-                if (c) receivedChecked.add(position);
-                else receivedChecked.remove(position);
-            });
+            holder.textTitle.setText(entry.title);
+            holder.textSub.setText(entry.subtitle);
+
+            int dot;
+            int label;
+            int color;
+            switch (entry.status) {
+                case ProgressEntry.RUNNING:
+                    dot = R.drawable.circle_violet;
+                    label = R.string.transfer_status_running;
+                    color = ContextCompat.getColor(TransferActivity.this,
+                            R.color.teal_700);
+                    holder.bar.setVisibility(View.VISIBLE);
+                    holder.bar.setProgressCompat(Math.max(entry.progress, 0), true);
+                    break;
+                case ProgressEntry.DONE:
+                    dot = R.drawable.circle_green;
+                    label = R.string.transfer_status_done;
+                    color = ContextCompat.getColor(TransferActivity.this,
+                            R.color.green);
+                    holder.bar.setVisibility(View.GONE);
+                    break;
+                case ProgressEntry.FAILED:
+                    dot = R.drawable.circle_red;
+                    label = R.string.transfer_status_failed;
+                    color = ContextCompat.getColor(TransferActivity.this,
+                            R.color.teal_200);
+                    holder.bar.setVisibility(View.GONE);
+                    break;
+                case ProgressEntry.CANCELLED:
+                    dot = R.drawable.circle_dot;
+                    label = R.string.transfer_status_cancelled;
+                    color = ContextCompat.getColor(TransferActivity.this,
+                            R.color.title_gray);
+                    holder.bar.setVisibility(View.GONE);
+                    break;
+                default:
+                    dot = R.drawable.circle_yellow;
+                    label = R.string.transfer_status_waiting;
+                    color = ContextCompat.getColor(TransferActivity.this,
+                            R.color.title_gray);
+                    holder.bar.setVisibility(View.GONE);
+                    break;
+            }
+            holder.statusDot.setBackgroundResource(dot);
+            holder.textStatus.setText(label);
+            holder.textStatus.setTextColor(color);
+
+            boolean cancellable = entry.status == ProgressEntry.WAITING
+                    || entry.status == ProgressEntry.RUNNING;
+            holder.btnCancel.setVisibility(cancellable ? View.VISIBLE : View.INVISIBLE);
+            holder.btnCancel.setOnClickListener(v -> cancelEntry(pos));
         }
 
         @Override
         public int getItemCount() {
-            return receivedManifest == null ? 0 : receivedManifest.items.size();
+            return activeQueue().size();
         }
 
         class VH extends RecyclerView.ViewHolder {
-            CheckBox checkItem;
-            ImageView itemIcon;
-            TextView textTitle, textSubtitle;
+            View statusDot;
+            TextView textTitle, textSub, textStatus;
+            com.google.android.material.progressindicator.LinearProgressIndicator bar;
+            ImageButton btnCancel;
 
             VH(View view) {
                 super(view);
-                checkItem = view.findViewById(R.id.checkItem);
-                itemIcon = view.findViewById(R.id.itemIcon);
-                textTitle = view.findViewById(R.id.textTitle);
-                textSubtitle = view.findViewById(R.id.textSubtitle);
+                statusDot = view.findViewById(R.id.statusDot);
+                textTitle = view.findViewById(R.id.textProgressTitle);
+                textSub = view.findViewById(R.id.textProgressSub);
+                textStatus = view.findViewById(R.id.textProgressStatus);
+                bar = view.findViewById(R.id.barProgress);
+                btnCancel = view.findViewById(R.id.btnCancelProgress);
             }
         }
     }
@@ -1164,18 +1722,34 @@ public class TransferActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull VH holder, int position) {
             if (position >= sendersFound.size()) return;
-            SenderDiscovery.Sender s = sendersFound.get(position);
+            final SenderDiscovery.Sender s = sendersFound.get(position);
 
-            holder.textSenderLock.setText(s.secured ? "🔒" : "🔓");
-            holder.textSenderName.setText(s.device);
+            holder.textSenderLock.setText("");
+            holder.textSenderName.setText(s.isWifiNetwork()
+                    ? "📶 " + s.device : s.device);
             holder.textSenderSub.setText(s.secured
-                    ? "Misy teny miafina : mila scan-ena ny QR"
-                    : "Misokatra : azo tsindriana mivantana");
+                    ? getString(R.string.transfer_sender_secured_sub)
+                    : getString(R.string.transfer_sender_open_sub));
 
             holder.itemView.setOnClickListener(v -> {
-                if (s.secured) {
+                if (isBaibolyNetwork(s)) {
+                    // Réseau WiFi Baiboly repéré par scan — même si on
+                    // n'était connecté à AUCUN réseau.
+                    if (s.secured) {
+                        // Protégé : le QR fournit le mot de passe, il
+                        // connecte le WiFi automatiquement.
+                        binding.textReceiveState.setText(
+                                getString(R.string.transfer_wifi_need_qr, s.ssid));
+                        launchScanner();
+                    } else {
+                        // Ouvert : on se connecte directement.
+                        connectToWifiNetwork(s);
+                    }
+                } else if (s.isWifiNetwork()) {
+                    // Réseau non reconnu : rien à faire.
+                } else if (s.secured) {
                     binding.textReceiveState.setText(
-                            "🔒 " + s.device + " : scan-eo ny QR'n'ilay namana");
+                            getString(R.string.transfer_sender_scan_prompt, s.device));
                     launchScanner();
                 } else {
                     connectToOpenSender(s);
@@ -1202,7 +1776,9 @@ public class TransferActivity extends AppCompatActivity {
 
     /** Sender ouvert : connexion directement, sans QR ni token. */
     private void connectToOpenSender(SenderDiscovery.Sender s) {
-        binding.textReceiveState.setText("Mifandray amin'i " + s.device + "…");
-        handleScannedQr(s.url() + "?");
+        String url = s.url();
+        if (url == null) return;
+        binding.textReceiveState.setText(getString(R.string.transfer_connecting_to_device, s.device));
+        handleScannedQr(url + "?");
     }
 }
