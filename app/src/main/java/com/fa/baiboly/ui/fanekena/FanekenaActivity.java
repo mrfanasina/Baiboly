@@ -385,11 +385,10 @@ public class FanekenaActivity extends AppCompatActivity
 
                         int off = sessionPrevItem != null ? 1 : 0;
 
-                        if (sessionPrevItem != null && position == 0) {
-                            // Page "Teo aloha" feuilletée : item précédent
-                            scheduleSessionBack();
-                            return;
-                        }
+                        // Pages de transition ("Teo aloha" / "Manaraka") :
+                        // le passage est déclenché à la FIN du swipe (voir
+                        // onPageScrollStateChanged), pas au milieu du geste.
+                        if (sessionPrevItem != null && position == 0) return;
 
                         if (position < off + run.size()) {
                             ProgramSession.Item item = run.get(position - off);
@@ -398,38 +397,53 @@ public class FanekenaActivity extends AppCompatActivity
                                         CodeAdapter.getDisplayName(item.reference));
                             }
                             historyService.addHistory(item.reference, "fanekena");
-                        } else {
-                            // Page "Manaraka" feuilletée : item suivant
-                            scheduleSessionAdvance();
                         }
                     }
 
                     @Override
                     public void onPageScrollStateChanged(int state) {
-                        // L'utilisateur regagne une page de contenu (retour
-                        // manuel depuis "Manaraka") : annule le passage.
-                        if (state == ViewPager2.SCROLL_STATE_IDLE) {
-                            int off = sessionPrevItem != null ? 1 : 0;
-                            int pos = binding.viewPager.getCurrentItem();
-                            boolean onContent = pos >= off
-                                    && pos < off + run.size();
-                            if (onContent) cancelPendingSessionMove();
+                        // L'utilisateur re-touche le pager pendant le repos :
+                        // il reprend la main, le passage est annulé.
+                        if (state == ViewPager2.SCROLL_STATE_DRAGGING) {
+                            cancelPendingSessionMove();
+                            return;
+                        }
+                        if (state != ViewPager2.SCROLL_STATE_IDLE) return;
+
+                        int off = sessionPrevItem != null ? 1 : 0;
+                        int pos = binding.viewPager.getCurrentItem();
+
+                        if (sessionPrevItem != null && pos == 0) {
+                            // Swipe posé sur "Teo aloha" : item précédent,
+                            // après un court repos sur l'écran de transition.
+                            scheduleSessionBack();
+                        } else if (pos == off + run.size()) {
+                            // Swipe posé sur "Manaraka" : item suivant.
+                            scheduleSessionAdvance();
+                        } else {
+                            // Retour sur une page de contenu (retour
+                            // manuel depuis "Manaraka") : annule le passage.
+                            cancelPendingSessionMove();
                         }
                     }
                 });
     }
 
-    /** Repos sur l'écran de transition ("Manaraka" / "Teo aloha") avant
-     *  de lancer le lecteur suivant : le swipe se termine visuellement,
-     *  l'activity se construit hors animation -> plus de saccade. */
-    private static final long TRANSITION_REST_MS = 1500;
+    /** Repos sur l'écran de transition ("Manaraka" / "Teo aloha") après le
+     *  repos COMPLET du swipe (déclenché sur SCROLL_STATE_IDLE, plus jamais
+     *  en plein geste) : le swipe se termine visuellement, on laisse
+     *  l'écran de transition respirer, puis l'activité suivante démarre
+     *  hors animation -> glissement fluide sans saccade. */
+    private static final long TRANSITION_REST_MS = 150;
 
     /** Changement de lecteur programmé (annulable). */
     private final Runnable pendingSessionMove = new Runnable() {
         @Override
         public void run() {
-            pendingBack = false;
+            // lire AVANT de consommer pendingBack : l'ordre inverse
+            // forçait toujours un passage "vers l'avant" (retour impossible).
             performSessionAdvance();
+            pendingBack = false;
         }
     };
 

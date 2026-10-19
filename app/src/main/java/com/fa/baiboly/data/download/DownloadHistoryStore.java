@@ -64,6 +64,10 @@ public class DownloadHistoryStore extends SQLiteOpenHelper {
     }
 
     public boolean hasUrl(String url) {
+        // Les entrées de secours ont une url null → un bind null sadd
+        // "the bind value at index 1 is null" = CRASH dès l'ouverture
+        // de l'écran. Entrée sans url = jamais téléchargée.
+        if (url == null || url.isEmpty()) return false;
         Cursor c = getReadableDatabase().rawQuery(
                 "SELECT 1 FROM " + TABLE + " WHERE " + COL_URL + " = ? LIMIT 1",
                 new String[]{url});

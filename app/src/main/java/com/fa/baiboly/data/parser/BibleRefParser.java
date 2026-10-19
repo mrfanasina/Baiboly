@@ -234,7 +234,6 @@ public final class BibleRefParser {
                     + "(?:\\s*[:.]\\s*(\\d+))?"   // g4 : verset fin (si ':' présent)
                     + ")?"
     );
-
     /**
      * Extrait le nom de livre + les nombres d'une référence libre.
      * Accepte les séparateurs ":", ".", ",", les nombres collés au livre
@@ -286,7 +285,6 @@ public final class BibleRefParser {
 
         Integer num = resolveBookText(prefix, bookText);
         if (num == null) return null;
-
         return buildReading(num, bookText, tail);
     }
 
@@ -329,6 +327,20 @@ public final class BibleRefParser {
      *  - "3.16-17"    -> chapitre 3, versets 16 à 17
      *  - "7.54-8.1"   -> chapitre 7 v54 à chapitre 8 v1
      */
+    /**
+     * Livres qui n'ont QU'UN SEUL chapitre (donc pas de numéro de
+     * chapitre utilisable) : Oba (Obadia), File (Filemona), 2Jao, 3Jao
+     * et Jod. Pour eux, "Jod 17-23" ne peut pas être une plage de
+     * chapitres : ce sont les versets du chapitre 1 (= "Jod 1:17-23").
+     */
+    private static boolean isSingleChapterBook(int bookNumber) {
+        return bookNumber == 31 // Oba — Obadia
+                || bookNumber == 57 // File — Filemona
+                || bookNumber == 63 // 2Jao
+                || bookNumber == 64 // 3Jao
+                || bookNumber == 65; // Jod
+    }
+
     private static ParsedRef buildReading(int bookNumber, String bookName, String tail) {
         ParsedRef ref = new ParsedRef();
         ref.bookNumber = bookNumber;
@@ -341,7 +353,6 @@ public final class BibleRefParser {
         ref.hasNumbers = false;
 
         if (tail == null || tail.isEmpty()) return ref;
-
         Matcher m = TAIL_PATTERN.matcher(tail);
         if (!m.find()) return ref;
 
@@ -367,6 +378,22 @@ public final class BibleRefParser {
         } else if (m.group(3) != null) {
             // Forme "chapitre-chapitre" (chapitres entiers)
             ref.endChapter = Integer.parseInt(m.group(3));
+        }
+
+        // Livres à UN SEUL chapitre ("File", "Jod"...) : sans séparateur
+        // ":", les nombres qui suivent le livre sont des VERSETS du
+        // chapitre 1. "Jod 17-23" = "Jod 1:17-23" ; "File 4" = "File 1:4".
+        // La forme explicite "Jod 1:17-23" (avec ':') reste inchangée, et
+        // "Jod 1" tout seul garde le sens "le livre entier" (chap. 1).
+        if (isSingleChapterBook(bookNumber) && m.group(2) == null) {
+            int v1 = ref.startChapter;
+            int v2 = ref.endChapter;
+            if (v1 > 1 || v2 != v1) {
+                ref.startChapter = 1;
+                ref.endChapter = 1;
+                ref.startVerse = v1;
+                ref.endVerse = v2;
+            }
         }
         return ref;
     }    // =====================================================

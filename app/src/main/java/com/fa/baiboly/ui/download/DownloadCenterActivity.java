@@ -54,6 +54,10 @@ public class DownloadCenterActivity extends AppCompatActivity {
     private List<DownloadEntry> availableList = new ArrayList<>();
     private final List<DownloadEntry> fallbackList = new ArrayList<>();
 
+    /** Paquet de mise à jour de l'app proposé par le manifest (ou null). */
+    private DownloadEntry appUpdate;
+    private boolean updateDownloading;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         applyGlobalTheme();
@@ -88,6 +92,11 @@ public class DownloadCenterActivity extends AppCompatActivity {
         setupFallbackEntries();
         loadData();
         refreshMemoryInfo();
+
+        // Mise à jour de l'app : carte en haut de l'écran
+        binding.btnUpdateApp.setOnClickListener(v -> {
+            if (appUpdate != null && !updateDownloading) installUpdate();
+        });
     }
 
     private void applyGlobalTheme() {
@@ -103,12 +112,17 @@ public class DownloadCenterActivity extends AppCompatActivity {
     // 📥 DONNÉES
     // =========================================================
     private void setupFallbackEntries() {
-        // Sert si le serveur n'est pas encore joignable ou le
-        // manifest vide — prépare déjà les futurs paquets de data.
+        // Sert si le serveur n'est pas encore joignable ou le manifest vide
+        // — prépare déjà les paquets d'ANNÉES SUIVANTES (perikopa 2027,
+        // lecture quotidienne, mofonaina archivée…) : dès que le lien
+        // contient ces fichiers, le manifest du serveur les remplacera.
+        int nextYear = java.util.Calendar.getInstance()
+                .get(java.util.Calendar.YEAR) + 1;
         fallbackList.clear();
         fallbackList.add(new DownloadEntry(
-                DownloadEntry.TYPE_PERIKOPA, "Perikopa 2026",
-                "Vakiteny isam-andro · taona", null, 0L));
+                DownloadEntry.TYPE_PERIKOPA, "Perikopa " + nextYear,
+                "Vakiteny isam-andro · taona manaraka",
+                "perikopa/" + nextYear + ".json", 0L));
         fallbackList.add(new DownloadEntry(
                 DownloadEntry.TYPE_MOFONAINA, "Mofonaina androany",
                 "Mofo tsy miseho", null, 0L));
@@ -127,14 +141,133 @@ public class DownloadCenterActivity extends AppCompatActivity {
                 fetched = manifestClient.fetchManifest();
             } catch (Exception ignored) {
             }
-            final List<DownloadEntry> result = (fetched != null && !fetched.isEmpty())
-                    ? fetched : fallbackList;
-            final boolean fromServer = fetched != null && !fetched.isEmpty();
+
+            // Sépare le paquet "app" (mise à jour) des données —il a
+            // sa carte dédiée tout en haut de l'écran.
+            DownloadEntry update = null;
+            List<DownloadEntry> data = new ArrayList<>();
+            for (DownloadEntry e : fetched) {
+                if (DownloadEntry.TYPE_APP.equals(e.getType())) {
+                    if (update == null || e.getVersionCode() > update.getVersionCode()) {
+                        update = e;
+                    }
+                } else {
+                    data.add(e);
+                }
+            }
+            if (data.isEmpty()) data.addAll(fallbackList);
+
+            final List<DownloadEntry> dataResult = data;
+            final boolean fromServer = !fetched.isEmpty();
+            final DownloadEntry updateResult = update;
             runOnUiThread(() -> {
-                availableList = result;
+                appUpdate = updateResult;
+                applyUpdateCard();
+                availableList = dataResult;
                 updateAvailableSection(fromServer);
             });
         }).start();
+    }
+
+    // =========================================================
+    // ⬆️ MISE À JOUR DE L'APP (carte en haut)
+    // =========================================================
+
+    /**
+     * Affiche la carte uniquement si le manifest propose une entrée
+     * "app" dont versionCode est strictement postérieur à la version
+     * installée. Si le lien n'a pas de versionCode, on Accepte quand
+     * même ( carte visible ) — le serveur est déjà en train de décider.
+     */
+    private void applyUpdateCard() {
+        if (appUpdate == null) {
+            binding.cardUpdate.setVisibility(View.GONE);
+            return;
+        }
+        if (appUpdate.getVersionCode() > 0
+                && appUpdate.getVersionCode() <= installedVersionCode()) {
+            binding.cardUpdate.setVisibility(View.GONE);
+            return;
+        }
+        binding.cardUpdate.setVisibility(View.VISIBLE);
+        if (appUpdate.getVersionName() != null
+                && !appUpdate.getVersionName().isEmpty()) {
+            binding.textUpdateVersion.setText("v" + appUpdate.getVersionName());
+        } else if (appUpdate.getVersionCode() > 0) {
+            binding.textUpdateVersion.setText("v" + appUpdate.getVersionCode());
+        } else {
+            binding.textUpdateVersion.setText("");
+        }
+        binding.textUpdateDesc.setText(
+                "Fandaharana vaovao azo misintona avy amin'ny serveur. "
+                        + "Rehefa vita ny fisintona dia atao avy hatrany ny fametrahana.");
+        binding.btnUpdateApp.setEnabled(!updateDownloading);
+        binding.btnUpdateApp.setText("Misintona");
+    }
+
+    /** versionCode (version name) Currently installed. */
+    private int installedVersionCode() {
+        try {
+            android.content.pm.PackageInfo pi = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            return pi.versionCode;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** Télécharge l'APK depuis le serveur puis lance l'installation. */
+    private void installUpdate() {
+        if (appUpdate == null) return;
+        updateDownloading = true;
+        binding.btnUpdateApp.setEnabled(false);
+        binding.btnUpdateApp.setText("Mahandry…");
+
+        final DownloadEntry entry = appUpdate;
+        new Thread(() -> {
+            File apk = null;
+            String error = null;
+            try {
+                apk = manifestClient.download(entry);
+            } catch (Exception e) {
+                error = e.getMessage();
+            }
+            final File result = apk;
+            final String msg = error;
+            runOnUiThread(() -> {
+                updateDownloading = false;
+                if (result != null && result.length() > 0) {
+                    historyStore.add(entry, result.length(), System.currentTimeMillis());
+                    openApkInstaller(result);
+                    binding.cardUpdate.setVisibility(View.GONE);
+                } else {
+                    Toast.makeText(this,
+                            "Tsy nety misintona : "
+                                    + (msg != null ? msg : "tsy misy serveur"),
+                            Toast.LENGTH_LONG).show();
+                }
+                applyUpdateCard();
+                loadData();
+            });
+        }, "update-download").start();
+    }
+
+    /** Passe la main au système pour installer l'APK téléchargé. */
+    private void openApkInstaller(File apk) {
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", apk);
+            Intent install = new Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri,
+                            "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(install);
+        } catch (Exception e) {
+            Toast.makeText(this,
+                    "Tsy azo apetraka : " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateRecentSection() {

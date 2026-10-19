@@ -80,48 +80,35 @@
                     Log.e("MOFONAINA", "Reading1 ERROR ", e);
                 }
 
+
                 // =========================
-                // 🎵 SONG 1
+                // 🎵 SONGS : toute partie après la lecture qui contient un
+                // numéro de chant est une chanson. Le nombre de parties varie
+                // selon les jours : aujourd'hui
+                // "Sal.../ FFPM 790.../ Vavaka/ Mofonaina/ FF 3" (5 parties),
+                // la 2e chanson est en parts[4] — on ne peut plus figer
+                // l'index. Song1 = 1re chanson trouvée, Song2 = la dernière.
                 // =========================
+                List<Song> songs = new ArrayList<>();
                 try {
-                    if (parts.length > 1) {
-
-                        Log.d("MOFONAINA", "Trying Song1 with: " + parts[1]);
-
-                        Song s1 = safeSong(parts[1]);
-
-                        if (s1 != null) {
-                            Log.d("MOFONAINA", "Song1 OK = " + s1.getId());
-                            data.setSong1(s1);
-                        } else {
-                            Log.d("MOFONAINA", "Song1 NULL ");
+                    for (int i = 1; i < parts.length; i++) {
+                        Song s = safeSong(parts[i]);
+                        if (s != null) {
+                            Log.d("MOFONAINA", "Song candidate[" + i + "] = " + s.getId());
+                            songs.add(s);
+                        }
+                    }
+                    if (!songs.isEmpty()) {
+                        data.setSong1(songs.get(0));
+                        Log.d("MOFONAINA", "Song1 = " + songs.get(0).getId());
+                        if (songs.size() > 1) {
+                            Song last = songs.get(songs.size() - 1);
+                            data.setSong2(last);
+                            Log.d("MOFONAINA", "Song2 = " + last.getId());
                         }
                     }
                 } catch (Exception e) {
-                    Log.e("MOFONAINA", "Song1 ERROR ", e);
-                }
-
-                // =========================
-                // 🎵 SONG 2
-                // =========================
-                try {
-                    if (parts.length > 5) {
-
-                        Log.d("MOFONAINA", "Trying Song2 with: " + parts[5]);
-
-                        Song s2 = safeSong(parts[5]);
-
-                        if (s2 != null) {
-                            Log.d("MOFONAINA", "Song2 OK = " + s2.getId());
-                            data.setSong2(s2);
-                        } else {
-                            Log.d("MOFONAINA", "Song2 NULL");
-                        }
-                    } else {
-                        Log.d("MOFONAINA", "Song2 skipped (parts.length <= 5)");
-                    }
-                } catch (Exception e) {
-                    Log.e("MOFONAINA", "Song2 ERROR", e);
+                    Log.e("MOFONAINA", "Songs ERROR", e);
                 }
             }
             // =========================
@@ -230,11 +217,22 @@
 
                     text = text.trim();
 
+                    // Espaces insécables du HTML ignorés par \\s des regex
+                    text = text.replace('\u00a0', ' ');
+
+                    // Format "Sal. 108. 1. 4" (chapitre. verset début.
+                    // verset fin, séparés par des points) → "Sal. 108:1-4".
+                    // Testé AVANT la règle deux nombres, il absorbe la liste
+                    // complète.
+                    text = text.replaceAll("(\\d+)\\s*\\.\\s*(\\d+)\\s*\\.\\s*(\\d+)",
+                            "$1:$2-$3");
+
                     // Fix: Convert dot-separated chapter.verse to colon format
                     // "Sal 66.1-7" → "Sal 66:1-7"
                     // "Sal 66.1" → "Sal 66:1"
-                    // But NOT "Sal 66" (chapter only)
-                    text = text.replaceAll("(\\d+)\\.(\\d+)", "$1:$2");
+                    // But NOT "Sal 66" (chapter only) — espaces autour du
+                    // point tolérés ("Sal 66. 1")
+                    text = text.replaceAll("(\\d+)\\s*\\.\\s*(\\d+)", "$1:$2");
 
                     // Fix format
                     text = text.replace(",", ":");

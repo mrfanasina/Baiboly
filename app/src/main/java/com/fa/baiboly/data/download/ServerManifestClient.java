@@ -36,9 +36,17 @@ import java.util.List;
  *     { "type": "perikopa",   "title": "Perikopa 2026",
  *       "url": "perikopa/2026.json",   "size": 243000 },
  *     { "type": "mofonaina",  "title": "Mofonaina 14 Oktobra",
- *       "url": "mofonaina/2026-10-14.json", "size": 12000 }
+ *       "url": "mofonaina/2026-10-14.json", "size": 12000 },
+ *     { "type": "app",        "title": "Mise à jour de l'app",
+ *       "url": "app/baiboly-1.2.0.apk", "size": 6200000,
+ *       "versionCode": 2, "versionName": "1.2.0" }
  *   ]
  * }
+ *
+ * L'entrée "app" déclenche la carte de mise à jour de l'écran
+ * Downloads (visible si versionCode > versionCode installée),
+ * les autres entrées sont de la DATA (perikopa, mofonaina de
+ * l'année suivante, lecture quotidienne…).
  */
 public class ServerManifestClient {
 
@@ -96,6 +104,12 @@ public class ServerManifestClient {
                     e.setTitle(o.optString("title", ""));
                     e.setUrl(o.optString("url", ""));
                     e.setSize(o.optLong("size", 0L));
+                    // Paquet de mise à jour de l'app : versionCode qui
+                    // déclenche (ou non) la carte « mise à jour ».
+                    if (DownloadEntry.TYPE_APP.equals(e.getType())) {
+                        e.setVersionCode(o.optInt("versionCode", 0));
+                        e.setVersionName(o.optString("versionName", null));
+                    }
                     list.add(e);
                 }
             }
@@ -114,6 +128,9 @@ public class ServerManifestClient {
      * (Plus tard : importer le contenu dans la base ici.)
      */
     public File download(DownloadEntry entry) throws Exception {
+        if (entry.absoluteUrl(getBaseUrl()) == null) {
+            throw new Exception("URL source inconnue");
+        }
         URL url = new URL(entry.absoluteUrl(getBaseUrl()));
         HttpURLConnection conn = open(url);
 

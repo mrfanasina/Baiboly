@@ -57,7 +57,8 @@ public final class TransferUtils {
 
                     // Priorité à l'interface du hotspot (ap*, swlan*, ...)
                     if (name.startsWith("ap") || name.startsWith("swlan")
-                            || name.contains("swlan")) {
+                            || name.contains("swlan") || name.startsWith("wlan1")
+                            || name.startsWith("rndis") || name.startsWith("usb")) {
                         return host;
                     }
                     if (addr.isSiteLocalAddress() || host.startsWith("192.168.")) {
@@ -70,12 +71,58 @@ public final class TransferUtils {
         return fallback;
     }
 
+    /**
+     * IP locale AVEC attente : juste après la création du hotspot,
+     * l'interface "ap*" n'a pas encore son adresse → sans retry on
+     * construirait "http://null:8619" dans le QR. On relit l'interface
+     * jusqu'à ce qu'une IP apparaisse (timeoutMs), puis on tente le
+     * DhcpInfo du WiFi comme dernier recours.
+     *
+     * À appeler sur un thread d'arrière-plan.
+     */
+    public static String localIpAddress(Context context, long timeoutMs) {
+        String ip = localIpAddress();
+        long deadline = System.currentTimeMillis() + Math.max(0L, timeoutMs);
+        while (ip == null && System.currentTimeMillis() < deadline) {
+            try {
+                //noinspection BusyWait
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                break;
+            }
+            ip = localIpAddress();
+        }
+        if (ip == null) ip = dhcpIpAddress(context);
+        if (ip == null) ip = "192.168.43.1";
+        return ip;
+    }
+
+    /** Dernier recours : adresse IP du WifiManager (DhcpInfo). */
+    private static String dhcpIpAddress(Context context) {
+        try {
+            WifiManager wm = (WifiManager) context.getApplicationContext()
+                    .getSystemService(Context.WIFI_SERVICE);
+            if (wm == null) return null;
+            android.net.DhcpInfo info = wm.getDhcpInfo();
+            if (info == null || info.ipAddress == 0) return null;
+            int ip = info.ipAddress;
+            return (ip & 0xff) + "." + ((ip >> 8) & 0xff) + "."
+                    + ((ip >> 16) & 0xff) + "." + ((ip >> 24) & 0xff);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // =========================================================
     // ⬛ GÉNÉRATION QR
     // =========================================================
 
-    /** Bitmap QR code du contenu donné (taille carrée en px). */
-    public static Bitmap qrBitmap(String content, int sizePx) {
+    /**
+     * Bitmap QR code du contenu donné (taille carrée en px).
+     * @param fgColor couleur du QR : 2,4 GHz = encre foncée, 5 GHz = encre
+     *                violette — le QR lui-même indique la bande choisie.
+     */
+    public static Bitmap qrBitmap(String content, int sizePx, int fgColor) {
         try {
             QRCodeWriter writer = new QRCodeWriter();
             BitMatrix matrix = writer.encode(
@@ -86,7 +133,7 @@ public final class TransferUtils {
             for (int x = 0; x < sizePx; x++) {
                 for (int y = 0; y < sizePx; y++) {
                     bitmap.setPixel(x, y,
-                            matrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                            matrix.get(x, y) ? fgColor : Color.WHITE);
                 }
             }
             return bitmap;
@@ -119,10 +166,13 @@ public final class TransferUtils {
         StringBuilder sb = new StringBuilder();
         if (ssid != null && !ssid.isEmpty()) {
             sb.append("WIFI:T:").append(pass == null ? "nopass" : "WPA")
-                    .append(";S:").append(escapeWifi(ssid)).append(';');
+                    .append(";S:").append(escapeWifi(ssid));
             if (pass != null) {
-                sb.append("P:").append(escapeWifi(pass)).append(';');
+                sb.append(";P:").append(escapeWifi(pass));
             }
+            // UN SEUL ";;" fermant le bloc : avec un ';' en plus après le
+            // mot de passe, on produisait ";;;" et l'URL parsée commençait
+            // par ";" → "QR invalide" chez le récepteur.
             sb.append(";;");
         }
         return sb.append(transferUrl).toString();
@@ -158,7 +208,10 @@ public final class TransferUtils {
             int sep = text.indexOf(";;", 5);
             if (sep < 0) return null;
             String wifiBlock = text.substring(5, sep);
-            url = text.substring(sep + 2).trim();
+            // Tolérance : d'anciens senders émettaient ";;;" (3 points-
+            // virgules) → l'URL commençait par des ';' orphelins. On les
+            // retire sinon parseTransferUrl() ne reconnaît plus le QR.
+            url = text.substring(sep + 2).replaceFirst("^;+", "").trim();
 
             String[] parts = wifiBlock.split("(?<!\\\\);");
             for (String part : parts) {

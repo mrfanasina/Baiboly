@@ -17,6 +17,7 @@ package com.fa.baiboly.models;
 public class DownloadEntry {
 
     // Types connus (le champ type sert à choisir l'icône / la future importation)
+    public static final String TYPE_APP = "app";
     public static final String TYPE_PERIKOPA = "perikopa";
     public static final String TYPE_MOFONAINA = "mofonaina";
     public static final String TYPE_DATA = "data";
@@ -26,6 +27,13 @@ public class DownloadEntry {
     private String subtitle;
     private String url;
     private long size;
+    /**
+     * Uniquement pour type = "app" (paquet de mise à jour de l'app) :
+     * versionCode de la version proposée. 0 si absent/non-app.
+     */
+    private int versionCode;
+    /** Affichage "1.2.0" (optionnel, pour la carte de mise à jour). */
+    private String versionName;
 
     public DownloadEntry() {
     }
@@ -76,6 +84,22 @@ public class DownloadEntry {
 
     public void setSize(long size) {
         this.size = size;
+    }
+
+    public int getVersionCode() {
+        return versionCode;
+    }
+
+    public void setVersionCode(int versionCode) {
+        this.versionCode = versionCode;
+    }
+
+    public String getVersionName() {
+        return versionName;
+    }
+
+    public void setVersionName(String versionName) {
+        this.versionName = versionName;
     }
 
     /** Résolution de l'URL relative par rapport à BASE_URL. */

@@ -222,9 +222,10 @@ public class SongVersesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
         // Base sizes (in SP) scaled dynamically
 
         // Taille des versets : réglage utilisateur (Paramètres -> taille du
-        // texte), avec un bonus de 20 % sur le texte (paroles plus grandes
-        // que la valeur de base, reste modulable par le curseur 12-40 sp).
-        vh.tvText.setTextSize(textSize * 1.4f);
+        // texte), avec un léger bonus de 15 % à la demande (les paroles
+        // doivent s'imprimer un tout petit peu plus que les livres, sans
+        // retrouver le décalage du vieux ×1,4).
+        vh.tvText.setTextSize(textSize * 1.15f);
         vh.tvNumber.setTextSize(textSize);
 
         // -----------------------------

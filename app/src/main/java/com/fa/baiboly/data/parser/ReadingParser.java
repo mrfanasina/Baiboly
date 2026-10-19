@@ -27,6 +27,7 @@ public class ReadingParser {
      * @return Reading object or null if parsing fails
      */
     public Reading parse(String input) {
+
         if (input == null || input.trim().isEmpty()) return null;
 
         BibleRefParser.ParsedRef ref = BibleRefParser.parse(input);

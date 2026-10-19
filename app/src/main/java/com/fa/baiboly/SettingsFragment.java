@@ -325,8 +325,11 @@ public class SettingsFragment extends Fragment {
         // Theme
         refreshThemeSelection();
 
-        // Text Size
+        // Text Size : borné aux limites du slider (12–58 sp) — une valeur
+        // sauvegardée hors bornes (ancien réglage) serait refusée par le
+        // com.google.android.material.slider.Slider.
         float size = preferences.getFloat(KEY_TEXT_SIZE, 18f);
+        size = Math.max(12f, Math.min(58f, size));
         binding.textSizeSlider.setValue(size);
         binding.txtSizePreview.setTextSize(size);
 

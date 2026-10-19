@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chemins partagés par le FileProvider : les fichiers téléchargés
+     du serveur (APK de mise à jour, data perikopa/mofonaina) vivent
+     dans <app>/external/Android/data/<app>/files/downloads/. -->
+<paths>
+    <external-files-path
+        name="downloads"
+        path="downloads/" />
+</paths>
