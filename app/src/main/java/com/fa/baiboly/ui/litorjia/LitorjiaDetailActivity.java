@@ -584,6 +584,31 @@ public class LitorjiaDetailActivity extends AppCompatActivity
                     LitorjiaImportActivity.intentForMerge(this), REQ_PICK_JSON);
             return true;
         }
+        if (id == R.id.menu_duplicate_program) {
+            Program copy = repo.duplicateProgram(program.id,
+                    (program.title == null ? "Fivoriana" : program.title) + " (dika)",
+                    program.serviceDate);
+            if (copy != null) {
+                Toast.makeText(this, getString(R.string.lit_duplicate_done),
+                        Toast.LENGTH_SHORT).show();
+                LitorjiaDetailActivity.openProgram(this, copy.id);
+            }
+            return true;
+        }
+        if (id == R.id.menu_delete_program) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.lit_delete_title)
+                    .setMessage(R.string.lit_delete_message)
+                    .setPositiveButton("Eny", (d, w) -> {
+                        repo.deleteProgram(program.id);
+                        Toast.makeText(this, getString(R.string.lit_delete_done),
+                                Toast.LENGTH_SHORT).show();
+                        finish();
+                    })
+                    .setNegativeButton("Tsia", null)
+                    .show();
+            return true;
+        }
         if (id == R.id.menu_restore_perikopa) {
             refetchPerikopaIntoReadings();
             return true;

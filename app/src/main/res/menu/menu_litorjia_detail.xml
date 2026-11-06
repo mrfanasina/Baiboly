@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_edit_toggle"
+        android:icon="@drawable/ic_edit"
+        android:title="@string/lit_mode_edition"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_undo"
+        android:icon="@drawable/ic_backspace"
+        android:title="@string/lit_menu_undo"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_expand"
+        android:title="@string/lit_menu_expand"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_collapse"
+        android:title="@string/lit_menu_collapse"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_numbers"
+        android:title="@string/lit_menu_numbers"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_rename"
+        android:title="@string/lit_menu_rename"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_restore_perikopa"
+        android:title="@string/lit_menu_restore_perikopa"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_import_here"
+        android:title="@string/lit_menu_import_here"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_export"
+        android:title="@string/lit_menu_export"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_export_copy"
+        android:title="@string/lit_menu_export_copy"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_duplicate_program"
+        android:title="@string/lit_menu_duplicate"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_delete_program"
+        android:title="@string/lit_menu_delete"
+        app:showAsAction="never" />
+</menu>

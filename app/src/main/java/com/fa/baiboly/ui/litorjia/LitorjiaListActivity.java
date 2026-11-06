@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.ColorManager;
+import com.fa.baiboly.data.litorjia.LitorjiaJsonService;
 import com.fa.baiboly.data.litorjia.LitorjiaRepository;
 import com.fa.baiboly.data.litorjia.Program;
 import com.fa.baiboly.data.litorjia.ProgramGenerator;
@@ -87,8 +88,19 @@ public class LitorjiaListActivity extends AppCompatActivity {
 
         binding.fabAdd.setOnClickListener(v -> showCreateDialog());
 
-        // Importer (menu flottant adjacent)
-        binding.toolbar.setOnClickListener(v -> showOverflowMenu());
+        // Import / aide toujours accessibles en un geste (§4.7) : menu ⋮.
+        binding.toolbar.inflateMenu(R.menu.menu_litorjia_list);
+        binding.toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.menu_import) {
+                LitorjiaImportActivity.openCreate(this);
+                return true;
+            }
+            if (item.getItemId() == R.id.menu_import_help) {
+                LitorjiaImportActivity.openHelp(this);
+                return true;
+            }
+            return false;
+        });
     }
 
     @Override
@@ -302,19 +314,6 @@ public class LitorjiaListActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void showOverflowMenu() {
-        // Import de programme (JSON) — entrée secondaire de la liste
-        new AlertDialog.Builder(this)
-                .setTitle("Litorjia")
-                .setItems(new CharSequence[]{
-                        getString(R.string.lit_menu_import),
-                        getString(R.string.lit_menu_import_help)}, (d, w) -> {
-                    if (w == 0) LitorjiaImportActivity.openCreate(this);
-                    else LitorjiaImportActivity.openHelp(this);
-                })
-                .show();
-    }
-
     private void applyGlobalTheme() {
         SharedPreferences prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE);
         int savedMode = prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
@@ -366,17 +365,7 @@ public class LitorjiaListActivity extends AppCompatActivity {
                 showProgramMenu(p);
                 return true;
             });
-            holder.btnDelete.setOnClickListener(v -> {
-                new AlertDialog.Builder(LitorjiaListActivity.this)
-                        .setTitle(R.string.lit_delete_title)
-                        .setMessage(R.string.lit_delete_message)
-                        .setPositiveButton("Eny", (d, w) -> {
-                            repo.deleteProgram(p.id);
-                            loadPrograms();
-                        })
-                        .setNegativeButton("Tsia", null)
-                        .show();
-            });
+            holder.btnDelete.setOnClickListener(v -> confirmDelete(p));
         }
 
         @Override
@@ -417,19 +406,66 @@ public class LitorjiaListActivity extends AppCompatActivity {
                 .setItems(new CharSequence[]{
                         getString(R.string.lit_menu_rename),
                         getString(R.string.lit_menu_duplicate),
-                        getString(R.string.lit_menu_change_date)}, (d, w) -> {
+                        getString(R.string.lit_menu_export),
+                        getString(R.string.lit_menu_change_date),
+                        getString(R.string.lit_menu_delete)}, (d, w) -> {
                     if (w == 0) showRenameDialog(p);
                     else if (w == 1) {
                         Program copy = repo.duplicateProgram(p.id, null, p.serviceDate);
                         if (copy != null) {
-                            Toast.makeText(this, "Voasokatra", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, getString(R.string.lit_duplicate_done),
+                                    Toast.LENGTH_SHORT).show();
                             loadPrograms();
                         }
-                    } else {
+                    } else if (w == 2) {
+                        shareJson(repo.getProgram(p.id));
+                    } else if (w == 3) {
                         showDatePicker(p);
+                    } else {
+                        confirmDelete(p);
                     }
                 })
                 .show();
+    }
+
+    private void confirmDelete(Program p) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.lit_delete_title)
+                .setMessage(R.string.lit_delete_message)
+                .setPositiveButton("Eny", (d, w) -> {
+                    repo.deleteProgram(p.id);
+                    Toast.makeText(this, getString(R.string.lit_delete_done),
+                            Toast.LENGTH_SHORT).show();
+                    loadPrograms();
+                })
+                .setNegativeButton("Tsia", null)
+                .show();
+    }
+
+    /** Export JSON depuis la liste (partage, enregistrement, copie). */
+    private void shareJson(Program program) {
+        if (program == null) return;
+        try {
+            String safe = program.title == null ? "fivoriana"
+                    : program.title.replaceAll("[^A-Za-z0-9]+", "_").toLowerCase(Locale.US);
+            java.io.File f = new java.io.File(getCacheDir(), "litorjia-" + safe + ".json");
+            java.io.FileWriter w = new java.io.FileWriter(f);
+            w.write(LitorjiaJsonService.export(program));
+            w.close();
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, "com.fa.baiboly.fileprovider", f);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("application/json");
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(send, getString(R.string.lit_share_json)));
+        } catch (Exception e) {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                    getSystemService(Context.CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(
+                    "litorjia", LitorjiaJsonService.export(program)));
+            Toast.makeText(this, getString(R.string.lit_copied), Toast.LENGTH_SHORT).show();
+        }
     }
 
     /** Changement de date du culte (le perikopa ne suit pas automatiquement). */
