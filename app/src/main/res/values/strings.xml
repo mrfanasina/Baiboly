@@ -4,12 +4,13 @@
     <!-- ========================= -->
     <string name="lit_todo_badge">zavatra azo fenoina</string>
     <string name="lit_nothing_to_undo">Tsy misy azo averina intsony</string>
-    <string name="lit_copied">Voasary (copié)</string>
+    <string name="lit_copied">Voatahiry ao amin\'ny clipboard</string>
     <string name="lit_no_perikopa">Tsy misy perikopa amin\'izy androany</string>
     <string name="lit_delete_title">Hofafy?</string>
     <string name="lit_delete_message">Hofafy ilay litorjia?</string>
     <string name="lit_delete_node_title">Hofafy izany?</string>
-    <string name="lit_delete_node_msg">Hofafy miaraka amin\'ny zanany rehetra. Azonao averina ny famafana (annuler).</string>
+    <string name="lit_delete_node_msg">Hofafy miaraka amin\'ny zanany rehetra. Azonao averina ny famafana.</string>
+    <string name="lit_delete_node_children">%1$d singa ao anatiny no hofafana miaraka.</string>
     <string name="lit_add_element">Hanampy zavatra</string>
     <string name="lit_act_edit">Ovaina</string>
     <string name="lit_act_consult">Hita (votoaty)</string>
@@ -26,9 +27,10 @@
     <string name="lit_act_expand">Itsiranona</string>
     <string name="lit_act_collapse">Hikatezina</string>
     <string name="lit_act_delete">Hofafana</string>
-    <string name="lit_mode_edition">Mode fanovana</string>
-    <string name="lit_mode_lecture">Mode mandaha</string>    <string name="lit_mode_edition_toast">Mode fanovana : tsindrio hanatsarana, elindro lava hanampy zavatra.</string>
-    <string name="lit_mode_lecture_toast">Mode mandaha : tsindrio hanamaky.</string>
+    <string name="lit_mode_edition">Fomba fanovana</string>
+    <string name="lit_mode_lecture">Fomba famakiana</string>
+    <string name="lit_mode_edition_toast">Fomba fanovana : tsindrio hanovana, tsindrio lava hamakiana ny safidy.</string>
+    <string name="lit_mode_lecture_toast">Fomba famakiana : tsindrio hijery ny votoaty.</string>
     <string name="lit_menu_undo">Averina (annuler)</string>
     <string name="lit_menu_expand">Rehetra itsiranona</string>
     <string name="lit_menu_collapse">Rehetra hikatezina</string>
@@ -43,14 +45,17 @@
     <string name="lit_menu_duplicate">Dika mitovy</string>
     <string name="lit_menu_change_date">Ovoina ny daty</string>
     <string name="lit_share_json">Litorjia JSON</string>
+    <string name="lit_title">Litorjia</string>
     <string name="lit_item_count">%1$d singa</string>
     <string name="lit_badge_todo">hamenoana</string>
+    <string name="lit_drag_handle">Tarito hanovana toerana</string>
     <string name="lit_todo_badge_count">%1$d hamenoana</string>
     <string name="lit_empty_program">Tsy misy zavatra ao amin\'ity litorjia ity</string>
     <string name="lit_empty_add">Hanampy zavatra</string>
     <string name="lit_empty_import">Ampidiro JSON</string>
     <string name="lit_empty_hint">Atombohy amin\'ny fampidirana zavatra iray na ny JSON.</string>
     <string name="lit_cancel">Hiala</string>
+    <string name="lit_save">Tehirizo</string>
     <string name="lit_create_date">Daty</string>
     <string name="lit_create_title">Lohateny</string>
     <string name="lit_create_dialog_title">Hamorona litorjia</string>
@@ -88,13 +93,13 @@
     <string name="lit_help_title">Avy amin\'ny sary izay fivoahany</string>
     <string name="lit_help_steps">1. Adikao ny "prompt" eto ambany.\n2. Alefa mampiraharaha amin\'ny sarin\'ny fandaharana amin\'ny fanampiana (ChatGPT, Gemini, Claude…).\n3. Adikao ny valiny (JSON).\n4. Apetaho eto ary hanamarina.</string>
     <string name="lit_copy_prompt">Adikao ny prompt</string>
-    <string name="lit_copy_schema">Schéma JSON</string>
+    <string name="lit_copy_schema">Endrika JSON</string>
     <string name="lit_paste_json_title">Apetaho eto ny JSON</string>
     <string name="lit_btn_paste">Apetsaka</string>
     <string name="lit_btn_open_file">Sokafy fichier .json</string>
     <string name="lit_btn_import">Hanamarina sy handahatra</string>
     <string name="lit_prompt_copied">Prompt voasary — alefa mampiraharaha amin\'ny sary amin\'ny AI</string>
-    <string name="lit_schema_copied">Schéma voasary</string>
+    <string name="lit_schema_copied">Voatahiry ny endrika JSON</string>
     <string name="lit_json_copied_to_field">JSON voakarakara</string>
     <string name="lit_report_bad">Tsy azo amidy</string>
     <string name="lit_report_ok">Voaamarina — azonao amidina.</string>

@@ -114,6 +114,7 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         RecyclerView recycler = findViewById(R.id.recyclerTree);
         recycler.setLayoutManager(new LinearLayoutManager(this));
         recycler.setAdapter(adapter);
+        setupDragAndDrop(recycler);
 
         findViewById(R.id.fabAdd).setOnClickListener(v -> showAddMenu(root, 0));
         findViewById(R.id.btnEmptyAdd).setOnClickListener(v -> {
@@ -178,6 +179,7 @@ public class LitorjiaDetailActivity extends AppCompatActivity
     /** Bascule lecture/édition depuis le menu ou l'état vide. */
     private void toggleEditMode() {
         editMode = true;
+        adapter.setEditMode(true);
         android.view.MenuItem item = toolbarMenu == null ? null : toolbarMenu.findItem(R.id.menu_edit_toggle);
         if (item != null) {
             item.setTitle(R.string.lit_mode_lecture);
@@ -229,7 +231,10 @@ public class LitorjiaDetailActivity extends AppCompatActivity
                 root = r.root;
                 program.root = root;
                 adapter = new TreeFlatAdapter(root, this);
-                ((RecyclerView) findViewById(R.id.recyclerTree)).setAdapter(adapter);
+                RecyclerView recycler = findViewById(R.id.recyclerTree);
+                recycler.setAdapter(adapter);
+                setupDragAndDrop(recycler);
+                adapter.setEditMode(editMode);
                 repo.saveTree(program, root);
                 refreshHeader();
                 Toast.makeText(this, "Niova", Toast.LENGTH_SHORT).show();
@@ -250,6 +255,85 @@ public class LitorjiaDetailActivity extends AppCompatActivity
     @Override
     public void onNodeLongTap(ProgramNode node) {
         showNodeMenu(node);
+    }
+
+    @Override
+    public void onNodeMove(ProgramNode from, ProgramNode to) {
+        pushUndoState();
+        moveNodeBefore(from, to);
+    }
+
+    // =========================================================
+    // Glisser-déposer (§4.3, alternative aux boutons monter/descendre)
+    // =========================================================
+
+    /**
+     * La poignée de chaque ligne démarre un glisser vertical. Le noeud est
+     * déplacé avant la cible, ce qui permet aussi de changer de section en
+     * le déposant sur une autre branche.
+     */
+    private void setupDragAndDrop(RecyclerView recycler) {
+        androidx.recyclerview.widget.ItemTouchHelper.Callback callback =
+                new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
+                        androidx.recyclerview.widget.ItemTouchHelper.UP
+                                | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+                    @Override
+                    public boolean onMove(@NonNull RecyclerView rv,
+                                          @NonNull RecyclerView.ViewHolder viewHolder,
+                                          @NonNull RecyclerView.ViewHolder target) {
+                        ProgramNode from = adapter.nodeAtPosition(viewHolder.getAdapterPosition());
+                        ProgramNode to = adapter.nodeAtPosition(target.getAdapterPosition());
+                        moveNodeBefore(from, to);
+                        return true;
+                    }
+
+                    @Override
+                    public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                        // Pas de suppression par glissement : seulement réordonner.
+                    }
+
+                    @Override
+                    public boolean isLongPressDragEnabled() {
+                        return false; // appui long = menu d'actions
+                    }
+
+                    @Override
+                    public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+                        if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_DRAG
+                                && viewHolder != null) {
+                            pushUndoState();
+                        }
+                        super.onSelectedChanged(viewHolder, actionState);
+                    }
+                };
+        androidx.recyclerview.widget.ItemTouchHelper helper =
+                new androidx.recyclerview.widget.ItemTouchHelper(callback);
+        helper.attachToRecyclerView(recycler);
+        adapter.setTouchHelper(helper);
+    }
+
+    /** Déplace {@code from} juste avant {@code to} (sans étape d'annulation). */
+    private void moveNodeBefore(ProgramNode from, ProgramNode to) {
+        if (from == null || to == null || from == to) return;
+        if (isAncestor(from, to)) return; // pas un noeud dans son propre sous-arbre
+        ProgramNode fromParent = parentOf(from);
+        ProgramNode toParent = parentOf(to);
+        int fi = indexOf(fromParent, from);
+        if (fi < 0) return;
+        fromParent.children.remove(fi);
+        int ti = indexOf(toParent, to);
+        if (ti < 0) ti = toParent.children.size();
+        toParent.children.add(ti, from);
+        from.parentId = toParent.id;
+        saveNow();
+        adapter.rebuild();
+    }
+
+    private boolean isAncestor(ProgramNode ancestor, ProgramNode node) {
+        for (ProgramNode c : ancestor.children) {
+            if (c == node || isAncestor(c, node)) return true;
+        }
+        return false;
     }
 
     private void openEditor(ProgramNode node) {
@@ -274,10 +358,18 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         labels.add(getString(R.string.lit_act_consult)); actions.add(() -> NodeDetailDialog.show(this, node));
 
         if (editMode) {
+            // Ajouter à n'importe quel niveau : enfant (sections) ou
+            // frère juste après le noeud courant.
             if (node.isContainer()) {
                 labels.add(getString(R.string.lit_act_add_child));
                 actions.add(() -> showAddMenu(node, node.children.size()));
             }
+            labels.add(getString(R.string.lit_act_add_after));
+            actions.add(() -> {
+                ProgramNode parent = parentOf(node);
+                int at = indexOf(parent, node);
+                showAddMenu(parent, at < 0 ? parent.children.size() : at + 1);
+            });
             labels.add(getString(R.string.lit_act_rename));
             actions.add(() -> showRenameNode(node));
             labels.add(getString(R.string.lit_act_up)); actions.add(() -> moveNode(node, -1));
@@ -411,7 +503,7 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.lit_delete_node_title))
                 .setMessage(kids > 0
-                        ? kids + " element(s) ao anatiny no hofafana miaraka."
+                        ? getString(R.string.lit_delete_node_children, kids)
                         : getString(R.string.lit_delete_node_msg))
                 .setPositiveButton("Eny", (d, w) -> {
                     pushUndoState();
@@ -456,9 +548,17 @@ public class LitorjiaDetailActivity extends AppCompatActivity
     // =========================================================
 
     private void showAddMenu(ProgramNode parent, int at) {
-        String[] entries = {"Sampana", "Lohateny (titr de)", "Hira", "Vakiteny",
-                "Vavaka", "Fanekem-pinoana", "Antsan'ny Salema (horo",
-                "Lahatsoratra", "Rakitra", "Hafa"};
+        String[] entries = {
+                getString(R.string.lit_add_section),
+                getString(R.string.lit_add_title),
+                getString(R.string.lit_add_hymn),
+                getString(R.string.lit_add_bible),
+                getString(R.string.lit_add_prayer),
+                getString(R.string.lit_add_creed),
+                getString(R.string.lit_add_choir),
+                getString(R.string.lit_add_text),
+                getString(R.string.lit_add_offering),
+                getString(R.string.lit_add_custom)};
         String[] types = {
                 ProgramNode.TYPE_SECTION, ProgramNode.TYPE_TITLE, ProgramNode.TYPE_HYMN,
                 ProgramNode.TYPE_BIBLE, ProgramNode.TYPE_PRAYER, ProgramNode.TYPE_CREED,
@@ -527,6 +627,7 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         int id = item.getItemId();
         if (id == R.id.menu_edit_toggle) {
             editMode = !editMode;
+            adapter.setEditMode(editMode);
             item.setTitle(editMode ? R.string.lit_mode_lecture : R.string.lit_mode_edition);
             item.setIcon(editMode ? R.drawable.ic_eye_icon : R.drawable.ic_edit);
             Toast.makeText(this, editMode

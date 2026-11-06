@@ -31,6 +31,9 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
         void onNodeTap(ProgramNode node);
 
         void onNodeLongTap(ProgramNode node);
+
+        /** Glisser-déposer : déplace {@code from} avant {@code to}. */
+        void onNodeMove(ProgramNode from, ProgramNode to);
     }
 
     /** Nœud + profondeur (liste aplatie). */
@@ -49,6 +52,8 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
     private final Set<String> collapsedIds = new HashSet<>();
     private final Listener listener;
     private boolean showNumbers = false;
+    private boolean editMode = false;
+    private androidx.recyclerview.widget.ItemTouchHelper touchHelper;
 
     TreeFlatAdapter(ProgramNode root, Listener listener) {
         this.root = root;
@@ -59,6 +64,21 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
     void setShowNumbers(boolean b) {
         showNumbers = b;
         notifyDataSetChanged();
+    }
+
+    void setEditMode(boolean edit) {
+        editMode = edit;
+        notifyDataSetChanged();
+    }
+
+    void setTouchHelper(androidx.recyclerview.widget.ItemTouchHelper helper) {
+        this.touchHelper = helper;
+    }
+
+    /** Noeud à une position de la liste aplatie, ou null. */
+    ProgramNode nodeAtPosition(int position) {
+        if (position < 0 || position >= flat.size()) return null;
+        return flat.get(position).node;
     }
 
     boolean isShowNumbers() {
@@ -190,6 +210,17 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
         // Noeud masqué : ligne atténuée (visible seulement en édition)
         h.itemView.setAlpha(n.hidden ? 0.45f : 1f);
 
+        // Poignée de glisser-déposer : édition uniquement
+        h.imgDrag.setVisibility(editMode ? View.VISIBLE : View.GONE);
+        h.imgDrag.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
+                    && touchHelper != null) {
+                touchHelper.startDrag(h);
+                return true;
+            }
+            return false;
+        });
+
         h.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onNodeTap(n);
         });
@@ -234,7 +265,7 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
 
     static class VH extends RecyclerView.ViewHolder {
         View indentArea;
-        ImageView imgChevron, imgIcon;
+        ImageView imgChevron, imgIcon, imgDrag;
         TextView textNumber, textTitle, textSummary, badgeTodo;
 
         VH(@NonNull View v) {
@@ -246,6 +277,7 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
             textTitle = v.findViewById(R.id.textTitle);
             textSummary = v.findViewById(R.id.textSummary);
             badgeTodo = v.findViewById(R.id.badgeTodo);
+            imgDrag = v.findViewById(R.id.imgDrag);
         }
     }
 }
