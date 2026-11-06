@@ -58,6 +58,33 @@ public class LitorjiaGenerationTest {
     }
 
     @Test
+    public void niveau1SansHiraEtNiveau2AvecHira() {
+        assertFalse("le niveau 1 ne doit pas contenir de Hira",
+                hasType(level("level-1"), ProgramNode.TYPE_HYMN));
+        assertTrue(hasType(level("level-2"), ProgramNode.TYPE_HYMN));
+    }
+
+    @Test
+    public void niveau4EstUnSurEnsembleDuNiveau3() {
+        ProgramNode l4 = level("level-4");
+        // Briques du niveau 3
+        assertTrue(hasTitle(l4, "Fitarihana"));
+        assertTrue(hasTitle(l4, "Hira"));
+        assertTrue(hasTitle(l4, "Vavaka"));
+        assertTrue(hasTitle(l4, "Vakiteny"));
+        assertTrue(hasTitle(l4, "Fanazavana"));
+        assertTrue(hasType(l4, ProgramNode.TYPE_CREED));
+        assertTrue(hasTitle(l4, "Rakitra"));
+        assertTrue(hasTitle(l4, "Toriteny"));
+        assertTrue(hasTitle(l4, "Tsodrano"));
+        // Éléments ajoutés par le niveau 4
+        assertTrue(hasTitle(l4, "Raharaham-piangonana"));
+        assertTrue(hasTitle(l4, "Vavaka fangatahana"));
+        assertTrue(hasTitle(l4, "Asa vavolombelona"));
+        assertTrue(hasTitle(l4, "Famaranana"));
+    }
+
+    @Test
     public void chaqueLitorjiaEstNonVideEtPartageLesBriques() {
         for (String id : new String[]{"litorjia-1", "litorjia-2", "litorjia-3"}) {
             ProgramNode root = ProgramGenerator.instantiate(

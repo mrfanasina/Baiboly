@@ -12,7 +12,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class LitorjiaDbHelper extends SQLiteOpenHelper {
 
     private static final String DB_NAME = "litorjia.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
 
     private static LitorjiaDbHelper instance;
 
@@ -66,6 +66,14 @@ public class LitorjiaDbHelper extends SQLiteOpenHelper {
             // première version et on rattache ses programmes au niveau standard.
             db.execSQL("UPDATE program SET template_id='level-2' WHERE template_id='level-5'");
             db.execSQL("DELETE FROM program_template WHERE id='level-5'");
+        }
+        if (oldVersion < 3) {
+            // v3 : les arbres des niveaux 1 à 4 ont été corrigés. On retire
+            // uniquement les gabarits intégrés pour que le catalogue les
+            // réinsère ; les gabarits ajoutés en base sont conservés.
+            db.execSQL("DELETE FROM program_template WHERE id IN "
+                    + "('level-1','level-2','level-3','level-4',"
+                    + "'litorjia-1','litorjia-2','litorjia-3')");
         }
     }
 }

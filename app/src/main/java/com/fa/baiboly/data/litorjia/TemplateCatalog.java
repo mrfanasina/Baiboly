@@ -170,6 +170,18 @@ public final class TemplateCatalog {
     // Brique 6 : Vakiteny (rôle readings — rempli par le perikopa)
     static JSONArray brickVakiteny() { return empty(); }
 
+    /** Section Vakiteny commune aux niveaux, remplie par le perikopa. */
+    static JSONObject readingsSection() {
+        return node(ProgramNode.TYPE_SECTION, "Vakiteny",
+                rolePayload(ProgramNode.ROLE_READINGS), brickVakiteny());
+    }
+
+    /** Section Fanazavana (niveaux 2 à 4). */
+    static JSONObject fanazavanaSection() {
+        return node(ProgramNode.TYPE_SECTION, "Fanazavana", null,
+                arr(node(ProgramNode.TYPE_CUSTOM, "Fanambarana", null)));
+    }
+
     static String rolePayload(String role) { return NodePayloadParser.rolePayload(role); }
 
     // =========================================================
@@ -180,38 +192,30 @@ public final class TemplateCatalog {
      * Arbre type d'un gabarit. Renvoie null si l'identifiant est inconnu.
      */
     public static String tree(String templateId) {
-        JSONObject credo = node(ProgramNode.TYPE_CREED, "Fanekem-pinoana apostolika",
-                NodePayloadParser.creedPayload(defaultCreedVersion(templateId)));
-        JSONObject credo1 = node(ProgramNode.TYPE_CREED, "Fanekem-pinoana apostolika",
-                NodePayloadParser.creedPayload(1));
-
         switch (safe(templateId)) {
             case "level-1": {
                 // Essentiel : Fitarihana, Vavaka, Vakiteny, Vavaka hira
+                // (sans Hira ni Fanazavana, cf. §4.1)
                 return arr(
                         node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
-                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null,
-                                arr(node(ProgramNode.TYPE_HYMN, null, toggleHymn("FFPM", null, null)))),
+                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
                                 NodePayloadParser.prayerPayload("fiderana", null)),
-                        node(ProgramNode.TYPE_SECTION, "Vakiteny", rolePayload(ProgramNode.ROLE_READINGS),
-                                brickVakiteny()),
+                        readingsSection(),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka hira",
                                 NodePayloadParser.prayerPayload("hira", null))
                 ).toString();
             }
             case "level-2": {
-                // Standard : + Hira, Fanazavana
+                // Standard : niveau 1 + Hira, Fanazavana
                 return arr(
                         node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
-                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null,
-                                arr(node(ProgramNode.TYPE_HYMN, null, toggleHymn("FFPM", null, null)))),
+                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
+                        node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
                                 NodePayloadParser.prayerPayload("fiderana", null)),
-                        node(ProgramNode.TYPE_SECTION, "Vakiteny", rolePayload(ProgramNode.ROLE_READINGS),
-                                brickVakiteny()),
-                        node(ProgramNode.TYPE_SECTION, "Fanazavana", null,
-                                arr(node(ProgramNode.TYPE_CUSTOM, "Fanambarana", null))),
+                        readingsSection(),
+                        fanazavanaSection(),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka hira",
                                 NodePayloadParser.prayerPayload("hira", null))
                 ).toString();
@@ -220,42 +224,48 @@ public final class TemplateCatalog {
                 // Étendu : niveau 2 + Fanekem-pinoana, Rakitra, Toriteny, Tsodrano
                 return arr(
                         node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
-                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null,
-                                arr(node(ProgramNode.TYPE_HYMN, null, toggleHymn("FFPM", null, null)))),
+                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
+                        node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
                                 NodePayloadParser.prayerPayload("fiderana", null)),
-                        node(ProgramNode.TYPE_SECTION, "Vakiteny", rolePayload(ProgramNode.ROLE_READINGS),
-                                brickVakiteny()),
-                        credo1,
+                        readingsSection(),
+                        fanazavanaSection(),
+                        node(ProgramNode.TYPE_CREED, "Fanekem-pinoana apostolika",
+                                NodePayloadParser.creedPayload(1)),
                         node(ProgramNode.TYPE_OFFERING, "Rakitra", null),
                         node(ProgramNode.TYPE_TITLE, "Toriteny", null),
-                        node(ProgramNode.TYPE_TITLE, "Tsodrano", null),
-                        node(ProgramNode.TYPE_SECTION, "Fanazavana", null,
-                                arr(node(ProgramNode.TYPE_CUSTOM, "Fanambarana", null))),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka hira",
-                                NodePayloadParser.prayerPayload("hira", null))
+                                NodePayloadParser.prayerPayload("hira", null)),
+                        node(ProgramNode.TYPE_TITLE, "Tsodrano", null)
                 ).toString();
             }
             case "level-4": {
-                // Détaillé : niveau 3 + Raharaham-piangonana, Vavaka fangatahana,
-                // Asa vavolombelona, Famaranana
+                // Détaillé : niveau 3 + Raharaham-piangonana,
+                // Vavaka fangatahana, Asa vavolombelona, Famaranana.
                 return arr(
                         node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
-                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null,
-                                arr(node(ProgramNode.TYPE_HYMN, null, toggleHymn("FFPM", null, null)))),
+                        node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
+                        node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
                                 NodePayloadParser.prayerPayload("fiderana", null)),
-                        node(ProgramNode.TYPE_SECTION, "Fameleza", null),
-                        node(ProgramNode.TYPE_SECTION, "Vakiteny", rolePayload(ProgramNode.ROLE_READINGS),
-                                brickVakiteny()),
-                        credo1,
-                        node(ProgramNode.TYPE_SECTION, "Raharaham-piangonana", null, brickRaharaham()),
+                        readingsSection(),
+                        fanazavanaSection(),
+                        node(ProgramNode.TYPE_CREED, "Fanekem-pinoana apostolika",
+                                NodePayloadParser.creedPayload(1)),
+                        node(ProgramNode.TYPE_SECTION, "Raharaham-piangonana", null,
+                                arr(node(ProgramNode.TYPE_TITLE,
+                                                "Famakiana ny hafatra avy amin'ny foibe", null),
+                                        node(ProgramNode.TYPE_CUSTOM, "Fanambarana", null))),
                         node(ProgramNode.TYPE_OFFERING, "Rakitra", null),
                         node(ProgramNode.TYPE_TITLE, "Toriteny", null),
-                        node(ProgramNode.TYPE_SECTION, "Fangatahana sy asa", null, brickFangatahana()),
+                        node(ProgramNode.TYPE_PRAYER, "Vavaka hira",
+                                NodePayloadParser.prayerPayload("hira", null)),
+                        node(ProgramNode.TYPE_PRAYER, "Vavaka fangatahana",
+                                NodePayloadParser.prayerPayload("fangatahana", null)),
+                        node(ProgramNode.TYPE_CUSTOM, "Asa vavolombelona", null),
                         node(ProgramNode.TYPE_TITLE, "Tsodrano", null),
-                        node(ProgramNode.TYPE_TEXT, "Fanamarihana", null),
-                        node(ProgramNode.TYPE_TEXT, "Famaranana", NodePayloadParser.bodyPayload(""))
+                        node(ProgramNode.TYPE_TEXT, "Famaranana",
+                                NodePayloadParser.bodyPayload(""))
                 ).toString();
             }
             case "litorjia-1": {
