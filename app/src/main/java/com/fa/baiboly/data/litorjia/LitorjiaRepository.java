@@ -90,7 +90,7 @@ public class LitorjiaRepository {
             p = programFromRow(c, id);
             c.close();
         }
-        if (p != null) p.root = loadRoot(id);
+        if (p != null) p.root = loadRoot(id, p.title);
         return p;
     }
 
@@ -197,7 +197,7 @@ public class LitorjiaRepository {
     // =========================================================
 
     /** Charge tout l'arbre d'un programme (descendants de la racine). */
-    private ProgramNode loadRoot(String programId) {
+    private ProgramNode loadRoot(String programId, String programTitle) {
         List<ProgramNode> all = new ArrayList<>();
         Cursor c = db.rawQuery(
                 "SELECT id, parent_id, position, type, title, payload, hidden, origin, role " +
@@ -238,13 +238,24 @@ public class LitorjiaRepository {
         } else if (orphans.size() > 1) {
             // Réparation des programmes écrits par l'ancienne version :
             // tous les noeuds de premier niveau avaient parent_id = NULL.
-            // On les regroupe sous une racine synthétique au lieu d'en
-            // perdre tous sauf un.
-            root = new ProgramNode();
-            root.id = "root-" + programId;
-            root.type = ProgramNode.TYPE_SECTION;
-            root.origin = ProgramNode.ORIGIN_TEMPLATE;
+            // Si l'ancienne racine (section portant le titre du programme)
+            // est présente, on lui rattache les autres au lieu d'ajouter une
+            // racine parasite ; sinon on crée une racine synthétique.
             for (ProgramNode n : orphans) {
+                if (ProgramNode.TYPE_SECTION.equals(n.type)
+                        && programTitle != null && programTitle.equals(n.title)) {
+                    root = n;
+                    break;
+                }
+            }
+            if (root == null) {
+                root = new ProgramNode();
+                root.id = "root-" + programId;
+                root.type = ProgramNode.TYPE_SECTION;
+                root.origin = ProgramNode.ORIGIN_TEMPLATE;
+            }
+            for (ProgramNode n : orphans) {
+                if (n == root) continue;
                 n.parentId = root.id;
                 root.children.add(n);
             }
