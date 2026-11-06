@@ -543,7 +543,7 @@ final class NodeEditorDialog {
             case ProgramNode.TYPE_PRAYER:
                 return "Karazana sy fanamarihana";
             case ProgramNode.TYPE_CREED:
-                return "Lahatsoratra avy ao amin'ny base (v1–v4)";
+                return "Lahatsoratra avy ao amin'ny tahiry (v1–v4)";
             case ProgramNode.TYPE_CHOIR:
                 return "Anaran'ny antokom-pihira = lohateny ; hira afaka";
             default:

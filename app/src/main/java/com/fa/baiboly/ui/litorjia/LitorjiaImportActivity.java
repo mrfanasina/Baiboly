@@ -240,7 +240,7 @@ public class LitorjiaImportActivity extends AppCompatActivity {
             }
             inputJson.setText(sb.toString());
         } catch (Exception e) {
-            Toast.makeText(this, "Tsy nety vakiana ny fichier", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Tsy nety vakiana ny rakitra", Toast.LENGTH_SHORT).show();
         }
     }
 

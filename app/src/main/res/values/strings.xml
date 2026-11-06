@@ -13,7 +13,7 @@
     <string name="lit_delete_node_children">%1$d singa ao anatiny no hofafana miaraka.</string>
     <string name="lit_add_element">Hanampy zavatra</string>
     <string name="lit_act_edit">Ovaina</string>
-    <string name="lit_act_consult">Hita (votoaty)</string>
+    <string name="lit_act_consult">Jereo ny votoaty</string>
     <string name="lit_act_add_child">Hanampy ao anatiny</string>
     <string name="lit_act_rename">Manova anarana</string>
     <string name="lit_act_up">Akatona</string>
@@ -100,10 +100,10 @@
     <string name="lit_btn_import">Hanamarina sy handahatra</string>
     <string name="lit_prompt_copied">Prompt voasary — alefa mampiraharaha amin\'ny sary amin\'ny AI</string>
     <string name="lit_schema_copied">Voatahiry ny endrika JSON</string>
-    <string name="lit_json_copied_to_field">JSON voakarakara</string>
-    <string name="lit_report_bad">Tsy azo amidy</string>
-    <string name="lit_report_ok">Voaamarina — azonao amidina.</string>
-    <string name="lit_report_check">%1$d voampidirina, %2$d azo amerenana.</string>
+    <string name="lit_json_copied_to_field">Voapetaka ny JSON</string>
+    <string name="lit_report_bad">Tsy azo ampidirina</string>
+    <string name="lit_report_ok">Voamarina — azonao ampidirina.</string>
+    <string name="lit_report_check">%1$d voampidirina, %2$d azo hamarinina.</string>
     <string name="lit_import_created">Voampidirina ny litorjia vaovao</string>
     <string name="lit_import_merged">Voampidirina ao anaty ilay litorjia efa misy</string>
 

@@ -188,13 +188,12 @@ public class LitorjiaListActivity extends AppCompatActivity {
         // Date : par défaut le prochain dimanche
         EditText inputDate = view.findViewById(R.id.inputDate);
         SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        SimpleDateFormat fmtUser = new SimpleDateFormat("dd MMMM yyyy", Locale.US);
         Calendar cal = Calendar.getInstance();
         int today = cal.get(Calendar.DAY_OF_WEEK);
         int daysToSunday = (Calendar.SUNDAY - today + 7) % 7;
         cal.add(Calendar.DAY_OF_MONTH, daysToSunday);
         Date initial = cal.getTime();
-        inputDate.setText(fmtUser.format(initial));
+        inputDate.setText(displayDate(initial));
         final String[] dateString = {fmt.format(initial)};
 
         inputDate.setOnClickListener(v -> {
@@ -206,7 +205,7 @@ public class LitorjiaListActivity extends AppCompatActivity {
                     (dp, y, m, d) -> {
                         c.set(y, m, d);
                         dateString[0] = fmt.format(c.getTime());
-                        inputDate.setText(fmtUser.format(c.getTime()));
+                        inputDate.setText(displayDate(c.getTime()));
                     },
                     c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH))
                     .show();
@@ -258,6 +257,17 @@ public class LitorjiaListActivity extends AppCompatActivity {
         return false;
     }
 
+    /** Date lisible en malgache, sans dépendre de la locale du téléphone. */
+    private String displayDate(Date d) {
+        Calendar c = Calendar.getInstance();
+        c.setTime(d);
+        String[] months = {"Janoary", "Febroary", "Martsa", "Aprily", "May",
+                "Jona", "Jolay", "Aogositra", "Septambra", "Oktobra",
+                "Novambra", "Desambra"};
+        return c.get(Calendar.DAY_OF_MONTH) + " " + months[c.get(Calendar.MONTH)]
+                + " " + c.get(Calendar.YEAR);
+    }
+
     /** Aperçu des sections du gabarit sélectionné (depuis la base). */
     private void showPreview(TextView hint, String templateId) {
         if (hint == null) return;
@@ -285,7 +295,7 @@ public class LitorjiaListActivity extends AppCompatActivity {
                     "Alakamisy", "Zoma", "Asabotsy"};
             int dowIdx = c.get(Calendar.DAY_OF_WEEK) - 1;
             input.setText(dowIdx >= 0 && dowIdx < 7
-                    ? "Alahady " + d + " " + months[m - 1] : "Fivoriana");
+                    ? dow[dowIdx] + " " + d + " " + months[m - 1] : "Fivoriana");
         } catch (Exception e) {
             input.setText("Fivoriana");
         }
@@ -347,7 +357,7 @@ public class LitorjiaListActivity extends AppCompatActivity {
             holder.textName.setText(p.title);
             StringBuilder meta = new StringBuilder();
             if (p.serviceDate != null && !p.serviceDate.isEmpty()) {
-                meta.append(p.serviceDate).append(" · ");
+                meta.append(prettyIso(p.serviceDate)).append(" · ");
             }
             String tpl = repo.templateLabel(p.templateId);
             meta.append(tpl == null ? "" : tpl);
@@ -386,6 +396,18 @@ public class LitorjiaListActivity extends AppCompatActivity {
                 textBadge = v.findViewById(R.id.textProgramBadge);
                 btnDelete = v.findViewById(R.id.btnDelete);
             }
+        }
+    }
+
+    /** "2026-11-08" -> "8 Novambra 2026" (null si format inattendu). */
+    private String prettyIso(String iso) {
+        try {
+            String[] p = iso.split("-");
+            Calendar c = Calendar.getInstance();
+            c.set(Integer.parseInt(p[0]), Integer.parseInt(p[1]) - 1, Integer.parseInt(p[2]));
+            return displayDate(c.getTime());
+        } catch (Exception e) {
+            return iso;
         }
     }
 
