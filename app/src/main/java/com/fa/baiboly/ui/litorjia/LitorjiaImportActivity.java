@@ -73,7 +73,8 @@ public class LitorjiaImportActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
+            getSupportActionBar().setDisplayShowTitleEnabled(true);
+            getSupportActionBar().setTitle(R.string.lit_import_title);
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 

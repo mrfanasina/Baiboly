@@ -78,7 +78,8 @@ public class LitorjiaListActivity extends AppCompatActivity {
         setSupportActionBar(binding.toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
+            getSupportActionBar().setDisplayShowTitleEnabled(true);
+            getSupportActionBar().setTitle(R.string.lit_title);
         }
         binding.toolbar.setNavigationOnClickListener(v -> finish());
 
