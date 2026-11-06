@@ -123,8 +123,11 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
 
     private void walk(ProgramNode n, int depth) {
         for (ProgramNode c : n.children) {
-            boolean hidden = c.hidden && (!showHidden);
-            if (!hidden) flat.add(new FlatNode(c, depth));
+            boolean hidden = c.hidden && !showHidden && !editMode;
+            // En lecture, un noeud masqué disparaît avec son sous-arbre. En
+            // édition il reste visible (atténué) pour pouvoir être réaffiché.
+            if (hidden) continue;
+            flat.add(new FlatNode(c, depth));
             if (c.isContainer() && !collapsedIds.contains(c.id)) walk(c, depth + 1);
         }
     }
@@ -169,6 +172,9 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
         boolean expandable = n.isContainer() && !n.children.isEmpty();
         h.imgChevron.setVisibility(expandable ? View.VISIBLE : View.INVISIBLE);
         h.imgChevron.animate().rotation(expandable && !isCollapsed(n) ? 90f : 0f).setDuration(120).start();
+        h.imgChevron.setOnClickListener(v -> {
+            if (expandable) toggleExpand(n);
+        });
 
         // Icône type
         h.imgIcon.setImageResource(n.iconRes());

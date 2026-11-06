@@ -146,8 +146,11 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         all.remove(root);
 
         int incomplete = 0;
+        int visible = 0;
         for (ProgramNode n : all) {
-            if (!n.hidden && n.isIncomplete()) incomplete++;
+            if (n.hidden) continue;
+            visible++;
+            if (n.isIncomplete()) incomplete++;
         }
 
         tvTitle.setText(program.title == null ? "" : program.title);
@@ -157,7 +160,7 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         }
         String tpl = repo.templateLabel(program.templateId);
         meta.append(tpl == null ? "—" : tpl);
-        meta.append(" · ").append(getString(R.string.lit_item_count, all.size()));
+        meta.append(" · ").append(getString(R.string.lit_item_count, visible));
         tvMeta.setText(meta.toString());
 
         if (incomplete > 0) {
@@ -167,8 +170,9 @@ public class LitorjiaDetailActivity extends AppCompatActivity
             badge.setVisibility(View.GONE);
         }
 
-        // Programme vide : actions plutôt qu'un écran blanc (§4.8)
-        boolean empty = all.isEmpty();
+        // Programme vide (ou entièrement masqué en lecture) : actions plutôt
+        // qu'un écran blanc (§4.8).
+        boolean empty = editMode ? all.isEmpty() : visible == 0;
         findViewById(R.id.emptyState).setVisibility(empty ? View.VISIBLE : View.GONE);
         findViewById(R.id.recyclerTree).setVisibility(empty ? View.GONE : View.VISIBLE);
 
