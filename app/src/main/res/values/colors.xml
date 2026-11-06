@@ -85,4 +85,8 @@
     <color name="liturgical_pentekosta">#D32F2F</color>
     <color name="liturgical_epifania">#FDD835</color>
     <color name="liturgical_ordinary">#2E7D32</color>
+
+    <!-- Module Litorjia (programme de culte) -->
+    <color name="lit_icon_tint">#C40E5A</color>
+    <color name="lit_heading">#7B1FA2</color>
 </resources>

@@ -142,10 +142,15 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Fandaharana (programs)
+        // Fandaharana (programmes de lecture)
         binding.fandaharana.setOnClickListener(v -> {
             Intent intent = new Intent(this, com.fa.baiboly.ui.fandaharana.FandaharanaActivity.class);
             startActivity(intent);
+        });
+
+        // Litorjia (programme de culte — module séparé)
+        binding.litorjia.setOnClickListener(v -> {
+            com.fa.baiboly.ui.litorjia.LitorjiaListActivity.open(this);
         });
 
         // Mini-lecteur : affiché au-dessus de la bottom nav dès qu'un feo

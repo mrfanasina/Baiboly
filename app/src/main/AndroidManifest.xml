@@ -121,6 +121,21 @@
         <activity
             android:name=".ui.fandaharana.FandaharanaActivity"
             android:label="Fandaharana" />
+        <!-- 🕊 Programme de culte (Litorjia) : module séparé de fandaharana -->
+        <activity
+            android:name=".ui.litorjia.LitorjiaListActivity"
+            android:exported="false"
+            android:label="Litorjia" />
+        <activity
+            android:name=".ui.litorjia.LitorjiaDetailActivity"
+            android:exported="false"
+            android:label="Litorjia"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.litorjia.LitorjiaImportActivity"
+            android:exported="false"
+            android:label="Ampidiro litorjia"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.fandaharana.ProgramDetailActivity"
             android:label="Fandaharana" />
