@@ -357,8 +357,7 @@ public class LitorjiaListActivity extends AppCompatActivity {
             int incomplete = quickIncomplete(p.id);
             holder.textBadge.setVisibility(incomplete > 0 ? View.VISIBLE : View.GONE);
             if (incomplete > 0) {
-                holder.textBadge.setText(incomplete
-                        + (incomplete == 1 ? " zavatra azo fenoina" : " zavatra azo fenoina"));
+                holder.textBadge.setText(getString(R.string.lit_todo_badge_count, incomplete));
             }
 
             holder.card.setOnClickListener(v ->

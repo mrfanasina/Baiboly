@@ -45,6 +45,7 @@
     <string name="lit_share_json">Litorjia JSON</string>
     <string name="lit_item_count">%1$d singa</string>
     <string name="lit_badge_todo">hamenoana</string>
+    <string name="lit_todo_badge_count">%1$d hamenoana</string>
     <string name="lit_empty_program">Tsy misy zavatra ao amin\'ity litorjia ity</string>
     <string name="lit_empty_add">Hanampy zavatra</string>
     <string name="lit_empty_import">Ampidiro JSON</string>
