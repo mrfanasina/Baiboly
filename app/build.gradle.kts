@@ -63,6 +63,9 @@ dependencies {
     implementation(libs.navigation.ui)
     implementation(libs.work.runtime)
     testImplementation(libs.junit)
+    // org.json réel pour les tests JVM des gabarits (le stub Android lève
+    // une exception hors appareil) — dépendance de test uniquement.
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     implementation("androidx.media:media:1.7.0")
