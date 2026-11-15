@@ -8,6 +8,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/background"
         android:orientation="vertical"
         android:padding="20dp">
 
@@ -40,12 +41,40 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClose"
-            style="@style/Widget.Material3.Button.TonalButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Hidiana" />
+            android:gravity="end|center_vertical"
+            android:orientation="horizontal">
+            <!-- Suppression directe de l'élément consulté (confirmation
+                 affichée par l'écran) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDelete"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/lit_act_delete"
+                android:textColor="?attr/colorError"
+                android:visibility="gone" />
+
+            <!-- Passer à l'édition de cet élément, depuis la consultation -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEdit"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Ovay"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnClose"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hidiana" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

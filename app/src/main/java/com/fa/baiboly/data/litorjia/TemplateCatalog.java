@@ -28,16 +28,18 @@ public final class TemplateCatalog {
         }
     }
 
-    /** Catalogue dans l'ordre d'affichage : niveaux puis litorjia. */
+    /** Catalogue dans l'ordre d'affichage : litorjia puis niveaux. */
     public static List<TemplateInfo> catalog() {
         List<TemplateInfo> list = new ArrayList<>();
-        list.add(new TemplateInfo("level-1", "Tsotra indrindra (1)", "level", 1));
-        list.add(new TemplateInfo("level-2", "Mahazatra (2)", "level", 2));
-        list.add(new TemplateInfo("level-3", "Feno kokoa (3)", "level", 3));
-        list.add(new TemplateInfo("level-4", "Antsam-panahy (arab-panahy)", "level", 4));
-        list.add(new TemplateInfo("litorjia-1", "Litorjia I", "litorjia", 10));
-        list.add(new TemplateInfo("litorjia-2", "Litorjia II", "litorjia", 11));
-        list.add(new TemplateInfo("litorjia-3", "Litorjia III", "litorjia", 12));
+        // Les litorjia passent avant les niveaux : c'est le choix courant
+        // lors de la création d'un programme de culte.
+        list.add(new TemplateInfo("litorjia-1", "Litorjia I", "litorjia", 1));
+        list.add(new TemplateInfo("litorjia-2", "Litorjia II", "litorjia", 2));
+        list.add(new TemplateInfo("litorjia-3", "Litorjia III", "litorjia", 3));
+        list.add(new TemplateInfo("level-1", "Tsotra indrindra (1)", "level", 10));
+        list.add(new TemplateInfo("level-2", "Mahazatra (2)", "level", 11));
+        list.add(new TemplateInfo("level-3", "Feno kokoa (3)", "level", 12));
+        list.add(new TemplateInfo("level-4", "Antsam-panahy", "level", 13));
         return list;
     }
 
@@ -104,7 +106,40 @@ public final class TemplateCatalog {
 
     private static JSONArray empty() { return new JSONArray(); }
 
-    public static final String T_MIVAVAHA = "Mivavaha mandrakariva";
+    /** Titre d'en-tête utilisé tant que le lohahevitra du jour est inconnu. */
+    private static final String TITRE_DEFAUT = "Mivavaha mandrakariva";
+
+    /**
+     * Noeud d'en-tête du culte : le lohahevitra (thème du mois courant,
+     * table perikopa). Le catalogue est statique : le thème est passé par
+     * l'appelant qui dispose d'un Context (voir LitorjiaRepository).
+     */
+    private static JSONObject lohahevitraNode(String lohahevitra) {
+        String theme = lohahevitra == null ? "" : lohahevitra.trim();
+        return node(ProgramNode.TYPE_TITLE,
+                theme.isEmpty() ? TITRE_DEFAUT : theme, null);
+    }
+
+    /**
+     * Remplace le titre du noeud d'en-tête d'un arbre par le lohahevitra.
+     * Les arbres stockés en base gardent le titre de repli : le thème du
+     * mois est appliqué à la lecture, sans migration de la base.
+     */
+    public static String withLohahevitra(String treeJson, String lohahevitra) {
+        if (treeJson == null || treeJson.trim().isEmpty()) return treeJson;
+        String theme = lohahevitra == null ? "" : lohahevitra.trim();
+        if (theme.isEmpty()) return treeJson;
+        try {
+            JSONArray arr = new JSONArray(treeJson);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.optJSONObject(i);
+                if (o == null || !ProgramNode.TYPE_TITLE.equals(o.optString("type"))) continue;
+                o.put("title", theme);
+                return arr.toString();
+            }
+        } catch (Exception ignored) {}
+        return treeJson;
+    }
 
     // hymn payload sans numéro = chant à compléter
     static String toggleHymn(String book, Integer n, int[] stanzas) {
@@ -113,19 +148,14 @@ public final class TemplateCatalog {
         return NodePayloadParser.hymnPayload(book, n, st, null);
     }
 
-    static String bible(String book, Integer bookNumber, int chapter, String from, String to) {
-        List<ProgramNode.BibleRef> refs = new ArrayList<>();
-        refs.add(new ProgramNode.BibleRef(book, bookNumber, String.valueOf(chapter), from, to));
-        return NodePayloadParser.biblePayload(refs);
-    }
+    // NOTE : aucun verset n'est écrit en dur dans les gabarits. Les seules
+    // lectures d'un programme sont celles du perikopa de la date, lues dans
+    // la base et placées dans le noeud « Vakiteny » (§4.2).
 
     // Brique 1 : Fiderana sy fisaorana
     static JSONArray brickFiderana() {
         return arr(
                 node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
-                node(ProgramNode.TYPE_BIBLE, "Fiarahabana apostolika",
-                        bible("Romana", 45, 1, "7", null)),
-                node(ProgramNode.TYPE_BIBLE, null, bible("Salamo", 19, 138, "1", "6")),
                 node(ProgramNode.TYPE_HYMN, null, toggleHymn("FFPM", 12, new int[]{1, 2, 3})),
                 node(ProgramNode.TYPE_PRAYER, "Vavaka fisaorana",
                         NodePayloadParser.prayerPayload("fisaorana", null)));
@@ -134,8 +164,6 @@ public final class TemplateCatalog {
     // Brique 2 : Fanambarana ny sitrapon'Andriamanitra
     static JSONArray brickFanambarana() {
         return arr(
-                node(ProgramNode.TYPE_BIBLE, null, bible("Jeremia", 24, 33, "3", null)),
-                node(ProgramNode.TYPE_BIBLE, null, bible("Jaona", 43, 4, "23", "24")),
                 node(ProgramNode.TYPE_HYMN, null, toggleHymn("FIF", 105, new int[]{1, 2})),
                 node(ProgramNode.TYPE_PRAYER, "Vavaka fianken-keloka",
                         NodePayloadParser.prayerPayload("keloka", null)));
@@ -144,7 +172,6 @@ public final class TemplateCatalog {
     // Brique 3 : Famelan-keloka
     static JSONArray brickFamelanKeloka() {
         return arr(
-                node(ProgramNode.TYPE_BIBLE, null, bible("Salamo", 19, 91, "14", "16")),
                 node(ProgramNode.TYPE_HYMN, null, toggleHymn("FIF", 324, new int[]{1, 2})));
     }
 
@@ -192,12 +219,20 @@ public final class TemplateCatalog {
      * Arbre type d'un gabarit. Renvoie null si l'identifiant est inconnu.
      */
     public static String tree(String templateId) {
+        return tree(templateId, null);
+    }
+
+    /**
+     * Arbre type d'un gabarit, le lohahevitra servant de titre d'en-tête.
+     * {@code null} ou vide conserve le titre de repli.
+     */
+    public static String tree(String templateId, String lohahevitra) {
         switch (safe(templateId)) {
             case "level-1": {
                 // Essentiel : Fitarihana, Vavaka, Vakiteny, Vavaka hira
                 // (sans Hira ni Fanazavana, cf. §4.1)
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
                                 NodePayloadParser.prayerPayload("fiderana", null)),
@@ -209,7 +244,7 @@ public final class TemplateCatalog {
             case "level-2": {
                 // Standard : niveau 1 + Hira, Fanazavana
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
                         node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
@@ -223,7 +258,7 @@ public final class TemplateCatalog {
             case "level-3": {
                 // Étendu : niveau 2 + Fanekem-pinoana, Rakitra, Toriteny, Tsodrano
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
                         node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
@@ -243,7 +278,7 @@ public final class TemplateCatalog {
                 // Détaillé : niveau 3 + Raharaham-piangonana,
                 // Vavaka fangatahana, Asa vavolombelona, Famaranana.
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fitarihana", null),
                         node(ProgramNode.TYPE_HYMN, "Hira", toggleHymn("FFPM", null, null)),
                         node(ProgramNode.TYPE_PRAYER, "Vavaka",
@@ -271,7 +306,7 @@ public final class TemplateCatalog {
             case "litorjia-1": {
                 // Séquence complète du culte du 25/10/2026 (§2.2)
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fiderana sy fisaorana an'Andriamanitra",
                                 null, brickFiderana()),
                         node(ProgramNode.TYPE_SECTION, "Fanambarana ny sitrapon'Andriamanitra",
@@ -299,7 +334,7 @@ public final class TemplateCatalog {
                 // avant la Famelan-keloka, Raharaham avant la Fanambarana.
                 // (variantes à valider d'après les diaporamas réels, §14.3)
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fiderana sy fisaorana an'Andriamanitra",
                                 null, brickFiderana()),
                         node(ProgramNode.TYPE_SECTION, "Raharaham-piangonana", null, brickRaharaham()),
@@ -324,7 +359,7 @@ public final class TemplateCatalog {
                 // Mêmes briques : credo après les Vakiteny.
                 // (variante à valider d'après les diaporamas réels, §14.3)
                 return arr(
-                        node(ProgramNode.TYPE_TITLE, T_MIVAVAHA, null),
+                        lohahevitraNode(lohahevitra),
                         node(ProgramNode.TYPE_SECTION, "Fiderana sy fisaorana an'Andriamanitra",
                                 null, brickFiderana()),
                         node(ProgramNode.TYPE_SECTION, "Fanambarana ny sitrapon'Andriamanitra",
@@ -350,6 +385,11 @@ public final class TemplateCatalog {
 
     /** Seed du catalogue en base (idempotent). */
     public static void seed(android.database.sqlite.SQLiteDatabase db) {
+        seed(db, null);
+    }
+
+    /** Seed du catalogue, chaque arbre portant le lohahevitra du jour. */
+    public static void seed(android.database.sqlite.SQLiteDatabase db, String lohahevitra) {
         try {
             db.execSQL("BEGIN IMMEDIATE");
             for (TemplateInfo t : catalog()) {
@@ -357,9 +397,17 @@ public final class TemplateCatalog {
                         "SELECT id FROM program_template WHERE id=?", new String[]{t.id});
                 boolean exists = c.moveToFirst();
                 if (c != null) c.close();
-                if (exists) continue;
-                String tree = tree(t.id);
+                String tree = tree(t.id, lohahevitra);
                 if (tree == null) continue;
+                if (exists) {
+                    // Le catalogue embarqué fait foi : une base créée par une
+                    // version antérieure est réalignée (sinon les anciens
+                    // versets codés en dur y resteraient).
+                    android.content.ContentValues upd = new android.content.ContentValues();
+                    upd.put("tree", tree);
+                    db.update("program_template", upd, "id=?", new String[]{t.id});
+                    continue;
+                }
                 android.content.ContentValues cv = new android.content.ContentValues();
                 cv.put("id", t.id);
                 cv.put("label", t.label);

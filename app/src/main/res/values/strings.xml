@@ -59,8 +59,8 @@
     <string name="lit_create_date">Daty</string>
     <string name="lit_create_title">Lohateny</string>
     <string name="lit_create_dialog_title">Hamorona litorjia</string>
-    <string name="lit_create_step1">Dingana 1 : safidio ny karazana</string>
-    <string name="lit_create_step2">Dingana 2 : safidio ny gabarit</string>
+    <string name="lit_create_step1">Karazana</string>
+    <string name="lit_create_step2">Gabarit</string>
     <string name="lit_create_preview_hint">Ny fizarana rehetra azo ampiana sy ovaina.</string>
     <string name="lit_create_confirm">Hamorona</string>
     <string name="lit_family_level">Ambaratonga</string>

@@ -30,6 +30,20 @@ final class NodeDetailDialog {
     private NodeDetailDialog() {}
 
     static void show(Context ctx, ProgramNode node) {
+        show(ctx, node, null, null);
+    }
+
+    static void show(Context ctx, ProgramNode node, Runnable onEdit) {
+        show(ctx, node, onEdit, null);
+    }
+
+    /**
+     * @param onEdit   action « Ovay » proposée au bas du détail (null = pas
+     *                 d'édition depuis la consultation)
+     * @param onDelete action « Hofafana » : suppression directe, confirmée
+     *                 par l'appelant (null = pas de suppression)
+     */
+    static void show(Context ctx, ProgramNode node, Runnable onEdit, Runnable onDelete) {
         AlertDialog dialog = new AlertDialog.Builder(ctx).create();
 
         View root = LayoutInflater.from(ctx).inflate(R.layout.dialog_litorjia_detail, null);
@@ -75,6 +89,20 @@ final class NodeDetailDialog {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
         root.findViewById(R.id.btnClose).setOnClickListener(v -> dialog.dismiss());
+
+        View btnEdit = root.findViewById(R.id.btnEdit);
+        btnEdit.setVisibility(onEdit == null ? View.GONE : View.VISIBLE);
+        btnEdit.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (onEdit != null) onEdit.run();
+        });
+
+        View btnDelete = root.findViewById(R.id.btnDelete);
+        btnDelete.setVisibility(onDelete == null ? View.GONE : View.VISIBLE);
+        btnDelete.setOnClickListener(v -> {
+            dialog.dismiss();
+            if (onDelete != null) onDelete.run();
+        });
         dialog.show();
     }
 

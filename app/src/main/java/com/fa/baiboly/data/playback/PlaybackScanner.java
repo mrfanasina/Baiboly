@@ -78,7 +78,7 @@ public final class PlaybackScanner {
     private static final int MAX_FILES = 4000;
 
     private static final Set<String> AUDIO_EXT = new HashSet<>(Arrays.asList(
-            "mp3", "m4a", "aac", "wav", "flac", "ogg", "oga", "opus",
+            "mp3", "m4a", "a ac", "wav", "flac", "ogg", "oga", "opus",
             "amr", "awb", "wma", "mp2", "mpa", "mid", "midi", "3gp", "m4b"));
 
     /** \"v2\", \"version 3\", \"2\" (nom d'un sous-dossier = version). */

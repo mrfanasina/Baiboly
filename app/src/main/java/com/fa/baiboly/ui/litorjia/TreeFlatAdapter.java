@@ -34,6 +34,9 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
 
         /** Glisser-déposer : déplace {@code from} avant {@code to}. */
         void onNodeMove(ProgramNode from, ProgramNode to);
+
+        /** Suppression demandée par l'icône de la ligne (édition). */
+        void onNodeDelete(ProgramNode node);
     }
 
     /** Nœud + profondeur (liste aplatie). */
@@ -79,6 +82,12 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
     ProgramNode nodeAtPosition(int position) {
         if (position < 0 || position >= flat.size()) return null;
         return flat.get(position).node;
+    }
+
+    /** Profondeur d'affichage d'une position (sert au glisser-déposer). */
+    int depthAt(int position) {
+        if (position < 0 || position >= flat.size()) return -1;
+        return flat.get(position).depth;
     }
 
     boolean isShowNumbers() {
@@ -141,6 +150,40 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
 
     boolean isCollapsed(ProgramNode n) {
         return collapsedIds.contains(n.id);
+    }
+
+    /**
+     * Nombre de lignes emportées par une ligne : elle-même + tout son
+     * sous-arbre visible (une section affichée déplace son contenu).
+     */
+    int blockSizeAt(int position) {
+        if (position < 0 || position >= flat.size()) return 0;
+        int depth = flat.get(position).depth;
+        int size = 1;
+        while (position + size < flat.size()
+                && flat.get(position + size).depth > depth) {
+            size++;
+        }
+        return size;
+    }
+
+    /**
+     * Réordonne la liste affichée pendant un glisser-déposer, sans toucher à
+     * l'arbre : l'appelant a déjà déplacé le noeud et reconstruit à la fin.
+     * {@code dest} est l'indice d'arrivée dans la liste APRÈS retrait du bloc
+     * (c'est ce que calcule l'appelant), ce qui permet de déplacer aussi une
+     * section avec tout son contenu.
+     */
+    void moveBlock(int fromPos, int count, int dest) {
+        if (fromPos < 0 || count <= 0 || fromPos >= flat.size()) return;
+        count = Math.min(count, flat.size() - fromPos);
+        List<FlatNode> block = new ArrayList<>(flat.subList(fromPos, fromPos + count));
+        flat.subList(fromPos, fromPos + count).clear();
+        if (dest < 0) dest = 0;
+        if (dest > flat.size()) dest = flat.size();
+        flat.addAll(dest, block);
+        if (fromPos == dest) return;
+        notifyItemMoved(fromPos, dest);
     }
 
     /** Raffraîchit des données modifiées (sauvegarde faite par l'activité). */
@@ -216,8 +259,15 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
         // Noeud masqué : ligne atténuée (visible seulement en édition)
         h.itemView.setAlpha(n.hidden ? 0.45f : 1f);
 
-        // Poignée de glisser-déposer : édition uniquement
+        // Poignée de glisser-déposer et corbeille : édition uniquement.
+        // Tous les noeuds y compris ceux du gabarit ("origin" template ou
+        // calendar) peuvent être supprimés.
+        // Une section se déplace comme un bloc : ses enfants la suivent.
         h.imgDrag.setVisibility(editMode ? View.VISIBLE : View.GONE);
+        h.btnDeleteRow.setVisibility(editMode ? View.VISIBLE : View.GONE);
+        h.btnDeleteRow.setOnClickListener(v -> {
+            if (listener != null) listener.onNodeDelete(n);
+        });
         h.imgDrag.setOnTouchListener((v, event) -> {
             if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN
                     && touchHelper != null) {
@@ -271,7 +321,7 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
 
     static class VH extends RecyclerView.ViewHolder {
         View indentArea;
-        ImageView imgChevron, imgIcon, imgDrag;
+        ImageView imgChevron, imgIcon, imgDrag, btnDeleteRow;
         TextView textNumber, textTitle, textSummary, badgeTodo;
 
         VH(@NonNull View v) {
@@ -284,6 +334,7 @@ class TreeFlatAdapter extends RecyclerView.Adapter<TreeFlatAdapter.VH> {
             textSummary = v.findViewById(R.id.textSummary);
             badgeTodo = v.findViewById(R.id.badgeTodo);
             imgDrag = v.findViewById(R.id.imgDrag);
+            btnDeleteRow = v.findViewById(R.id.btnDeleteRow);
         }
     }
 }

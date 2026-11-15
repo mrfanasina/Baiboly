@@ -182,9 +182,10 @@ public class AiExplanationActivity extends AppCompatActivity {
 
                         @Override
                         public void onError(String errorLog) {
+                            android.util.Log.e("AiExplanationActivity", "Erreur API précise", new Throwable(errorLog));
                             runOnUiThread(() -> {
                                 adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI,
-                                        "Nisy olana: " + errorLog));
+                                        "Nisy olana"));
                                 setInputEnabled(true);
                                 onNewAiMessageAdded();
                             });
@@ -670,12 +671,13 @@ public class AiExplanationActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(String errorLog) {
+                        android.util.Log.e("AiExplanationActivity", "Erreur API précise", new Throwable(errorLog));
                         runOnUiThread(() -> {
                             adapter.removeLoadingIfPresent();
                             adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI,
-                                    "Nisy olana teo amin'ny Fanazavana"));
+                                    "Nisy olana"));
                             setInputEnabled(true);
-                            Toast.makeText(AiExplanationActivity.this, "Tsy nandeha ny IA", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(AiExplanationActivity.this, "Nisy olana", Toast.LENGTH_SHORT).show();
                             onNewAiMessageAdded();
                         });
                     }
@@ -784,9 +786,10 @@ public class AiExplanationActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(String errorLog) {
+                        android.util.Log.e("AiExplanationActivity", "Erreur API précise", new Throwable(errorLog));
                         runOnUiThread(() -> {
                             adapter.removeLoadingIfPresent();
-                            adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI, "Nisy olana: " + errorLog));
+                            adapter.addMessage(new ChatMessage(ChatMessage.TYPE_AI, "Nisy olana"));
                             setInputEnabled(true);
                             onNewAiMessageAdded();
                         });

@@ -35,6 +35,8 @@ import com.fa.baiboly.data.litorjia.ReferenceResolver;
 import com.fa.baiboly.data.litorjia.TemplateCatalog;
 import com.fa.baiboly.models.PerikopaDay;
 import com.fa.baiboly.data.perikopa.PerikopaService;
+import com.fa.baiboly.ui.fandaharana.BiblePickerSheet;
+import com.fa.baiboly.ui.fandaharana.SongPickerSheet;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -74,9 +76,14 @@ public class LitorjiaDetailActivity extends AppCompatActivity
     private TreeFlatAdapter adapter;
     private android.view.Menu toolbarMenu;
     private boolean editMode = false;
+    /** Vrai pendant un glisser-déposer qui a réellement déplacé un noeud. */
+    private boolean dragArranging = false;
 
     /** Pile d'annulation : snapshots JSON de tout l'arbre. */
     private final List<String> undoStack = new ArrayList<>();
+
+    /** Pinceau du fond rouge révélé par le glissement de suppression. */
+    private final android.graphics.Paint swipePaint = new android.graphics.Paint();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -252,8 +259,54 @@ public class LitorjiaDetailActivity extends AppCompatActivity
 
     @Override
     public void onNodeTap(ProgramNode node) {
-        if (editMode) openEditor(node);
-        else NodeDetailDialog.show(this, node);
+        // Un appui montre TOUJOURS le détail en consultation (avec « Ovay »
+        // et « Hofafana »), y compris en mode édition. L'éditeur ne s'ouvre
+        // que sur demande explicite : bouton Ovay, menu d'appui long ou
+        // ajout d'un élément. On ne tombe donc jamais directement sur le
+        // formulaire d'édition au premier appui.
+        NodeDetailDialog.show(this, node,
+                () -> startEditing(node), () -> confirmDelete(node));
+    }
+
+    /** Passe en mode édition (si besoin) puis ouvre l'éditeur de l'élément. */
+    private void startEditing(ProgramNode node) {
+        if (!editMode) toggleEditMode();
+        openEditor(node);
+    }
+
+    /** Remplace le chant avec la feuille Fihirana (sokajy + numéro). */
+    private void pickHymn(ProgramNode node) {
+        new SongPickerSheet(song -> {
+            pushUndoState();
+            node.payload = NodePayloadParser.hymnPayload(song.getCategory(),
+                    song.getNumber(), new ArrayList<>(), node.hymnLabel());
+            if (node.title == null || node.title.trim().isEmpty()) {
+                node.title = song.getTitle();
+            }
+            commit();
+            Toast.makeText(this, "Hira nosoloina", Toast.LENGTH_SHORT).show();
+        }, node.hymnBook(), node.hymnNumber())
+                .show(getSupportFragmentManager(), "lit_song_picker");
+    }
+
+    /** Remplace la (les) lecture(s) avec la feuille Bible de l'app. */
+    private void pickReading(ProgramNode node) {
+        new BiblePickerSheet((reference, title) -> {
+            List<ProgramNode.BibleRef> refs = PerikopaFiller.parse(reference,
+                    new ReferenceResolver(this));
+            if (refs.isEmpty()) {
+                // Référence non reconnue : conservée telle quelle
+                ProgramNode.BibleRef raw = new ProgramNode.BibleRef();
+                raw.book = reference;
+                raw.label = title;
+                refs.add(raw);
+            }
+            pushUndoState();
+            node.payload = NodePayloadParser.biblePayload(refs);
+            if (node.title == null || node.title.trim().isEmpty()) node.title = title;
+            commit();
+            Toast.makeText(this, "Vakiteny nosoloina", Toast.LENGTH_SHORT).show();
+        }).show(getSupportFragmentManager(), "lit_bible_picker");
     }
 
     @Override
@@ -265,6 +318,12 @@ public class LitorjiaDetailActivity extends AppCompatActivity
     public void onNodeMove(ProgramNode from, ProgramNode to) {
         pushUndoState();
         moveNodeBefore(from, to);
+    }
+
+    /** Icône corbeille d'une ligne (édition) : même confirmation que le menu. */
+    @Override
+    public void onNodeDelete(ProgramNode node) {
+        confirmDelete(node);
     }
 
     // =========================================================
@@ -280,20 +339,118 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         androidx.recyclerview.widget.ItemTouchHelper.Callback callback =
                 new androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
                         androidx.recyclerview.widget.ItemTouchHelper.UP
-                                | androidx.recyclerview.widget.ItemTouchHelper.DOWN, 0) {
+                                | androidx.recyclerview.widget.ItemTouchHelper.DOWN,
+                        androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+                    @Override
+                    public int getMovementFlags(@NonNull RecyclerView rv,
+                                                @NonNull RecyclerView.ViewHolder vh) {
+                        // Le glissement de suppression n'existe qu'en édition :
+                        // en lecture, on ne risque pas d'effacer par mégarde.
+                        // Tout se glisse, y compris une section : elle emmène
+                        // alors tout son contenu (voir onMove).
+                        ProgramNode n = adapter.nodeAtPosition(nodePosition(vh));
+                        boolean canDrag = editMode && n != null;
+                        return makeMovementFlags(
+                                canDrag
+                                        ? androidx.recyclerview.widget.ItemTouchHelper.UP
+                                                | androidx.recyclerview.widget.ItemTouchHelper.DOWN
+                                        : 0,
+                                editMode ? androidx.recyclerview.widget.ItemTouchHelper.LEFT : 0);
+                    }
+
                     @Override
                     public boolean onMove(@NonNull RecyclerView rv,
                                           @NonNull RecyclerView.ViewHolder viewHolder,
                                           @NonNull RecyclerView.ViewHolder target) {
-                        ProgramNode from = adapter.nodeAtPosition(viewHolder.getAdapterPosition());
-                        ProgramNode to = adapter.nodeAtPosition(target.getAdapterPosition());
-                        moveNodeBefore(from, to);
+                        int fromPos = nodePosition(viewHolder);
+                        int toPos = nodePosition(target);
+                        if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) {
+                            return false;
+                        }
+                        ProgramNode from = adapter.nodeAtPosition(fromPos);
+                        ProgramNode to = adapter.nodeAtPosition(toPos);
+                        // Sens du geste : vers le bas on passe APRÈS la cible,
+                        // vers le haut AVANT. (Insérer toujours « avant »
+                        // rendait tout déplacement vers le bas sans effet.)
+                        boolean after = toPos > fromPos;
+
+                        // Un seul point d'annulation pour tout le geste, pris
+                        // AVANT la première modification de l'arbre.
+                        boolean pushed = false;
+                        if (!dragArranging) {
+                            pushUndoState();
+                            pushed = true;
+                        }
+                        if (!reorderNextTo(from, to, after)) {
+                            if (pushed) undoStack.remove(undoStack.size() - 1);
+                            return false;
+                        }
+
+                        // Bloc emporté : une section déplace tout son
+                        // sous-arbre avec elle.
+                        int blockSize = Math.max(1, adapter.blockSizeAt(fromPos));
+                        int dest;
+                        if (after) {
+                            // Vers le bas sur une section : on atterrit après
+                            // tout son sous-arbre, comme le fait l'arbre.
+                            int toDepth = adapter.depthAt(toPos);
+                            int endOfTarget = toPos;
+                            while (endOfTarget + 1 < adapter.getItemCount()
+                                    && adapter.depthAt(endOfTarget + 1) > toDepth) {
+                                endOfTarget++;
+                            }
+                            // Décalage dû au retrait du bloc, situé avant.
+                            dest = endOfTarget + 1 - blockSize;
+                        } else {
+                            dest = toPos;
+                        }
+                        if (dest < 0) dest = 0;
+
+                        // Arbre réordonné en mémoire + liste qui suit le doigt
+                        // sans reconstruction : le glissement reste fluide.
+                        // Enregistrement et reconstruction au relâchement.
+                        dragArranging = true;
+                        adapter.moveBlock(fromPos, blockSize, dest);
                         return true;
                     }
 
                     @Override
+                    public void clearView(@NonNull RecyclerView rv,
+                                          @NonNull RecyclerView.ViewHolder viewHolder) {
+                        super.clearView(rv, viewHolder);
+                        if (dragArranging) {
+                            dragArranging = false;
+                            // Après l'animation : enregistrement de la nouvelle
+                            // disposition puis reconstruction fidèle de l'arbre
+                            // (profondeurs et sous-arbres qui ont suivi).
+                            rv.post(() -> {
+                                saveNow();
+                                adapter.rebuild();
+                            });
+                        }
+                    }
+
+                    @Override
                     public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                        // Pas de suppression par glissement : seulement réordonner.
+                        ProgramNode n = adapter.nodeAtPosition(nodePosition(viewHolder));
+                        // La ligne revient en place : la confirmation s'affiche
+                        // sur un arbre intact, annuler ne laisse pas de trace.
+                        adapter.notifyDataSetChanged();
+                        if (n != null) confirmDelete(n);
+                    }
+
+                    @Override
+                    public void onChildDraw(@NonNull android.graphics.Canvas c,
+                                            @NonNull RecyclerView rv,
+                                            @NonNull RecyclerView.ViewHolder vh,
+                                            float dX, float dY, int actionState,
+                                            boolean isCurrentlyActive) {
+                        if (actionState
+                                == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_SWIPE
+                                && dX < 0) {
+                            drawSwipeDelete(c, vh.itemView, dX);
+                        }
+                        super.onChildDraw(c, rv, vh, dX, dY, actionState, isCurrentlyActive);
                     }
 
                     @Override
@@ -302,10 +459,19 @@ public class LitorjiaDetailActivity extends AppCompatActivity
                     }
 
                     @Override
+                    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder vh) {
+                        // Un glissement franc suffit, sans parcourir toute la
+                        // largeur de l'écran.
+                        return 0.35f;
+                    }
+
+                    @Override
                     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
                         if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_DRAG
                                 && viewHolder != null) {
-                            pushUndoState();
+                            // Confirme la prise en main de la poignée.
+                            viewHolder.itemView.performHapticFeedback(
+                                    android.view.HapticFeedbackConstants.LONG_PRESS);
                         }
                         super.onSelectedChanged(viewHolder, actionState);
                     }
@@ -316,21 +482,71 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         adapter.setTouchHelper(helper);
     }
 
+    /**
+     * Position fiable d'une ligne : la position « binding » peut être
+     * NO_POSITION juste après une mise à jour de la liste, ce qui
+     * désactivait le geste au premier essai.
+     */
+    private static int nodePosition(RecyclerView.ViewHolder vh) {
+        int pos = vh.getBindingAdapterPosition();
+        if (pos == RecyclerView.NO_POSITION) pos = vh.getLayoutPosition();
+        return pos;
+    }
+
+    /** Fond rouge + corbeille blanche révélés par le glissement gauche. */
+    private void drawSwipeDelete(android.graphics.Canvas c, View item, float dX) {
+        float density = getResources().getDisplayMetrics().density;
+        swipePaint.setColor(androidx.core.content.ContextCompat.getColor(
+                this, R.color.lit_swipe_delete));
+        c.drawRect(Math.max(item.getLeft(), item.getRight() + dX), item.getTop(),
+                item.getRight(), item.getBottom(), swipePaint);
+
+        android.graphics.drawable.Drawable icon =
+                androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_delete);
+        if (icon == null) return;
+        int size = (int) (24 * density);
+        int margin = (int) (16 * density);
+        int left = item.getRight() - margin - size;
+        int top = item.getTop() + (item.getHeight() - size) / 2;
+        icon.setBounds(left, top, left + size, top + size);
+        androidx.core.graphics.drawable.DrawableCompat.setTint(icon, android.graphics.Color.WHITE);
+        icon.draw(c);
+    }
+
     /** Déplace {@code from} juste avant {@code to} (sans étape d'annulation). */
     private void moveNodeBefore(ProgramNode from, ProgramNode to) {
-        if (from == null || to == null || from == to) return;
-        if (isAncestor(from, to)) return; // pas un noeud dans son propre sous-arbre
+        if (reorderBefore(from, to)) {
+            saveNow();
+            adapter.rebuild();
+        }
+    }
+
+    /**
+     * Réordonne l'arbre en mémoire seulement : {@code from} devient le frère
+     * qui précède {@code to}, quelle que soit la branche de celui-ci.
+     * @return vrai si l'arbre a changé
+     */
+    private boolean reorderBefore(ProgramNode from, ProgramNode to) {
+        return reorderNextTo(from, to, false);
+    }
+
+    /**
+     * Place {@code from} juste avant ou juste après {@code to}, dans la
+     * branche de celui-ci.
+     */
+    private boolean reorderNextTo(ProgramNode from, ProgramNode to, boolean after) {
+        if (from == null || to == null || from == to) return false;
+        if (isAncestor(from, to)) return false; // pas un noeud dans son propre sous-arbre
         ProgramNode fromParent = parentOf(from);
-        ProgramNode toParent = parentOf(to);
         int fi = indexOf(fromParent, from);
-        if (fi < 0) return;
+        if (fi < 0) return false;
         fromParent.children.remove(fi);
+        ProgramNode toParent = parentOf(to);
         int ti = indexOf(toParent, to);
         if (ti < 0) ti = toParent.children.size();
-        toParent.children.add(ti, from);
+        toParent.children.add(after ? ti + 1 : ti, from);
         from.parentId = toParent.id;
-        saveNow();
-        adapter.rebuild();
+        return true;
     }
 
     private boolean isAncestor(ProgramNode ancestor, ProgramNode node) {
@@ -345,7 +561,7 @@ public class LitorjiaDetailActivity extends AppCompatActivity
         NodeEditorDialog.show(this, program, node, saved -> {
             saveNow();
             adapter.refresh();
-        }, this);
+        }, this, this::confirmDelete);
     }
 
     // =========================================================
@@ -358,8 +574,16 @@ public class LitorjiaDetailActivity extends AppCompatActivity
 
         if (editMode) {
             labels.add(getString(R.string.lit_act_edit)); actions.add(() -> openEditor(node));
+            // Raccourci : remplacer directement, sans passer par l'éditeur.
+            if (ProgramNode.TYPE_HYMN.equals(node.type)) {
+                labels.add("Hanolo hira"); actions.add(() -> pickHymn(node));
+            } else if (ProgramNode.TYPE_BIBLE.equals(node.type)) {
+                labels.add("Hanolo vakiteny"); actions.add(() -> pickReading(node));
+            }
         }
-        labels.add(getString(R.string.lit_act_consult)); actions.add(() -> NodeDetailDialog.show(this, node));
+        labels.add(getString(R.string.lit_act_consult));
+        actions.add(() -> NodeDetailDialog.show(this, node,
+                () -> startEditing(node), () -> confirmDelete(node)));
 
         if (editMode) {
             // Ajouter à n'importe quel niveau : enfant (sections) ou

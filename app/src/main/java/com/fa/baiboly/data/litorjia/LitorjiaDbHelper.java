@@ -61,8 +61,6 @@ public class LitorjiaDbHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion < 2) {
-            // v2 : RDZ n'était qu'un exemple de forme courte, pas un gabarit
-            // du catalogue (§4.1/§4.8). On retire l'entrée codée en dur de la
             // première version et on rattache ses programmes au niveau standard.
             db.execSQL("UPDATE program SET template_id='level-2' WHERE template_id='level-5'");
             db.execSQL("DELETE FROM program_template WHERE id='level-5'");

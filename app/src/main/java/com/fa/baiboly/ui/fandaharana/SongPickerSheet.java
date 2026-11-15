@@ -34,6 +34,8 @@ public class SongPickerSheet extends BottomSheetDialogFragment {
     }
 
     private final OnSongPicked listener;
+    private final String presetBook;
+    private final Integer presetNumber;
 
     private FihiranaService service;
 
@@ -46,7 +48,17 @@ public class SongPickerSheet extends BottomSheetDialogFragment {
     private View btnValidate;
 
     public SongPickerSheet(OnSongPicked listener) {
+        this(listener, null, null);
+    }
+
+    /**
+     * Variante qui ouvre la feuille sur un chant déjà choisi (le Fihirana
+     * affiche alors directement ce sokajy et ce numéro).
+     */
+    public SongPickerSheet(OnSongPicked listener, String presetBook, Integer presetNumber) {
         this.listener = listener;
+        this.presetBook = presetBook;
+        this.presetNumber = presetNumber;
     }
 
     @Nullable
@@ -68,6 +80,7 @@ public class SongPickerSheet extends BottomSheetDialogFragment {
 
         setupCategorySelector(view);
         setupNumPad(view);
+        applyPreset();
         updateDisplay();
     }
 
@@ -102,6 +115,23 @@ public class SongPickerSheet extends BottomSheetDialogFragment {
             });
             popup.show();
         });
+    }
+
+    /** Pré-sélectionne le chant en cours d'édition (s'il existe encore). */
+    private void applyPreset() {
+        if (presetBook == null || presetBook.trim().isEmpty()) return;
+        List<String> categories = service.getCategories();
+        if (categories == null || !categories.contains(presetBook.trim())) return;
+
+        selectedCategory = presetBook.trim();
+        tvCategorySelected.setText(selectedCategory);
+        updateSongCount();
+
+        if (presetNumber == null || presetNumber <= 0) return;
+        int maxSongs = service.getSongCountByCategory(selectedCategory);
+        if (presetNumber <= maxSongs) {
+            currentInput = String.valueOf(presetNumber);
+        }
     }
 
     private void updateSongCount() {

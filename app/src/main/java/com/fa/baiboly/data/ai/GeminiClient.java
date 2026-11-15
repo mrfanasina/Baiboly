@@ -22,11 +22,24 @@ public class GeminiClient {
     // (GEMINI_API_KEY=xxxxx dans local.properties — jamais commitée sur git).
     private static final String API_KEY = BuildConfig.GEMINI_API_KEY;
 
+    /** Modèle par défaut (le plus récent, gratuit). */
+    public static final String MODELE_PAR_DEFAUT = "gemini-3.8-flash";
+
     private final GenerativeModelFutures model;
     private PerikopaService service;
     private final AiPreferencesService aiPrefs;
 
+    /** Constructeur avec le modèle par défaut. */
     public GeminiClient(Context context) {
+        this(context, MODELE_PAR_DEFAUT);
+    }
+
+    /**
+     * Constructeur avec un modèle précis : permet à BibleExplanationService
+     * de basculer sur un modèle de repli quand le courant est surchargé
+     * (503) ou retiré (404) par Google.
+     */
+    public GeminiClient(Context context, String modelName) {
         this.service = new PerikopaService(context);
         this.aiPrefs = new AiPreferencesService(context);
 
@@ -48,23 +61,21 @@ public class GeminiClient {
                 .build();
 
         // 2. Configurer les paramètres
-        // NB : setTemperature() n'existe pas dans toutes les versions du SDK,
-        // on garde donc la config par défaut pour l'instant. Voir la note en
-        // bas de fichier si vous voulez la réactiver plus tard.
         GenerationConfig config = new GenerationConfig.Builder().build();
 
-        // 3. Initialiser le modèle de base
-        // NB : en 0.9.0, l'ordre exact du constructeur est :
-        // (modelName, apiKey, generationConfig, safetySettings, requestOptions, tools, toolConfig, systemInstruction)
-        // Il faut donc fournir tous les paramètres intermédiaires pour atteindre systemInstruction.
+        // 3. Initialiser le modèle
+        String apiKey = API_KEY;
+        if (apiKey == null) {
+            apiKey = "";
+        }
         GenerativeModel baseModel = new GenerativeModel(
-                "gemini-3.1-flash-lite",
-                API_KEY,
+                modelName,
+                apiKey,
                 config,
                 Collections.emptyList(),
                 new RequestOptions(),
-                (List<Tool>) null,
-                (ToolConfig) null,
+                Collections.emptyList(),
+                null,
                 systemInstruction
         );
 
@@ -87,13 +98,9 @@ public class GeminiClient {
 }
 
 /*
- * NOTE SÉCURITÉ :
- * La clé API n'est plus codée en dur : elle est lue depuis local.properties
- * (GEMINI_API_KEY=xxxxx), qui n'est jamais commité sur git, puis injectée
- * dans BuildConfig par app/build.gradle.kts.
- *
- * NB : même avec ce mécanisme, la clé reste présente dans l'APK final et
- * peut être extraite par décompilation. Pour une protection réelle, faire
- * passer les appels par un petit backend à vous, pour ne jamais exposer
- * la clé côté client.
+ * NB SÉCURITÉ :
+ * La clé API est lue depuis local.properties (GEMINI_API_KEY=xxxxx), qui
+ * n'est jamais commité sur git, puis injectée dans BuildConfig par
+ * app/build.gradle.kts. Elle reste présente dans l'APK final et peut être
+ * extraite par décompilation.
  */

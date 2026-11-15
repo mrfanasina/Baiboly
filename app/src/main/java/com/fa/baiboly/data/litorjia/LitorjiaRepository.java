@@ -6,6 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
+import com.fa.baiboly.data.perikopa.PerikopaService;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -23,10 +25,22 @@ public class LitorjiaRepository {
 
     private static final String TAG = "LitorjiaRepo";
     private final SQLiteDatabase db;
+    private final Context appContext;
 
     public LitorjiaRepository(Context context) {
+        appContext = context.getApplicationContext();
         db = LitorjiaDbHelper.get(context).getWritableDatabase();
-        TemplateCatalog.seed(db);
+        TemplateCatalog.seed(db, todayLohahevitra());
+    }
+
+    /** Lohahevitra du jour (thème du mois), vide si le perikopa est absent. */
+    private String todayLohahevitra() {
+        try {
+            return new PerikopaService(appContext).getTodayLohahevitra();
+        } catch (Exception e) {
+            Log.w(TAG, "lohahevitra indisponible", e);
+            return "";
+        }
     }
 
     // =========================================================
@@ -35,7 +49,10 @@ public class LitorjiaRepository {
 
     public List<TemplateCatalog.TemplateInfo> templates() {
         List<TemplateCatalog.TemplateInfo> out = new ArrayList<>();
-        Cursor c = db.rawQuery("SELECT id, label, kind, rank FROM program_template ORDER BY rank", null);
+        // Les gabarits litorjia passent en tête, quel que soit le rang
+        // enregistré en base par une version antérieure du catalogue.
+        Cursor c = db.rawQuery("SELECT id, label, kind, rank FROM program_template "
+                + "ORDER BY CASE kind WHEN 'litorjia' THEN 0 ELSE 1 END, rank", null);
         if (c != null) {
             while (c.moveToNext()) {
                 out.add(new TemplateCatalog.TemplateInfo(
@@ -59,7 +76,9 @@ public class LitorjiaRepository {
         Cursor c = db.rawQuery("SELECT tree FROM program_template WHERE id=?", new String[]{id});
         String tree = null;
         if (c != null && c.moveToFirst()) { tree = c.getString(0); c.close(); }
-        return tree;
+        // Le thème du mois est appliqué à la lecture : il ne se fige pas
+        // dans les arbres déjà semés en base.
+        return TemplateCatalog.withLohahevitra(tree, todayLohahevitra());
     }
 
     // =========================================================

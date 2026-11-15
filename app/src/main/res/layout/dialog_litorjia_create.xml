@@ -8,6 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:background="@color/modal_backgound"
         android:padding="20dp">
 
         <TextView
@@ -64,11 +65,13 @@
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface" />
 
-        <Spinner
-            android:id="@+id/spinnerFamily"
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleFamily"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="6dp"
+            app:selectionRequired="true"
+            app:singleSelection="true" />
 
         <TextView
             android:layout_width="match_parent"
@@ -84,6 +87,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:clipToPadding="false"
             android:nestedScrollingEnabled="false" />
 
         <TextView

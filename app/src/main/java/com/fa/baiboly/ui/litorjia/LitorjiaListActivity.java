@@ -142,47 +142,64 @@ public class LitorjiaListActivity extends AppCompatActivity {
         View view = getLayoutInflater().inflate(R.layout.dialog_litorjia_create, null);
         RecyclerView recycler = view.findViewById(R.id.recyclerTemplates);
         TextView hint = view.findViewById(R.id.textTemplateHint);
-        android.widget.Spinner family = view.findViewById(R.id.spinnerFamily);
+        com.google.android.material.button.MaterialButtonToggleGroup family =
+                view.findViewById(R.id.toggleFamily);
 
-        // Étape 1 : familles réellement présentes dans le catalogue.
+        // Étape 1 : familles réellement présentes, les litorjia d'abord.
         final List<String> kinds = new ArrayList<>();
-        final List<String> familyLabels = new ArrayList<>();
-        if (hasKind(templates, "level")) {
-            kinds.add("level");
-            familyLabels.add(getString(R.string.lit_family_level));
+        if (hasKind(templates, "litorjia")) kinds.add("litorjia");
+        if (hasKind(templates, "level")) kinds.add("level");
+        family.removeAllViews();
+        family.setSingleSelection(true);
+        family.setSelectionRequired(true);
+        for (String kind : kinds) {
+            com.google.android.material.button.MaterialButton btn =
+                    new com.google.android.material.button.MaterialButton(this, null,
+                            com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            btn.setText(getString("litorjia".equals(kind)
+                    ? R.string.lit_family_litorjia : R.string.lit_family_level));
+            btn.setAllCaps(false);
+            btn.setId(View.generateViewId());
+            btn.setTag(kind);
+            family.addView(btn, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            styleChoice(btn, false);
         }
-        if (hasKind(templates, "litorjia")) {
-            kinds.add("litorjia");
-            familyLabels.add(getString(R.string.lit_family_litorjia));
-        }
-        android.widget.ArrayAdapter<String> familyAdapter = new android.widget.ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_dropdown_item, familyLabels);
-        family.setAdapter(familyAdapter);
 
-        // Étape 2 : gabarits de la famille choisie (liste vivante).
+        // Étape 2 : gabarits de la famille choisie, en grille de deux.
         final List<TemplateCatalog.TemplateInfo> shown = new ArrayList<>();
         final String[] selected = {templates.get(0).id};
         TemplateChipAdapter chipAdapter = new TemplateChipAdapter(shown, selected, hint);
-        recycler.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(this));
+        recycler.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 2));
         recycler.setAdapter(chipAdapter);
 
         Runnable loadFamily = () -> {
-            int pos = family.getSelectedItemPosition();
-            String kind = pos >= 0 && pos < kinds.size() ? kinds.get(pos) : kinds.get(0);
+            String kind = kinds.isEmpty() ? null : kinds.get(0);
+            List<Integer> checked = family.getCheckedButtonIds();
+            if (!checked.isEmpty()) {
+                View b = family.findViewById(checked.get(0));
+                if (b != null && b.getTag() instanceof String) kind = (String) b.getTag();
+            }
             shown.clear();
             for (TemplateCatalog.TemplateInfo t : templates) {
-                if (kind.equals(t.kind)) shown.add(t);
+                if (kind != null && kind.equals(t.kind)) shown.add(t);
             }
             selected[0] = shown.isEmpty() ? null : shown.get(0).id;
             chipAdapter.notifyDataSetChanged();
             showPreview(hint, selected[0]);
         };
-        family.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override public void onItemSelected(android.widget.AdapterView<?> parent, View v, int pos, long id) {
-                loadFamily.run();
+        family.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View child = group.getChildAt(i);
+                if (child instanceof com.google.android.material.button.MaterialButton) {
+                    styleChoice((com.google.android.material.button.MaterialButton) child,
+                            child.getId() == checkedId);
+                }
             }
-            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+            loadFamily.run();
         });
+        if (family.getChildCount() > 0) family.check(family.getChildAt(0).getId());
         loadFamily.run();
 
         // Date : par défaut le prochain dimanche
@@ -248,6 +265,21 @@ public class LitorjiaListActivity extends AppCompatActivity {
         });
 
         dialog.show();
+    }
+
+    /**
+     * Apparence d'un choix (famille ou gabarit) selon qu'il est retenu ou
+     * non : la sélection se voit immédiatement, avec les couleurs du thème.
+     */
+    private void styleChoice(com.google.android.material.button.MaterialButton btn, boolean on) {
+        int bg = com.google.android.material.color.MaterialColors.getColor(btn, on
+                ? androidx.appcompat.R.attr.colorPrimary
+                : com.google.android.material.R.attr.colorSurfaceVariant);
+        int fg = com.google.android.material.color.MaterialColors.getColor(btn, on
+                ? com.google.android.material.R.attr.colorOnPrimary
+                : com.google.android.material.R.attr.colorOnSurfaceVariant);
+        btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(bg));
+        btn.setTextColor(fg);
     }
 
     private boolean hasKind(List<TemplateCatalog.TemplateInfo> list, String kind) {
@@ -537,6 +569,7 @@ public class LitorjiaListActivity extends AppCompatActivity {
             TemplateCatalog.TemplateInfo t = templates.get(position);
             holder.btn.setText(t.label);
             boolean on = t.id.equals(selected[0]);
+            styleChoice(holder.btn, on);
             holder.btn.setChecked(on);
             holder.btn.setOnClickListener(v -> {
                 selected[0] = t.id;

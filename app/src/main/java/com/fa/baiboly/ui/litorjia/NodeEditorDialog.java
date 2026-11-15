@@ -6,24 +6,24 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.litorjia.NodePayloadParser;
+import com.fa.baiboly.data.litorjia.PerikopaFiller;
 import com.fa.baiboly.data.litorjia.Program;
 import com.fa.baiboly.data.litorjia.ProgramNode;
 import com.fa.baiboly.data.litorjia.ReferenceResolver;
 import com.fa.baiboly.data.litorjia.TemplateCatalog;
-import com.fa.baiboly.data.parser.BibleRefParser;
+import com.fa.baiboly.ui.fandaharana.BiblePickerSheet;
+import com.fa.baiboly.ui.fandaharana.SongPickerSheet;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -48,10 +48,15 @@ final class NodeEditorDialog {
         void restorePerikopa(ProgramNode node);
     }
 
+    /** Remontée du clic corbeille : l'appelant confirme et supprime. */
+    interface OnDelete {
+        void onDelete(ProgramNode node);
+    }
+
     private NodeEditorDialog() {}
 
     static void show(Context ctx, Program program, ProgramNode node,
-                     OnSaved onSaved, OnRestorePerikopa restorer) {
+                     OnSaved onSaved, OnRestorePerikopa restorer, OnDelete onDelete) {
         View root = LayoutInflater.from(ctx).inflate(R.layout.dialog_litorjia_node, null);
         AlertDialog dialog = new AlertDialog.Builder(ctx).create();
         dialog.setView(root);
@@ -65,6 +70,22 @@ final class NodeEditorDialog {
         LinearLayout form = root.findViewById(R.id.formContainer);
         Button btnRestore = root.findViewById(R.id.btnRestore);
 
+        // Corbeille : ferme l'éditeur puis laisse l'appelant confirmer
+        // (même dialogue de confirmation et même annulation que l'arbre).
+        root.findViewById(R.id.btnDeleteNode).setOnClickListener(v -> {
+            dialog.dismiss();
+            if (onDelete != null) onDelete.onDelete(node);
+        });
+
+        // « Annuler » n'était câblé à rien : le bouton ne fermait pas.
+        root.findViewById(R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
+
+        // Les feuilles de choix (chant, lecture) sont des fenêtres qui
+        // s'ouvrent par-dessus ce dialogue : on ferme l'éditeur, on choisit,
+        // puis on rouvre l'éditeur avec la valeur retenue.
+        final Context reopenCtx = ctx;
+        final Runnable reopen = () -> show(reopenCtx, program, node, onSaved, restorer, onDelete);
+
         title.setText(typeName(node));
         kindLabel.setText(typeHint(node.type));
         inputTitle.setText(node.title == null ? "" : node.title);
@@ -72,10 +93,11 @@ final class NodeEditorDialog {
 
         switch (node.type) {
             case ProgramNode.TYPE_HYMN:
-                buildHymnForm(ctx, root, form, node, dialog, inputTitle, onSaved);
+                buildHymnForm(ctx, root, form, node, dialog, inputTitle, onSaved, reopen);
                 break;
             case ProgramNode.TYPE_BIBLE:
-                buildBibleForm(ctx, root, form, node, dialog, inputTitle, btnRestore, onSaved, restorer);
+                buildBibleForm(ctx, root, form, node, dialog, inputTitle, btnRestore,
+                        onSaved, restorer, reopen);
                 break;
             case ProgramNode.TYPE_PRAYER:
                 buildPrayerForm(ctx, root, form, node, dialog, inputTitle, onSaved);
@@ -103,39 +125,23 @@ final class NodeEditorDialog {
 
     private static void buildHymnForm(Context ctx, View root, LinearLayout form,
                                       ProgramNode node, AlertDialog dialog,
-                                      EditText inputTitle, OnSaved onSaved) {
-        ReferenceResolver resolver = new ReferenceResolver(ctx);
-        List<String> books = resolver.songBooks();
-        if (books.isEmpty()) {
-            books = new ArrayList<>(Arrays.asList("FFPM", "FIF", "FF"));
-        }
+                                      EditText inputTitle, OnSaved onSaved,
+                                      Runnable reopen) {
+        final String[] book = { node.hymnBook() };
+        final Integer[] number = { node.hymnNumber() };
+        final String[] songTitle = { null };
 
-        LinearLayout row = rowStrip(ctx);
-        TextView lblBook = labelOf(ctx, "Sokajy :");
-        final Spinner spBook = new Spinner(ctx);
-        ArrayAdapter<String> ad = new ArrayAdapter<>(
-                ctx, android.R.layout.simple_spinner_dropdown_item, books);
-        spBook.setAdapter(ad);
-        int sel = 0;
-        String cur = node.hymnBook();
-        if (cur != null && !cur.isEmpty()) {
-            for (int i = 0; i < books.size(); i++) {
-                if (books.get(i).equalsIgnoreCase(cur)) { sel = i; break; }
-            }
-        }
-        spBook.setSelection(Math.min(sel, Math.max(0, books.size() - 1)));
-        row.addView(lblBook, lpWrap());
-        row.addView(spBook, new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        LinearLayout row2 = rowStrip(ctx);
-        TextView lblNum = labelOf(ctx, "Laharana :");
-        final EditText inputNum = numberEdit(ctx);
-        Integer n = node.hymnNumber();
-        if (n != null) inputNum.setText(String.valueOf(n));
-        row2.addView(lblNum, lpWrap());
-        row2.addView(inputNum, new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        // Choix du chant : même feuille que l'écran Fihirana (sokajy +
+        // laharan'ny hira), ouverte sur le chant déjà enregistré.
+        final TextView tvChoice = new TextView(ctx);
+        final TextView tvChoiceSub = new TextView(ctx);
+        LinearLayout pickCard = pickCard(ctx, tvChoice, tvChoiceSub);
+        tvChoice.setText(songHeading(book[0], number[0]));
+        ReferenceResolver.SongInfo currentInfo =
+                new ReferenceResolver(ctx).findSong(book[0], number[0]);
+        tvChoiceSub.setText(currentInfo != null && currentInfo.title != null
+                && !currentInfo.title.isEmpty()
+                ? currentInfo.title : "Tsindrio hisafidy hira");
 
         TextView lblStanzas = labelOf(ctx,
                 "Andininy (foana = manontolo) :");
@@ -170,41 +176,43 @@ final class NodeEditorDialog {
         row4.addView(inputLabel, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        form.addView(row);
-        form.addView(row2);
+        form.addView(pickCard, lpFull());
         form.addView(lblStanzas);
         form.addView(stanzasBox);
         form.addView(row4);
 
-        root.findViewById(R.id.btnConfirm).setOnClickListener(v -> {
-            String nStr = inputNum.getText().toString().trim();
-            Integer number = null;
-            ReferenceResolver.SongInfo info = null;
-            if (!nStr.isEmpty()) {
-                try { number = Integer.parseInt(nStr); } catch (NumberFormatException ignored) {}
-                if (number != null) {
-                    String b = (String) spBook.getSelectedItem();
-                    info = resolver.findSong(b, number);
-                    if (info == null) {
-                        // Chant introuvable : conservé avec son libellé, marqué
-                        // « à compléter » (§7.4) — jamais bloquant
-                        Toast.makeText(ctx,
-                                "Tsy hita ilay hira " + b + " " + number, Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
+        // Écrit tout le formulaire dans le noeud. Les vues de ce dialogue
+        // restent lisibles même après sa fermeture.
+        final Runnable apply = () -> {
             List<Integer> stanzas = new ArrayList<>();
             for (int i = 0; i < stanzasBox.getChildCount(); i++) {
                 TextView chip = (TextView) stanzasBox.getChildAt(i);
                 if (chip.isSelected()) stanzas.add(i + 1);
             }
-            node.payload = NodePayloadParser.hymnPayload(
-                    (String) spBook.getSelectedItem(), number, stanzas,
+            node.payload = NodePayloadParser.hymnPayload(book[0], number[0], stanzas,
                     inputLabel.getText().toString().trim());
             node.title = inputTitle.getText().toString().trim();
-            if (node.title.isEmpty() && info != null && info.title != null) {
-                node.title = info.title; // titre de la base
+            if (node.title.isEmpty() && songTitle[0] != null) {
+                node.title = songTitle[0]; // titre de la base
             }
+        };
+
+        // La feuille de choix est une fenêtre : on ferme l'éditeur avant de
+        // l'ouvrir, puis on le rouvre sur le chant retenu (couplets à régler).
+        pickCard.setOnClickListener(v -> {
+            dialog.dismiss();
+            openSongPicker(ctx, book[0], number[0], song -> {
+                book[0] = song.getCategory();
+                number[0] = song.getNumber();
+                songTitle[0] = song.getTitle();
+                apply.run();
+                if (onSaved != null) onSaved.onSaved(node);
+                if (reopen != null) reopen.run();
+            });
+        });
+
+        root.findViewById(R.id.btnConfirm).setOnClickListener(v -> {
+            apply.run();
             dialog.dismiss();
             if (onSaved != null) onSaved.onSaved(node);
         });
@@ -217,80 +225,90 @@ final class NodeEditorDialog {
     private static void buildBibleForm(Context ctx, View root, LinearLayout form,
                                        ProgramNode node, AlertDialog dialog,
                                        EditText inputTitle, Button btnRestore,
-                                       OnSaved onSaved, OnRestorePerikopa restorer) {
+                                       OnSaved onSaved, OnRestorePerikopa restorer,
+                                       Runnable reopen) {
+        final ReferenceResolver resolver = new ReferenceResolver(ctx);
         final List<ProgramNode.BibleRef> refs = new ArrayList<>(node.bibleRefs());
-        LinearLayout refsBox = new LinearLayout(ctx);
+        final LinearLayout refsBox = new LinearLayout(ctx);
         refsBox.setOrientation(LinearLayout.VERTICAL);
-        final List<List<EditText>> rowsFields = new ArrayList<>();
 
-        Runnable render = () -> {
+        // Liste des lectures, dans l'ordre : affichage + retrait par ligne.
+        final Runnable[] render = new Runnable[1];
+        render[0] = () -> {
             refsBox.removeAllViews();
-            rowsFields.clear();
+            if (refs.isEmpty()) {
+                TextView empty = new TextView(ctx);
+                empty.setText("Tsy mbola misy vakiteny — ampio amin'ny safidy eto ambany.");
+                empty.setTextSize(13f);
+                empty.setAlpha(0.7f);
+                empty.setPadding(0, px(ctx, 6), 0, px(ctx, 10));
+                refsBox.addView(empty, lpFull());
+                return;
+            }
             for (int i = 0; i < refs.size(); i++) {
-                ProgramNode.BibleRef r = refs.get(i);
+                final int index = i;
                 LinearLayout ll = new LinearLayout(ctx);
                 ll.setOrientation(LinearLayout.HORIZONTAL);
                 ll.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
-                AutoCompleteTextView inputBook = new AutoCompleteTextView(ctx);
-                inputBook.setHint("Boky");
-                inputBook.setTextSize(14f);
-                if (r.book != null) inputBook.setText(r.book);
-                ArrayAdapter<String> sugAd = new ArrayAdapter<>(ctx,
-                        android.R.layout.simple_dropdown_item_1line, commonBooks());
-                inputBook.setAdapter(sugAd);
+                TextView tv = new TextView(ctx);
+                tv.setText(refs.get(i).display());
+                tv.setTextSize(15f);
+                ll.addView(tv, new LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-                EditText inputChapter = new EditText(ctx);
-                inputChapter.setHint("Tok.");
-                inputChapter.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-                inputChapter.setTextSize(14f);
-                if (r.chapter != null) inputChapter.setText(r.chapter);
-
-                EditText inputFrom = new EditText(ctx);
-                inputFrom.setHint("Manomboka");
-                inputFrom.setTextSize(14f);
-                if (r.from != null) inputFrom.setText(r.from);
-
-                EditText inputTo = new EditText(ctx);
-                inputTo.setHint("Mifarana");
-                inputTo.setTextSize(14f);
-                if (r.to != null) inputTo.setText(r.to);
-
-                TextView num = new TextView(ctx);
-                num.setText((i + 1) + ".");
-                num.setTextSize(13f);
-                num.setTextColor(ctx.getResources().getColor(android.R.color.darker_gray));
-                num.setPadding(0, 0, 8, 0);
-                ll.addView(num);
-                ll.addView(inputBook, new LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.4f));
-                ll.addView(inputChapter, new LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.6f));
-                ll.addView(inputFrom, new LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f));
-                ll.addView(inputTo, new LinearLayout.LayoutParams(
-                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.8f));
-                refsBox.addView(ll);
-
-                List<EditText> f = new ArrayList<>();
-                f.add(inputBook);
-                f.add(inputChapter);
-                f.add(inputFrom);
-                f.add(inputTo);
-                rowsFields.add(f);
+                ImageButton del = new ImageButton(ctx);
+                del.setImageResource(R.drawable.ic_delete);
+                del.setColorFilter(androidx.core.content.ContextCompat.getColor(
+                        ctx, R.color.lit_swipe_delete));
+                del.setContentDescription(ctx.getString(R.string.lit_act_delete));
+                android.util.TypedValue ripple = new android.util.TypedValue();
+                if (ctx.getTheme().resolveAttribute(
+                        android.R.attr.selectableItemBackgroundBorderless, ripple, true)
+                        && ripple.resourceId != 0) {
+                    del.setBackgroundResource(ripple.resourceId);
+                }
+                int size = px(ctx, 40);
+                del.setOnClickListener(v -> {
+                    refs.remove(index);
+                    render[0].run();
+                });
+                ll.addView(del, new LinearLayout.LayoutParams(size, size));
+                refsBox.addView(ll, lpFull());
             }
         };
-        refs.add(new ProgramNode.BibleRef());
-        render.run();
+        render[0].run();
+        form.addView(refsBox);
 
         Button btnAddRef = new Button(ctx, null, android.R.attr.borderlessButtonStyle);
-        btnAddRef.setText("Hanampy andinin-teny");
+        btnAddRef.setText("Hanampy vakiteny");
+        // Même principe que pour le chant : la feuille s'ouvre par-dessus le
+        // dialogue, donc on ferme l'éditeur, on choisit, on enregistre puis
+        // on rouvre l'éditeur avec la lecture ajoutée.
         btnAddRef.setOnClickListener(v -> {
-            refs.add(new ProgramNode.BibleRef());
-            render.run();
+            final String typedTitle = inputTitle.getText().toString().trim();
+            dialog.dismiss();
+            openBiblePicker(ctx, (reference, title) -> {
+                List<ProgramNode.BibleRef> parsed = PerikopaFiller.parse(reference, resolver);
+                if (parsed.isEmpty()) {
+                    // Référence non reconnue : conservée brute, « à compléter »
+                    ProgramNode.BibleRef raw = new ProgramNode.BibleRef();
+                    raw.book = reference;
+                    raw.label = title;
+                    refs.add(raw);
+                } else {
+                    for (ProgramNode.BibleRef r : parsed) {
+                        if (r.label == null || r.label.isEmpty()) r.label = title;
+                    }
+                    refs.addAll(parsed);
+                }
+                node.payload = NodePayloadParser.biblePayload(refs);
+                if (!typedTitle.isEmpty()) node.title = typedTitle;
+                if (onSaved != null) onSaved.onSaved(node);
+                if (reopen != null) reopen.run();
+            });
         });
-        refsBox.addView(btnAddRef, lpFull());
-        form.addView(refsBox);
+        form.addView(btnAddRef, lpFull());
 
         // Bouton « Rétablir le perikopa du jour » (§4.3 : calendar ↔ manual)
         if (node.origin != null && ProgramNode.ORIGIN_CALENDAR.equals(node.origin)) {
@@ -304,46 +322,11 @@ final class NodeEditorDialog {
         }
 
         root.findViewById(R.id.btnConfirm).setOnClickListener(v -> {
-            List<ProgramNode.BibleRef> newRefs = new ArrayList<>();
-            boolean anyFilled = false;
-            for (List<EditText> f : rowsFields) {
-                String book = f.get(0).getText().toString().trim();
-                if (book.isEmpty()) continue;
-                ProgramNode.BibleRef r = new ProgramNode.BibleRef();
-                r.book = normalizeBook(book);
-                Integer bn = BibleRefParser.resolveBookNumber(book);
-                r.bookNumber = bn;
-                r.chapter = f.get(1).getText().toString().trim();
-                r.from = trimOrNull(f.get(2).getText().toString());
-                r.to = trimOrNull(f.get(3).getText().toString());
-                newRefs.add(r);
-                anyFilled = true;
-            }
-            if (!anyFilled) {
-                // Lecture vide conservée « à compléter » : ne casse jamais
-                newRefs.clear();
-            }
-            node.payload = NodePayloadParser.biblePayload(newRefs);
+            node.payload = NodePayloadParser.biblePayload(refs);
             node.title = inputTitle.getText().toString().trim();
             dialog.dismiss();
             if (onSaved != null) onSaved.onSaved(node);
         });
-    }
-
-    private static List<String> commonBooks() {
-        return Arrays.asList(
-                "Genesisy", "Exodely", "Salamo", "Manao fahalalana", "Isaia", "Jeremia",
-                "Danely", "Mpanjaka", "Esay", "Zakaria", "Mattheo", "Marka", "Lioka",
-                "Jaona", "Asan'ny Apostoly", "Romanà", "Korinto", "Galatiana",
-                "Efesiana", "Filipiana", "Kolosiana", "Tesaloniana", "Timoteo",
-                "Hebreo", "Jakoba", "Petero", "Joda", "Apokalypsy");
-    }
-
-    private static String normalizeBook(String raw) {
-        Integer bn = BibleRefParser.resolveBookNumber(raw);
-        if (bn == null) return raw.trim();
-        String s = BibleRefParser.shortNameOf(bn);
-        return s == null || s.isEmpty() ? raw.trim() : s;
     }
 
     private static String trimOrNull(String s) {
@@ -506,11 +489,45 @@ final class NodeEditorDialog {
         return t;
     }
 
-    private static EditText numberEdit(Context ctx) {
-        EditText e = new EditText(ctx);
-        e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        e.setTextSize(15f);
-        return e;
+    /** Carte cliquable « choisir » : libellé principal + précision. */
+    private static LinearLayout pickCard(Context ctx, TextView main, TextView sub) {
+        LinearLayout card = new LinearLayout(ctx);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(px(ctx, 14), px(ctx, 8), px(ctx, 14), px(ctx, 8));
+        card.setBackgroundResource(R.drawable.bg_picker_cell);
+        card.setClickable(true);
+        card.setFocusable(true);
+        main.setTextSize(15f);
+        sub.setTextSize(13f);
+        sub.setAlpha(0.7f);
+        card.addView(main, lpFull());
+        card.addView(sub, lpFull());
+        return card;
+    }
+
+    /** « FFPM 21 » ou « Tsy misy hira » quand rien n'est encore choisi. */
+    private static String songHeading(String book, Integer number) {
+        if (book == null || book.trim().isEmpty() || number == null) {
+            return "Tsy misy hira";
+        }
+        return book.trim() + " " + number;
+    }
+
+    /** Feuille de choix de chant, identique à celle du programme/Fihirana. */
+    private static void openSongPicker(Context ctx, String book, Integer number,
+                                       SongPickerSheet.OnSongPicked cb) {
+        if (!(ctx instanceof androidx.fragment.app.FragmentActivity)) return;
+        new SongPickerSheet(cb, book, number).show(
+                ((androidx.fragment.app.FragmentActivity) ctx).getSupportFragmentManager(),
+                "lit_song_picker");
+    }
+
+    /** Feuille de choix de lecture (livre → toko → andininy). */
+    private static void openBiblePicker(Context ctx, BiblePickerSheet.OnBiblePicked cb) {
+        if (!(ctx instanceof androidx.fragment.app.FragmentActivity)) return;
+        new BiblePickerSheet(cb).show(
+                ((androidx.fragment.app.FragmentActivity) ctx).getSupportFragmentManager(),
+                "lit_bible_picker");
     }
 
     private static EditText textEdit(Context ctx) {

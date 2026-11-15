@@ -8,6 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:background="@color/background"
         android:padding="20dp">
 
         <TextView
@@ -53,7 +54,24 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:orientation="horizontal"
-            android:gravity="end">
+            android:gravity="center_vertical">
+
+            <!-- Suppression de l'élément édité (à gauche, action destructive) -->
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/btnDeleteNode"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/lit_act_delete"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_delete"
+                app:tint="@color/lit_swipe_delete" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnRestore"
