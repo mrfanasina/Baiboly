@@ -6,6 +6,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.*;
 import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
@@ -19,6 +20,7 @@ import com.fa.baiboly.data.CardOrderAdapter;
 import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.ai.AiPreferencesService;
 import com.fa.baiboly.databinding.FragmentSettingsBinding;
+import com.fa.baiboly.ui.common.AppBackgrounds;
 import com.fa.baiboly.widgets.MofonainaOfflineWidget;
 import com.fa.baiboly.widgets.MofonainaOnlineWidget;
 
@@ -70,6 +72,7 @@ public class SettingsFragment extends Fragment {
         });
 
         loadAndApplySettings();
+        setupHomeBackground();
         setupThemeChanger();
         setupColors();
         setupTextSizeRealTime();
@@ -78,6 +81,67 @@ public class SettingsFragment extends Fragment {
         setupCardOrder();
         setupWidgetButtons();
         setupAiSettingsEntry();
+    }
+
+    // =========================
+    // FOND DE L'ACCUEIL
+    // =========================
+    private void setupHomeBackground() {
+        updateHomeBackgroundPreview();
+        binding.rowHomeBackground.setOnClickListener(v -> showHomeBackgroundPicker());
+    }
+
+    private void updateHomeBackgroundPreview() {
+        if (binding == null) return;
+        binding.imgHomeBackgroundPreview.setImageResource(
+                AppBackgrounds.getHomeBackground(requireContext()));
+    }
+
+    /** Grille de vignettes : le choix est enregistré et l'accueil se met à jour au retour. */
+    private void showHomeBackgroundPicker() {
+        Context context = requireContext();
+        int[] choices = AppBackgrounds.getHomeBackgroundChoices();
+        int current = AppBackgrounds.getHomeBackground(context);
+
+        GridLayout grid = new GridLayout(context);
+        grid.setColumnCount(3);
+        int pad = dp(8);
+        grid.setPadding(pad, pad, pad, pad);
+        int cell = dp(92);
+        int gap = dp(6);
+
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(grid);
+
+        AlertDialog dialog = new AlertDialog.Builder(context)
+                .setTitle("Fon'ny fandraisana")
+                .setView(scroll)
+                .setNegativeButton("Akatona", null)
+                .create();
+
+        for (int resId : choices) {
+            ImageView thumb = new ImageView(context);
+            thumb.setImageResource(resId);
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setContentDescription("Sary");
+            thumb.setAlpha(resId == current ? 1f : 0.6f);
+            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+            lp.width = cell;
+            lp.height = cell;
+            lp.setMargins(gap, gap, gap, gap);
+            grid.addView(thumb, lp);
+            thumb.setOnClickListener(v -> {
+                AppBackgrounds.setHomeBackground(context, resId);
+                updateHomeBackgroundPreview();
+                dialog.dismiss();
+            });
+        }
+
+        dialog.show();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     // =========================

@@ -13,6 +13,8 @@
     <color name="background">#FFFFFFFF</color>
     <color name="modal_backgound">#EEFFFFFF</color>
     <color name="text_full">#000000</color>
+    <color name="glass">#CDDBDBDB</color>
+    <color name="glass2">#11DBDBDB</color>
 
     <color name="title_gray">#616161</color>
     <color name="text2">#322F2F</color>
@@ -20,6 +22,8 @@
     <color name="ic_launcher_background">#F2E9DF</color>
 
     <color name="bgColor">#F5F5F5</color>
+    <color name="whiterose">#E7DEE1</color>
+
     <color name="cardColor">#EEFBFF</color>
 
     <color name="textPrimary">#393535</color>
@@ -73,6 +77,7 @@
 
     <!-- Validation / succès -->
     <color name="success">#10B981</color>
+    <color name="success_transp">#CC10B981</color>
 
     <!-- Fond de l'app / surface -->
     <color name="window_bg">#FFFFFF</color>

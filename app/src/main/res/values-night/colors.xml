@@ -14,6 +14,7 @@
     <color name="text_content">#BBBBBB</color>
     <color name="background">#1F1D1D</color>
     <color name="text_full">#FFFFFFFF</color>
+    <color name="whiterose">#2D2D2D</color>
 
     <color name="bgColor">#121212</color>
     <color name="cardColor">#1E1E1E</color>

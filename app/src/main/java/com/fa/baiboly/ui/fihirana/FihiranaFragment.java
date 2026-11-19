@@ -21,7 +21,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.fihirana.FihiranaService;
-import com.fa.baiboly.databinding.FragmentNotificationsBinding;
+import com.fa.baiboly.databinding.FragmentFihiranaBinding;
 import com.fa.baiboly.models.Song;
 
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.List;
  */
 public class FihiranaFragment extends Fragment {
 
-    private FragmentNotificationsBinding binding;
+    private FragmentFihiranaBinding binding;
     private FihiranaService service;
     private String currentInput = "";
     private String selectedCategory = "";
@@ -39,7 +39,7 @@ public class FihiranaFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        binding = FragmentNotificationsBinding.inflate(inflater, container, false);
+        binding = FragmentFihiranaBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 

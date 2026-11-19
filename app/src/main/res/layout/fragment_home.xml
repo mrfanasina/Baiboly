@@ -257,6 +257,7 @@
 
                 <LinearLayout
                     android:id="@+id/perikopaCardBg"
+                    android:backgroundTint="@color/glass2"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
@@ -303,7 +304,6 @@
                             android:src="@drawable/ic_list_view"
                             app:tint="?attr/colorPrimary"
                             android:padding="4dp"
-                            android:background="?attr/selectableItemBackground"
                             android:clickable="true"
                             android:focusable="true" />
                     </LinearLayout>

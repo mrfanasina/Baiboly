@@ -38,7 +38,7 @@
         <item name="android:layout_columnWeight">1</item>
         <item name="android:textSize">22sp</item>
         <item name="android:textColor">#E6E1E5</item>
-        <item name="backgroundTint">#2D2D2D</item>
+        <item name="backgroundTint">@color/glass</item>
         <item name="android:layout_margin">6dp</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>

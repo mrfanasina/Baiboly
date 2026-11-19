@@ -199,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
             return R.id.navigation_home;
         }
         if (destId == R.id.navigation_dashboard) return R.id.navigation_dashboard;
-        if (destId == R.id.navigation_notifications) return R.id.navigation_notifications;
+        if (destId == R.id.navigation_fihirana) return R.id.navigation_fihirana;
         if (destId == R.id.fanekena) return R.id.fanekena;
         return -1;
     }

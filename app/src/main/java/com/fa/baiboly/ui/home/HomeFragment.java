@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -35,6 +36,7 @@ import com.fa.baiboly.models.History;
 import com.fa.baiboly.models.MofonainaData;
 import com.fa.baiboly.models.PerikopaDay;
 import com.fa.baiboly.models.Song;
+import com.fa.baiboly.ui.common.AppBackgrounds;
 import com.fa.baiboly.ui.fanekena.CodeAdapter;
 import com.fa.baiboly.ui.fanekena.FanekenaActivity;
 import com.fa.baiboly.ui.fihirana.SongDetailActivity;
@@ -158,6 +160,8 @@ public class HomeFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (binding != null) {
+            // Le fond de l'accueil peut avoir été changé dans les paramètres.
+            AppBackgrounds.refreshHomeBackground(binding.getRoot());
             loadHistory(getLayoutInflater());
         }
     }
@@ -299,13 +303,12 @@ public class HomeFragment extends Fragment {
         img.setImageResource(R.drawable.ic_bible);
         img.setImageTintList(ColorStateList.valueOf(seasonColor));
 
-        // Apply semi-transparent liturgical season color as background
-        int bgColor = blendColor(seasonColor, 0.10f);
+        int bgColor = ColorUtils.setAlphaComponent(seasonColor, 15);
+
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(bgColor);
         bg.setCornerRadius(12f);
         row.setBackground(bg);
-
         // Margin between rows
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -450,86 +453,148 @@ public class HomeFragment extends Fragment {
         linearParent.invalidate();
     }
 
+
+
     private void displayMofonaina(MofonainaData data) {
         if (data == null) return;
 
-        // Mémorise ce qui est affiché (session maison)
+        // Mémorise ce qui est affiché
         currentMofonaina = data;
 
-        // Show the mofonaina card
+        // Affiche la carte
         binding.cardMofonaina.setVisibility(View.VISIBLE);
 
         binding.textMofonainaTitle.setText(data.getTitle());
         binding.textMofonainaSubTitle.setText(data.getDate());
         binding.mofonainaDetailsContainer.removeAllViews();
 
-        // Store verseOfDay to compare with Vakiteny anio
         String verseOfDayStr = null;
 
-
-        // Adding Bible Reading 1 (hide if same as verseOfDay)
+        // Lecture biblique 1
         if (data.getBibleReading1() != null) {
             String reading1 = data.getBibleReading1().toString();
+
             if (verseOfDayStr == null || !reading1.equals(verseOfDayStr)) {
-                addPremiumRow(binding.mofonainaDetailsContainer, reading1,
+                addPremiumRow(
+                        binding.mofonainaDetailsContainer,
+                        reading1,
                         R.drawable.menu_book,
-                        v -> openHomeSession(GROUP_MOFONAINA, "verse", reading1));
+                        v -> openHomeSession(
+                                GROUP_MOFONAINA,
+                                "verse",
+                                reading1
+                        )
+                );
             }
         }
 
-        // Adding Daily Verse — PROMINENT
+        // Verset du jour — fond légèrement coloré
         if (data.getVerseOfDay() != null) {
+
             verseOfDayStr = data.getVerseOfDay().toString();
 
-            View verseRow = getLayoutInflater().inflate(R.layout.item_home_row, binding.mofonainaDetailsContainer, false);
+            View verseRow = getLayoutInflater().inflate(
+                    R.layout.item_home_row,
+                    binding.mofonainaDetailsContainer,
+                    false
+            );
+
             TextView verseTv = verseRow.findViewById(R.id.rowText);
             ImageView verseIcon = verseRow.findViewById(R.id.rowIcon);
+
             verseTv.setText(verseOfDayStr);
             verseTv.setTextSize(15);
             verseTv.setTypeface(null, Typeface.BOLD);
-            int primaryColor = MaterialColors.getColor(verseTv, androidx.appcompat.R.attr.colorPrimary);
+
+            int primaryColor = MaterialColors.getColor(
+                    verseTv,
+                    androidx.appcompat.R.attr.colorPrimary
+            );
+
             verseTv.setTextColor(primaryColor);
             verseIcon.setImageResource(R.drawable.ic_bible);
-            verseIcon.setImageTintList(ColorStateList.valueOf(primaryColor));
+            verseIcon.setImageTintList(
+                    ColorStateList.valueOf(primaryColor)
+            );
 
-            // Prominent background
+            // Fond du verset : 8% d'opacité
             GradientDrawable bg = new GradientDrawable();
-            bg.setColor(blendColor(Color.parseColor("#2E7D32"), 0.06f));
-            bg.setCornerRadii(new float[]{12, 12, 12, 12, 12, 12, 12, 12});
+
+            int verseAlpha = (int) (255 * 0.08f);
+            int verseBgColor = (Color.parseColor("#2E7D32") & 0x00FFFFFF)
+                    | (verseAlpha << 24);
+
+            bg.setColor(verseBgColor);
+            bg.setCornerRadius(12f);
+
             verseRow.setBackground(bg);
+
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+
             lp.setMargins(0, 0, 0, 8);
             verseRow.setLayoutParams(lp);
 
             final String vRef = verseOfDayStr;
+
             verseRow.setOnClickListener(v ->
-                    openHomeSession(GROUP_MOFONAINA, "verse", vRef));
+                    openHomeSession(
+                            GROUP_MOFONAINA,
+                            "verse",
+                            vRef
+                    )
+            );
+
             binding.mofonainaDetailsContainer.addView(verseRow);
         }
 
-        // Adding Song 1
+        // Chant 1
         if (data.getSong1() != null) {
-            String songName = data.getSong1().getCategory().toUpperCase() + " " + data.getSong1().getNumber();
-            addPremiumRow(binding.mofonainaDetailsContainer, songName,
+
+            String songName = data.getSong1().getCategory().toUpperCase()
+                    + " " + data.getSong1().getNumber();
+
+            addPremiumRow(
+                    binding.mofonainaDetailsContainer,
+                    songName,
                     R.drawable.ic_music_note,
-                    v -> openHomeSession(GROUP_MOFONAINA, "song",
-                            data.getSong1().getId()));
+                    v -> openHomeSession(
+                            GROUP_MOFONAINA,
+                            "song",
+                            data.getSong1().getId()
+                    )
+            );
         }
 
-        // Adding Song 2
+        // Chant 2
         if (data.getSong2() != null) {
-            String songName = data.getSong2().getCategory().toUpperCase() + " " + data.getSong2().getNumber();
-            addPremiumRow(binding.mofonainaDetailsContainer, songName,
+
+            String songName = data.getSong2().getCategory().toUpperCase()
+                    + " " + data.getSong2().getNumber();
+
+            addPremiumRow(
+                    binding.mofonainaDetailsContainer,
+                    songName,
                     R.drawable.ic_music_note,
-                    v -> openHomeSession(GROUP_MOFONAINA, "song",
-                            data.getSong2().getId()));
+                    v -> openHomeSession(
+                            GROUP_MOFONAINA,
+                            "song",
+                            data.getSong2().getId()
+                    )
+            );
         }
 
-        // Check if Vakiteny anio (textHome) is same as verseOfDay → hide card
+        // Comparaison avec Vakiteny anio
         String homeReading = binding.textHome.getText().toString();
-        if (verseOfDayStr != null && homeReading != null && homeReading.equals(verseOfDayStr)) {
+
+        if (verseOfDayStr != null
+                && homeReading != null
+                && homeReading.equals(verseOfDayStr)) {
+
             binding.cardReading.setVisibility(View.GONE);
+
         } else {
             binding.cardReading.setVisibility(View.VISIBLE);
         }

@@ -12,11 +12,11 @@
         android:title="@string/title_dashboard" />
 
     <item
-        android:id="@+id/navigation_notifications"
-        android:icon="@drawable/music_svgrepo_com"
+        android:id="@+id/navigation_fihirana"
+        android:icon="@drawable/ic_audio"
         android:title="@string/title_notifications" />
     <item
         android:id="@+id/fanekena"
-        android:icon="@drawable/star_outline_svgrepo_com"
+        android:icon="@drawable/ic_dashboard_black_24dp"
         android:title="Fanekena" />
 </menu>

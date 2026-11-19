@@ -106,7 +106,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="16dp" />
+                android:paddingBottom="16dp"
+                android:tag="bg_no_cards" />
         </LinearLayout>
 
         <!-- Séparateur vertical discret (Optionnel) -->
@@ -141,7 +142,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="16dp" />
+                android:paddingBottom="16dp"
+                android:tag="bg_no_cards" />
         </LinearLayout>
 
     </LinearLayout>

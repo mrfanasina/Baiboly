@@ -25,7 +25,8 @@ public class SplashActivity extends AppCompatActivity {
     private static final String[][] VERSES = {
             {"Fa velona sy mahery ny tenin'Andriamanitra ka maranitra noho ny sabatra roa lela", "Hebreo 4:12"},
             {"Izay soratra rehetra nomen'ny tsindrimandrin'Andriamanitra dia mahasoa koa ho fampianarana, ho fandresen-dahatra, ho fanitsiana izay diso, ho fitaizana amin'ny fahamarinana,", "2 Timoty 3:16"},
-            {"Aza matahotra ianao, fa momba anao Aho; Ary aza miherikerika foana, fa Izaho no Andriamanitrao; Mampahery anao Aho sady mamonjy anao; Eny, mitantana anao amin'ny tanana ankavanan'ny fahamarinako Aho.", "Isaia 41:10"},
+            {"Aza matahotra ianao, fa momba anao Aho; Ary aza miherikerika foana, fa Izaho no Andriamanitrao; ", "Isaia 41:10a"},
+            {"Mampahery anao Aho sady mamonjy anao; Eny, mitantana anao amin'ny tanana ankavanan'ny fahamarinako Aho.\", ", "Isaia 41:10b"},
             {"Ampianaro ny lalanao aho, Jehovah ô; ary tariho amin'ny lalana marina aho noho ny fahavaloko..", "Salamo 27:11"},
             {"Hisaotra an'i Jehovah lalandava aho; ho eo am-bavako mandrakariva ny fiderana Azy.", "Salamo 34:1"},
             {"Mitady an'i Jehovah aho, dia mamaly ahy Izy ka manafaka ahy amin'ny tahotro rehetra.", "Salamo 34:4"},
