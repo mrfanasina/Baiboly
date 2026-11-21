@@ -75,7 +75,7 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.ViewHolder> {
 
                 int color = Color.parseColor(colorString.trim());
 
-                // Effet pastel léger
+                // Pastel léger (couleur du livre, comme avant).
                 int bgColor = Color.argb(
                         30,
                         Color.red(color),

@@ -9,6 +9,7 @@ import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.fa.baiboly.R;
@@ -16,17 +17,27 @@ import com.google.android.material.card.MaterialCardView;
 
 /**
  * Applique les photos de fond de l'application (dossier images/ici) sur les
- * écrans et sur les cartes. Les écrans de lecture ne doivent PAS appeler ce
- * gestionnaire (voir BaibolyApp pour la liste des exclusions).
+ * écrans et le style choisi sur les cartes. Les écrans de lecture ne doivent
+ * PAS appeler ce gestionnaire (voir BaibolyApp pour les exclusions).
  *
  * Chaque écran garde toujours la même photo : plus de changement aléatoire.
  * L'accueil utilise un fond choisi dans les paramètres (par défaut une image
- * fixe) et chaque carte de l'accueil a sa propre photo.
+ * fixe). Le style des cartes se choisit dans les paramètres :
+ * <ul>
+ *   <li>{@link #CARD_STYLE_IMAGE} (par défaut) : photo décorative individuelle
+ *       par carte, comme avant ;</li>
+ *   <li>{@link #CARD_STYLE_GLASS} : matériau Liquid Glass de
+ *       {@link GlassCardHelper}, qui floute la photo de l'écran.</li>
+ * </ul>
  */
 public final class AppBackgrounds {
 
     public static final String PREFS_NAME = "app_settings";
     public static final String KEY_HOME_BACKGROUND = "home_background";
+    /** Style des cartes : photo individuelle ou effet Liquid Glass. */
+    public static final String KEY_CARD_STYLE = "card_background_style";
+    public static final String CARD_STYLE_IMAGE = "image";
+    public static final String CARD_STYLE_GLASS = "glass";
 
     private static final int[] PHOTOS = {
             R.drawable.fond_01, R.drawable.fond_02, R.drawable.fond_03,
@@ -45,12 +56,17 @@ public final class AppBackgrounds {
             R.drawable.fond_04, R.drawable.fond_05, R.drawable.fond_06,
             R.drawable.fond_07, R.drawable.fond_08, R.drawable.fond_09,
             R.drawable.fond_10, R.drawable.fond_11, R.drawable.fond_14,
-            R.drawable.fond_15
+            R.drawable.fond_100, R.drawable.fond_101, R.drawable.fond_102,
+            R.drawable.fond_103, R.drawable.fond_104, R.drawable.fond_105,
+            R.drawable.fond_107, R.drawable.fond_106, R.drawable.fond_108,
+            R.drawable.fond_15, R.drawable.fond_109
     };
 
-    private static final int DEFAULT_HOME = R.drawable.fond_01;
+    private static final int DEFAULT_HOME = R.drawable.fond_08;
 
     private static final String HOME = "com.fa.baiboly.ui.home.HomeFragment";
+    private static final String BAIBOLY = "com.fa.baiboly.ui.baiboly.BaibolyFragment";
+    private static final String CHAPTER = "com.fa.baiboly.ui.baiboly.ChapterFragment";
     private static final String FIHIRANA = "com.fa.baiboly.ui.fihirana.FihiranaFragment";
     private static final String SONG_PICKER = "com.fa.baiboly.ui.fandaharana.SongPickerSheet";
     private static final String BIBLE_PICKER = "com.fa.baiboly.ui.fandaharana.BiblePickerSheet";
@@ -58,13 +74,36 @@ public final class AppBackgrounds {
     /** Voile posé sur le fond d'écran (le texte reste lisible). */
     private static final int SCRIM_LIGHT = 0x73FFFFFF; // blanc ~45 %
     private static final int SCRIM_DARK = 0xB3000000;  // noir ~70 %
-    /** Voile plus dense sur les cartes, qui contiennent du texte. */
+    /** Voile plus dense sur les cartes à photo, qui contiennent du texte. */
     private static final int CARD_SCRIM_LIGHT = 0xB3FFFFFF; // blanc ~70 %
     private static final int CARD_SCRIM_DARK = 0xCC000000;  // noir ~80 %
+    /** Voile du verre des barres (toolbar) : translucide, la photo reste visible. */
+    private static final int BAR_SCRIM_LIGHT = 0x99FFFFFF; // blanc ~60 %
+    private static final int BAR_SCRIM_DARK = 0xB3000000;  // noir ~70 %
+    /**
+     * Opacité du verre des barres : le contenu qui défile dessous reste
+     * deviné (texte en filigrane), au lieu d'être totalement masqué.
+     */
+    private static final int BAR_ALPHA = 0xEF;
+    /** Rayon des coins BAS des barres (barre du haut, bottom nav). */
+    private static final float BAR_CORNER_RADIUS_DP = 22f;
 
     private static final SparseArray<Bitmap> CACHE = new SparseArray<>();
 
     private AppBackgrounds() {
+    }
+
+    /** Style actuellement choisi pour les cartes (photo ou Liquid Glass). */
+    public static String getCardBackgroundStyle(Context context) {
+        String saved = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_CARD_STYLE, CARD_STYLE_IMAGE);
+        return CARD_STYLE_GLASS.equals(saved) ? CARD_STYLE_GLASS : CARD_STYLE_IMAGE;
+    }
+
+    public static void setCardBackgroundStyle(Context context, String style) {
+        String value = CARD_STYLE_GLASS.equals(style) ? CARD_STYLE_GLASS : CARD_STYLE_IMAGE;
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putString(KEY_CARD_STYLE, value).apply();
     }
 
     /** Images proposées pour le fond de l'accueil. */
@@ -112,25 +151,154 @@ public final class AppBackgrounds {
         }
         Context context = root.getContext();
         boolean night = isNight(context);
+        int scrim = night ? SCRIM_DARK : SCRIM_LIGHT;
         int photoRes = photoForKey(context, screenKey);
         Bitmap bitmap = getBitmap(context, photoRes);
-        if (bitmap == null) {
-            return;
-        }
+        android.util.Log.d("GlassDbg", "applyScreen ".concat(String.valueOf(screenKey))
+                .concat(" photo=").concat(String.valueOf(photoRes))
+                .concat(" bitmap=").concat(bitmap == null ? "null" : "ok")
+                .concat(" root=").concat(root.getWidth() + "x" + root.getHeight())
+                .concat(" style=").concat(getCardBackgroundStyle(context)));
 
-        String tag = screenKey + "#" + photoRes;
-        if (!tag.equals(root.getTag(R.id.tag_bg_screen))) {
-            root.setTag(R.id.tag_bg_screen, tag);
-            float topRadius = bottomSheet
-                    ? 20f * context.getResources().getDisplayMetrics().density : 0f;
-            root.setBackground(new PhotoBackgroundDrawable(bitmap,
-                    night ? SCRIM_DARK : SCRIM_LIGHT, 0f, topRadius));
+        if (bitmap != null) {
+            String tag = screenKey + "#" + photoRes;
+            if (!tag.equals(root.getTag(R.id.tag_bg_screen))) {
+                root.setTag(R.id.tag_bg_screen, tag);
+                float topRadius = bottomSheet
+                        ? 20f * context.getResources().getDisplayMetrics().density : 0f;
+                root.setBackground(new PhotoBackgroundDrawable(bitmap, scrim, 0f, topRadius));
+            }
         }
 
         // Sur l'écran de saisie du chant, seule la photo de fond compte : la
         // barre de recherche et les cartes gardent leur style.
         boolean allowCards = !bottomSheet && !FIHIRANA.equals(screenKey);
-        decorateCards(root, night, photoRes, allowCards);
+        decorateCards(root, root, photoRes, night, allowCards);
+    }
+
+    /**
+     * Fond photographique d'une carte isolée, sur un écran qui n'a pas de
+     * photo de fond (le voile reste le même que sur les cartes d'accueil).
+     */
+    public static void applyPhotoToCard(@NonNull MaterialCardView card, int photoRes) {
+        if (photoRes == 0) {
+            return;
+        }
+        Bitmap bitmap = getBitmap(card.getContext(), photoRes);
+        if (bitmap == null) {
+            return;
+        }
+        float radius = Math.max(0f, card.getRadius());
+        card.setTag(R.id.tag_bg_card, Boolean.TRUE);
+        card.setClipToOutline(true);
+        card.setBackground(new PhotoBackgroundDrawable(bitmap,
+                isNight(card.getContext()) ? CARD_SCRIM_DARK : CARD_SCRIM_LIGHT,
+                radius));
+    }
+
+    /**
+     * Applique le verre à une carte précise, en dehors de la décoration
+     * automatique d'un écran (utile pour tester un composant isolé).
+     * Le fond de référence est la photo de l'écran le plus proche.
+     */
+    public static void applyGlassToCard(@NonNull MaterialCardView card) {
+        applyGlassToCard(card, 0);
+    }
+
+    /**
+     * Verre teinté : même matériau que les autres cartes, mais l'arrière-plan
+     * flouté est coloré par {@code tintColor} (cartes de livres colorées).
+     */
+    public static void applyGlassToCard(@NonNull MaterialCardView card, int tintColor) {
+        View root = card;
+        while (root.getTag(R.id.tag_bg_screen) == null) {
+            android.view.ViewParent parent = root.getParent();
+            if (!(parent instanceof View)) {
+                break;
+            }
+            root = (View) parent;
+        }
+
+        int photoRes = 0;
+        Object tag = root.getTag(R.id.tag_bg_screen);
+        if (tag instanceof String) {
+            String value = (String) tag;
+            int separator = value.lastIndexOf('#');
+            if (separator >= 0) {
+                try {
+                    photoRes = Integer.parseInt(value.substring(separator + 1));
+                } catch (NumberFormatException ignored) {
+                    photoRes = 0;
+                }
+            }
+        }
+
+        card.setTag(R.id.tag_bg_card, null);
+        int scrim = GlassCardHelper.isNight(card.getContext()) ? SCRIM_DARK : SCRIM_LIGHT;
+        if (tintColor != 0) {
+            GlassCardHelper.apply(card, root, photoRes, scrim, tintColor);
+        } else {
+            GlassCardHelper.apply(card, root, photoRes, scrim);
+        }
+    }
+
+    /**
+     * Applique le verre flouté de l'écran à une vue quelconque (champ de
+     * saisie, barre…). La photo de référence est lue sur le fond de l'écran.
+     */
+    public static void applyGlassSurface(@NonNull View view, float radiusDp) {
+        View root = view;
+        while (root.getTag(R.id.tag_bg_screen) == null) {
+            android.view.ViewParent parent = root.getParent();
+            if (!(parent instanceof View)) {
+                break;
+            }
+            root = (View) parent;
+        }
+
+        int photoRes = 0;
+        Object tag = root.getTag(R.id.tag_bg_screen);
+        if (tag instanceof String) {
+            String value = (String) tag;
+            int separator = value.lastIndexOf('#');
+            if (separator >= 0) {
+                try {
+                    photoRes = Integer.parseInt(value.substring(separator + 1));
+                } catch (NumberFormatException ignored) {
+                    photoRes = 0;
+                }
+            }
+        }
+
+        Context context = view.getContext();
+        GlassCardHelper.Config config = GlassCardHelper.config(context);
+        int scrim = config.night ? SCRIM_DARK : SCRIM_LIGHT;
+        float radius = radiusDp * context.getResources().getDisplayMetrics().density;
+        view.setClipToOutline(true);
+        view.setBackground(new GlassSurfaceDrawable(config, view, root, photoRes, scrim,
+                radius));
+    }
+
+    /**
+     * Pose la photo de l'écran derrière la barre du bas : les coins arrondis du
+     * verre laissent ainsi voir le décor (au lieu du fond de fenêtre, noir en
+     * mode sombre).
+     */
+    public static void applyBarBackdrop(@Nullable View root, int photoRes) {
+        if (root == null || photoRes == 0) {
+            return;
+        }
+        String tag = "backdrop#" + photoRes;
+        if (tag.equals(root.getTag(R.id.tag_bg_screen))) {
+            return;
+        }
+        Bitmap bitmap = getBitmap(root.getContext(), photoRes);
+        if (bitmap == null) {
+            return;
+        }
+        root.setTag(R.id.tag_bg_screen, tag);
+        root.setBackground(new PhotoBackgroundDrawable(bitmap,
+                isNight(root.getContext()) ? SCRIM_DARK : SCRIM_LIGHT, 0f, 0f));
     }
 
     /** Réapplique le fond de l'accueil quand le choix a changé dans les paramètres. */
@@ -138,61 +306,133 @@ public final class AppBackgrounds {
         applyScreen(root, HOME);
     }
 
+    /**
+     * Applique un verre flouté à une barre (toolbar) : la photo de l'écran est
+     * recadrée sur les dimensions de la barre, floutée puis voilée. La barre
+     * reste transparente (on devine la photo) tout en gardant un texte lisible.
+     */
+    public static void applyGlassBar(@Nullable View bar, int photoRes) {
+        applyGlassBar(bar, photoRes, 0f, BAR_CORNER_RADIUS_DP);
+    }
+
+    /**
+     * Variante avec coins arrondis sur mesure : la barre du haut arrondit le
+     * bas, la barre de navigation arrondit le haut.
+     */
+    public static void applyGlassBar(@Nullable View bar, int photoRes,
+                                     float topRadiusDp, float bottomRadiusDp) {
+        if (bar == null || photoRes == 0) {
+            return;
+        }
+        Context context = bar.getContext();
+        float density = context.getResources().getDisplayMetrics().density;
+        int width = bar.getWidth() > 0
+                ? bar.getWidth()
+                : context.getResources().getDisplayMetrics().widthPixels;
+        int height = bar.getHeight() > 0 ? bar.getHeight() : Math.round(56 * density);
+        boolean night = isNight(context);
+        int scrim = night ? BAR_SCRIM_DARK : BAR_SCRIM_LIGHT;
+
+        Bitmap blurred = GlassBlur.backdrop(context, photoRes, width, height, scrim, 1.1f);
+        if (blurred != null) {
+            // Le voile est déjà dans le bitmap flouté : pas de second voile.
+            // Légère transparence : le contenu qui défile sous la barre
+            // transparaît en filigrane.
+            PhotoBackgroundDrawable background =
+                    new PhotoBackgroundDrawable(blurred, 0x00000000, 0f,
+                            topRadiusDp * density);
+            background.setBottomCornerRadius(bottomRadiusDp * density);
+            background.setAlpha(BAR_ALPHA);
+            bar.setBackground(background);
+        } else {
+            bar.setBackgroundColor(scrim);
+            bar.getBackground().setAlpha(BAR_ALPHA);
+        }
+    }
+
     /** Dans ces écrans, seule la photo de fond compte : les cartes gardent leur style. */
     private static int photoForKey(Context context, String screenKey) {
         if (HOME.equals(screenKey)) {
             return getHomeBackground(context);
         }
+        if (BAIBOLY.equals(screenKey) || CHAPTER.equals(screenKey)) {
+            return R.drawable.fond_12;
+        }
         if (FIHIRANA.equals(screenKey)) {
             return R.drawable.fond_12; // "chant 1"
         }
         if (SONG_PICKER.equals(screenKey)) {
-            return R.drawable.fond_13; // "chant"
+            return R.drawable.fond_12; // "chant"
         }
         if (BIBLE_PICKER.equals(screenKey)) {
-            return R.drawable.fond_05;
+            return R.drawable.fond_08;
         }
         int index = Math.floorMod(screenKey.hashCode(), PHOTOS.length);
         return PHOTOS[index];
     }
 
-    private static void decorateCards(View view, boolean night, int screenPhoto, boolean allowCards) {
+    private static void decorateCards(View view, View backgroundRoot, int screenPhoto,
+                                      boolean night, boolean allowCards) {
         // Sous-arbre à laisser intact (ex. grille des livres : couleurs d'origine).
         if ("bg_no_cards".equals(view.getTag())) {
             return;
         }
         if (view instanceof MaterialCardView) {
-            applyCardBackground((MaterialCardView) view, night, screenPhoto, allowCards);
+            applyCardBackground((MaterialCardView) view, backgroundRoot, screenPhoto,
+                    night, allowCards);
         }
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
             for (int i = 0; i < group.getChildCount(); i++) {
-                decorateCards(group.getChildAt(i), night, screenPhoto, allowCards);
+                decorateCards(group.getChildAt(i), backgroundRoot, screenPhoto, night,
+                        allowCards);
             }
         }
     }
 
     /**
-     * Photo placée derrière le contenu de la carte. On remplace le fond de la
-     * carte (et non un enfant) pour ne pas modifier sa mesure : les cartes en
-     * wrap_content conservent leur hauteur.
+     * Applique le style choisi dans les paramètres : photo individuelle de la
+     * carte, ou matériau Liquid Glass. On remplace le fond de la carte (et non
+     * un enfant) pour ne pas modifier sa mesure : les cartes en wrap_content
+     * conservent leur hauteur.
+     *
+     * <p>La carte "Aina sy Fahasalamana" garde son image de contenu d'origine et
+     * n'est donc pas concernée.</p>
      */
-    private static void applyCardBackground(MaterialCardView card, boolean night,
-                                            int screenPhoto, boolean allowCards) {
-        if (!allowCards || card.getTag(R.id.tag_bg_card) != null) {
+    private static void applyCardBackground(MaterialCardView card, View backgroundRoot,
+                                            int screenPhoto, boolean night,
+                                            boolean allowCards) {
+        if (!allowCards || card.getId() == R.id.cardAina) {
+            return;
+        }
+
+        if (CARD_STYLE_GLASS.equals(getCardBackgroundStyle(card.getContext()))) {
+            android.util.Log.d("GlassDbg", "glass card=" + card.getId()
+                    + " photo=" + screenPhoto + " bg=" + card.getBackground());
+            // Le style photo ne doit pas court-circuiter un retour au verre.
+            card.setTag(R.id.tag_bg_card, null);
+            GlassCardHelper.apply(card, backgroundRoot, screenPhoto,
+                    night ? SCRIM_DARK : SCRIM_LIGHT);
+            return;
+        }
+
+        // Style "Sary" : on retire la couche de verre éventuelle.
+        GlassCardHelper.remove(card);
+
+        // Style "Sary" : photo décorative individuelle de la carte.
+        if (card.getBackground() instanceof PhotoBackgroundDrawable
+                && card.getTag(R.id.tag_bg_card) != null) {
             return;
         }
         int photoRes = cardPhoto(card.getId(), screenPhoto);
         if (photoRes == 0) {
             return;
         }
-        card.setTag(R.id.tag_bg_card, Boolean.TRUE);
-
-        Context context = card.getContext();
-        Bitmap bitmap = getBitmap(context, photoRes);
+        Bitmap bitmap = getBitmap(card.getContext(), photoRes);
         if (bitmap == null) {
             return;
         }
+        card.setTag(R.id.tag_bg_card, Boolean.TRUE);
         float radius = Math.max(0f, card.getRadius());
         card.setClipToOutline(true);
         card.setBackground(new PhotoBackgroundDrawable(bitmap,
@@ -209,13 +449,13 @@ public final class AppBackgrounds {
         }
         int res;
         if (cardId == R.id.cardReading) {
-            res = R.drawable.fond_02;
+            res = R.drawable.fond_02_3;
         } else if (cardId == R.id.cardPerikopa) {
             res = R.drawable.fond_04; // perikopa.jpg
         } else if (cardId == R.id.cardHistory) {
             res = R.drawable.fond_02;
         } else if (cardId == R.id.cardMofonaina) {
-            res = R.drawable.fond_08;
+            res = R.drawable.fond_03;
         } else {
             return screenPhoto;
         }
@@ -232,7 +472,7 @@ public final class AppBackgrounds {
         return res;
     }
 
-    private static boolean isNight(Context context) {
+    static boolean isNight(Context context) {
         int mode = context.getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK;
         return mode == Configuration.UI_MODE_NIGHT_YES;

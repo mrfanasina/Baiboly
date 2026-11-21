@@ -21,6 +21,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
+            android:tag="bg_no_cards"
             android:paddingTop="4dp">
 
             <ImageView
@@ -53,6 +54,7 @@
                     android:background="?attr/colorSurfaceVariant"
                     android:orientation="horizontal"
                     android:paddingStart="14dp"
+                    android:backgroundTint="@color/glass"
                     android:paddingEnd="8dp">
 
                     <ImageView

@@ -1,27 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
     android:background="?attr/colorSurface">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/settingsScroll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
-        <!-- ========================= -->
-        <!-- TOP TOOLBAR -->
-        <!-- ========================= -->
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
+        <LinearLayout
+            android:id="@+id/settingsContent"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="Fikirakiràna"
-            app:navigationIcon="@drawable/ic_arrow_back" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
         <!-- ========================= -->
         <!-- PAGE TITLE -->
@@ -87,6 +84,72 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Safidio ny sary hita eto amin'ny fandraisana"
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginTop="2dp"/>
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ========================= -->
+        <!-- STYLE DES CARTES (SARY / LIQUID GLASS) -->
+        <!-- ========================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCardStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="28dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:id="@+id/rowCardStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true">
+
+                <ImageView
+                    android:id="@+id/imgCardStylePreview"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_dashboard_black_24dp"
+                    android:scaleType="centerInside"
+                    android:layout_marginEnd="14dp"
+                    app:tint="?attr/colorSecondary"
+                    android:contentDescription="Endrik'ireo karatra" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Endrik'ireo karatra"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface"/>
+
+                    <TextView
+                        android:id="@+id/txtCardStyleSummary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sary"
                         android:textSize="13sp"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:layout_marginTop="2dp"/>
@@ -706,6 +769,20 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-    </LinearLayout>
+        </LinearLayout>
 
-</androidx.core.widget.NestedScrollView>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- TOP TOOLBAR : translucide et arrondie, le contenu défile dessous -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@drawable/bg_reading_bar"
+        android:elevation="0dp"
+        app:title="Fikirakirana"
+        app:titleTextColor="?attr/colorOnSurface"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="?attr/colorOnSurface" />
+
+</FrameLayout>

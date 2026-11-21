@@ -28,6 +28,12 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">?attr/colorSurface</item>
 
+        <!-- Menus 3 points : surface translucide arrondie -->
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.Baiboly.Popup</item>
+        <item name="popupMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="android:popupMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+
         <!-- Style par défaut pour les champs de texte -->
         <item name="textInputStyle">@style/Widget.Material3.TextInputLayout.OutlinedBox</item>
     </style>
@@ -123,6 +129,27 @@
         <!-- Recoche la palette standard pour pressed/focus -->
         <item name="colorSecondaryContainer">?attr/colorSecondary</item>
         <item name="colorOnSecondaryContainer">?attr/colorOnSecondary</item>
+    </style>
+
+    <!-- ========================= -->
+    <!-- 📋 MENUS (3 POINTS) : arrondis + translucides -->
+    <!-- ========================= -->
+    <style name="Widget.Baiboly.PopupMenu" parent="Widget.Material3.PopupMenu">
+        <item name="android:popupBackground">@drawable/bg_popup_glass</item>
+    </style>
+
+    <!-- Pastille de l'onglet actif de la bottom nav : teinte du verre au lieu
+         du secondaryContainer (qui jurait avec le flou). -->
+    <style name="Widget.Baiboly.BottomNav.ActiveIndicator"
+        parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/nav_indicator</item>
+    </style>
+
+    <style name="ThemeOverlay.Baiboly.Popup" parent="ThemeOverlay.Material3">
+        <item name="android:popupMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="popupMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="android:popupBackground">@drawable/bg_popup_glass</item>
     </style>
 
     <!-- Splash theme: no system icon, direct custom splash -->

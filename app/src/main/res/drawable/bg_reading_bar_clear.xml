@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barre des écrans Aina / Diksionera : plus transparente que
+     bg_reading_bar, la photo de l'écran reste visible derrière. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/toolbar_bg_clear" />
+    <corners
+        android:bottomLeftRadius="22dp"
+        android:bottomRightRadius="22dp" />
+</shape>

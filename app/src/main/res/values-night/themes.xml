@@ -28,6 +28,12 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:statusBarColor">?attr/colorSurface</item>
 
+        <!-- Menus 3 points : surface translucide arrondie -->
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.Baiboly.Popup</item>
+        <item name="popupMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="android:popupMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/Widget.Baiboly.PopupMenu</item>
+
         <item name="textInputStyle">@style/Widget.Material3.TextInputLayout.OutlinedBox</item>
     </style>
 

@@ -39,7 +39,6 @@ public class BaibolyApp extends Application {
     ));
 
     private static final Set<String> SKIP_FRAGMENTS = new HashSet<>(Arrays.asList(
-            "com.fa.baiboly.ui.baiboly.ChapterFragment",
             "com.fa.baiboly.ui.baiboly.ReadingFragment",
             "com.fa.baiboly.ui.verses.VersePageFragment",
             "com.fa.baiboly.ui.reader.ReaderNeighborPageFragment",

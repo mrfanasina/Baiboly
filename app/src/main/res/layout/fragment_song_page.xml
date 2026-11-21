@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
+        android:paddingTop="?attr/actionBarSize"
         android:paddingBottom="120dp" />
 
     <!-- Barre flottante de sélection (comme dans la Bible) :

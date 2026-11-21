@@ -59,6 +59,33 @@ public class FanekenaService {
         return map;
     }
 
+    /**
+     * Map code -> titre (colonne titre des credos), pour afficher le vrai
+     * titre dans la liste au lieu du nom deduit du code.
+     */
+    public Map<String, String> getTitres() {
+        Map<String, String> map = new LinkedHashMap<>();
+
+        Cursor c = repository.getAllTitles();
+
+        if (c != null) {
+            try {
+                while (c.moveToNext()) {
+                    String code = c.getString(0);
+                    if (code == null) continue;
+                    code = code.toUpperCase();
+                    if (!map.containsKey(code)) {
+                        map.put(code, c.getString(1));
+                    }
+                }
+            } finally {
+                c.close();
+            }
+        }
+
+        return map;
+    }
+
     public Fanekena getByCode(String code) {
         code = code.toLowerCase();
         Cursor c = repository.getByCode(code);
@@ -68,10 +95,11 @@ public class FanekenaService {
         if (c != null && c.moveToFirst()) {
             int id = c.getInt(0);
             String text = c.getString(1);
+            String titre = c.getColumnCount() > 2 ? c.getString(2) : null;
 
             Log.d("DEBUG", "FOUND: " + text);
 
-            return new Fanekena(id, code, text);
+            return new Fanekena(id, code, text, titre);
         }
 
         Log.d("DEBUG", "NOT FOUND for code = " + code);
@@ -94,7 +122,8 @@ public class FanekenaService {
                     int id = c.getInt(0);
                     String code = c.getString(1);
                     String text = c.getString(2);
-                    list.add(new Fanekena(id, code, text));
+                    String titre = c.getColumnCount() > 3 ? c.getString(3) : null;
+                    list.add(new Fanekena(id, code, text, titre));
                 }
             } finally {
                 c.close();

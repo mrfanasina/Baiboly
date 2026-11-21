@@ -6,6 +6,7 @@ public class GlobalSearchResult {
         VERSET,
         CHANT,
         FANEKENA,
+        DICTIONNAIRE,
         IA_CTA
     }
 

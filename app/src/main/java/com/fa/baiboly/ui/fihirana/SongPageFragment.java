@@ -11,12 +11,16 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.models.SongVerse;
+import com.fa.baiboly.ui.common.EdgeBars;
 
 import java.util.List;
 
@@ -71,6 +75,17 @@ public class SongPageFragment extends Fragment {
         RecyclerView recyclerView = view.findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setHasFixedSize(true);
+
+        // Le chant commence sous la barre translucide (barre d'état incluse)
+        // puis défile dessous.
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int top = bars.top + EdgeBars.actionBarSizePx(v.getContext());
+            recyclerView.setPadding(recyclerView.getPaddingLeft(), top,
+                    recyclerView.getPaddingRight(), recyclerView.getPaddingBottom());
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(view);
 
         setupScrollTracking(recyclerView);
 

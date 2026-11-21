@@ -3,7 +3,10 @@ package com.fa.baiboly.ui.fihirana;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -11,6 +14,11 @@ import android.view.View;
 import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.viewpager2.widget.ViewPager2;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.SeekBar;
@@ -28,6 +36,7 @@ import com.fa.baiboly.models.Playback;
 import com.fa.baiboly.databinding.ActivitySongDetailBinding;
 import com.fa.baiboly.models.Song;
 import com.fa.baiboly.models.SongVerse;
+import com.fa.baiboly.ui.common.EdgeBars;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.fa.baiboly.ui.fandaharana.SongPickerSheet;
 import com.fa.baiboly.ui.reader.ProgramSession;
@@ -135,6 +144,9 @@ public class SongDetailActivity extends AppCompatActivity
 
         // Keep screen ON
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        // Barre d'état transparente : la même translucidité que la toolbar.
+        setupEdgeToEdge();
 
         // Load text size
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -307,6 +319,36 @@ public class SongDetailActivity extends AppCompatActivity
 
     private boolean isSettingsOpen() {
         return binding.settingsContainer.getVisibility() == View.VISIBLE;
+    }
+
+    /**
+     * Bord à bord : la barre d'état devient transparente et prend la même
+     * translucidité que la toolbar (une seule surface de verre du haut de
+     * l'écran jusqu'aux boutons).
+     */
+    private void setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+        boolean light = (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES;
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(light);
+        controller.setAppearanceLightNavigationBars(light);
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            EdgeBars.applyAppBarInset(binding.appBar, bars.top);
+            // Le panneau de réglages remplace la barre : il commence juste
+            // sous la barre d'état, pas sous la toolbar du chant.
+            binding.settingsContainer.setPadding(0, bars.top, 0, 0);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(binding.getRoot());
     }
 
     private void setupToolbar(String title) {

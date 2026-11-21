@@ -14,11 +14,15 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.fanekena.FanekenaService;
 import com.fa.baiboly.models.Fanekena;
+import com.fa.baiboly.ui.common.EdgeBars;
 
 /**
  * Une page du ViewPager2 de FanekenaActivity : affiche un seul fanekena
@@ -68,7 +72,27 @@ public class FanekenaPageFragment extends Fragment {
         android.widget.TextView content = view.findViewById(R.id.content);
         View selectionBar = view.findViewById(R.id.selectionBar);
 
+        // Le texte commence sous la barre translucide (barre d'état incluse)
+        // puis défile dessous.
+        android.view.ViewGroup scrollView = view.findViewById(R.id.scroll);
+        if (scrollView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+                Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                EdgeBars.scrollUnderBars(scrollView,
+                        bars.top + EdgeBars.actionBarSizePx(v.getContext()),
+                        bars.bottom);
+                return insets;
+            });
+            ViewCompat.requestApplyInsets(view);
+        }
+
         String displayName = CodeAdapter.getDisplayName(code);
+
+        // Le vrai titre du credo (colonne titre) prime sur le nom du code.
+        if (fanekena != null && fanekena.getTitre() != null
+                && !fanekena.getTitre().trim().isEmpty()) {
+            displayName = fanekena.getTitre().trim();
+        }
 
         title.setText(displayName);
         if (fanekena != null) {

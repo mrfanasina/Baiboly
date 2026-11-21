@@ -3,6 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.fa.baiboly.MainActivity">
     <item
+        android:id="@+id/dictionary"
+        android:orderInCategory="5"
+        android:title="Diksionera Baiboly"
+        android:icon="@drawable/ic_dictionary"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/notes"
         android:orderInCategory="55"
         android:title="Fanamarihana"

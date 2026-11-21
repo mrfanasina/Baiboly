@@ -8,6 +8,10 @@
     <color name="black">#FF000000</color>
     <color name="blue">#256EC7</color>
     <color name="toolbar_bg">#CCFFFFFF</color>
+    <!-- Barre plus transparente des écrans Aina / Diksionera. -->
+    <color name="toolbar_bg_clear">#99FFFFFF</color>
+    <!-- Pastille de l'onglet actif de la bottom nav : proche du verre, discrète. -->
+    <color name="nav_indicator">#26000000</color>
     <color name="toolbar_bg_bl">#E6FFFFFF</color>
     <color name="white">#FFFFFFFF</color>
     <color name="background">#FFFFFFFF</color>
@@ -96,5 +100,5 @@
     <color name="lit_icon_tint">#C40E5A</color>
     <color name="lit_heading">#7B1FA2</color>
     <!-- Fond du glissement de suppression (vers la gauche) -->
-    <color name="lit_swipe_delete">#D32F2F</color>
+    <color name="lit_swipe_delete">#7ED32F2F</color>
 </resources>

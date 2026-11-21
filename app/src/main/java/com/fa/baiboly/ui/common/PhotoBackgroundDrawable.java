@@ -25,7 +25,8 @@ public class PhotoBackgroundDrawable extends Drawable {
     private final Bitmap bitmap;
     private final int scrimColor;
     private final float cornerRadius;
-    private final float topCornerRadius;
+    private float topCornerRadius;
+    private float bottomCornerRadius;
 
     private final Paint bitmapPaint = new Paint(
             Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
@@ -48,20 +49,33 @@ public class PhotoBackgroundDrawable extends Drawable {
         scrimPaint.setColor(scrimColor);
     }
 
+    /** Arrondit le bas du fond (barre du haut qui plonge sur le contenu). */
+    public void setBottomCornerRadius(float radius) {
+        this.bottomCornerRadius = radius;
+        clipPath.reset();
+        buildClipPath(getBounds());
+        invalidateSelf();
+    }
+
     @Override
     protected void onBoundsChange(@NonNull Rect bounds) {
         super.onBoundsChange(bounds);
         rect.set(bounds);
         updateMatrix(bounds);
+        buildClipPath(bounds);
+    }
+
+    private void buildClipPath(Rect bounds) {
         clipPath.reset();
+        rect.set(bounds);
         if (cornerRadius > 0f) {
             clipPath.addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW);
-        } else if (topCornerRadius > 0f) {
+        } else if (topCornerRadius > 0f || bottomCornerRadius > 0f) {
             float[] radii = {
                     topCornerRadius, topCornerRadius,
                     topCornerRadius, topCornerRadius,
-                    0f, 0f,
-                    0f, 0f
+                    bottomCornerRadius, bottomCornerRadius,
+                    bottomCornerRadius, bottomCornerRadius
             };
             clipPath.addRoundRect(rect, radii, Path.Direction.CW);
         }
@@ -87,7 +101,7 @@ public class PhotoBackgroundDrawable extends Drawable {
             return;
         }
         int save = canvas.save();
-        if (cornerRadius > 0f || topCornerRadius > 0f) {
+        if (cornerRadius > 0f || topCornerRadius > 0f || bottomCornerRadius > 0f) {
             canvas.clipPath(clipPath);
         }
         canvas.drawBitmap(bitmap, matrix, bitmapPaint);

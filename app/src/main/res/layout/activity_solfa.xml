@@ -9,7 +9,7 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
+        android:background="@drawable/bg_reading_bar"
         app:liftOnScroll="true">
 
         <androidx.appcompat.widget.Toolbar

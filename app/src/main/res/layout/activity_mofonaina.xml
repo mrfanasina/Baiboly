@@ -1,38 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        app:elevation="0dp">
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:navigationIcon="@drawable/ic_arrow_back"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
-
-            <TextView
-                android:id="@+id/toolbarTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_gravity="center_vertical" />
-        </androidx.appcompat.widget.Toolbar>
-    </com.google.android.material.appbar.AppBarLayout>
-
+    <!-- CONTENU PRINCIPAL -->
     <FrameLayout
         android:layout_width="match_parent"
-        android:background="?android:colorBackground"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="?android:colorBackground">
 
-        <!-- Loader moderne (remplace l'ancien ProgressBar générique) -->
+        <!-- LOADER -->
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/loader"
             android:layout_width="wrap_content"
@@ -43,12 +22,15 @@
             app:trackThickness="3dp"
             android:visibility="visible" />
 
+        <!-- SCROLL -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/mainScroll"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:clipToPadding="false"
+            android:paddingTop="?attr/actionBarSize">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -86,11 +68,13 @@
                     app:strokeWidth="1dp"
                     app:strokeColor="?attr/colorOutlineVariant"
                     app:rippleColor="?attr/colorPrimary">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:padding="16dp">
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -98,17 +82,19 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="?attr/colorSecondary"/>
+
                         <TextView
                             android:id="@+id/textReading"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textStyle="bold"
-                            android:layout_marginTop="4dp"
-                            />
+                            android:layout_marginTop="4dp"/>
+
                     </LinearLayout>
+
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- VERSET DU JOUR (CARD) -->
+                <!-- VERSET DU JOUR -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardVerseOfDay"
                     android:layout_width="match_parent"
@@ -121,11 +107,13 @@
                     app:strokeWidth="1dp"
                     app:strokeColor="?attr/colorOutlineVariant"
                     app:rippleColor="@color/green">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:padding="16dp">
+
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -133,14 +121,17 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="@color/green"/>
+
                         <TextView
                             android:id="@+id/textVerseOfDay"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textSize="18sp"
                             android:textStyle="bold"
-                            android:layout_marginTop="4dp" />
+                            android:layout_marginTop="4dp"/>
+
                     </LinearLayout>
+
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- CHANTS SECTION -->
@@ -150,12 +141,13 @@
                     android:text="Hira"
                     android:layout_marginTop="20dp"
                     android:textStyle="bold"/>
+
                 <LinearLayout
                     android:id="@+id/songsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:layout_marginTop="8dp" />
+                    android:layout_marginTop="8dp"/>
 
                 <!-- REFLECTION -->
                 <LinearLayout
@@ -167,11 +159,45 @@
                     android:paddingBottom="8dp"/>
 
             </LinearLayout>
+
         </androidx.core.widget.NestedScrollView>
+
+        <!-- SETTINGS -->
         <FrameLayout
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone"/>
+
     </FrameLayout>
-</LinearLayout>
+
+    <!-- TOPBAR AU-DESSUS DU CONTENU -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_reading_bar"
+        android:fitsSystemWindows="false"
+        app:elevation="0dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:popupTheme="@style/ThemeOverlay.Baiboly.Popup">
+
+            <TextView
+                android:id="@+id/toolbarTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_gravity="center_vertical"/>
+
+        </androidx.appcompat.widget.Toolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

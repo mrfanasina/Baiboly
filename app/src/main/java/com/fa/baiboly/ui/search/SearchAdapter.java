@@ -26,7 +26,8 @@ public class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     private static final int TYPE_VERSET = 0;
     private static final int TYPE_CHANT = 1;
     private static final int TYPE_FANEKENA = 2;
-    private static final int TYPE_IA_CTA = 3;
+    private static final int TYPE_DICTIONNAIRE = 3;
+    private static final int TYPE_IA_CTA = 4;
 
     private static final int HIGHLIGHT_COLOR = 0xFFE53935; // rouge accent, ajuste selon ton thème
 
@@ -38,6 +39,7 @@ public class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         void onVerseClick(GlobalSearchResult item);
         void onSongClick(GlobalSearchResult item);
         void onFanekenaClick(GlobalSearchResult item);
+        void onDictionaryClick(GlobalSearchResult item);
         void onAiCardClick(String query);
     }
 
@@ -60,6 +62,7 @@ public class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         switch (items.get(position).getType()) {
             case CHANT: return TYPE_CHANT;
             case FANEKENA: return TYPE_FANEKENA;
+            case DICTIONNAIRE: return TYPE_DICTIONNAIRE;
             case IA_CTA: return TYPE_IA_CTA;
             default: return TYPE_VERSET;
         }
@@ -105,6 +108,10 @@ public class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 badgeBg = R.drawable.bg_badge_fanekena;
                 h.categoryTag.setVisibility(View.GONE);
                 break;
+            case DICTIONNAIRE:
+                badgeBg = R.drawable.bg_badge_dictionary;
+                h.categoryTag.setVisibility(View.GONE);
+                break;
             default:
                 badgeBg = R.drawable.bg_badge_verset;
                 h.categoryTag.setVisibility(View.GONE);
@@ -116,6 +123,7 @@ public class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             switch (item.getType()) {
                 case CHANT: listener.onSongClick(item); break;
                 case FANEKENA: listener.onFanekenaClick(item); break;
+                case DICTIONNAIRE: listener.onDictionaryClick(item); break;
                 default: listener.onVerseClick(item); break;
             }
         });

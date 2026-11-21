@@ -21,6 +21,7 @@ import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.ai.AiPreferencesService;
 import com.fa.baiboly.databinding.FragmentSettingsBinding;
 import com.fa.baiboly.ui.common.AppBackgrounds;
+import com.fa.baiboly.ui.common.EdgeBars;
 import com.fa.baiboly.widgets.MofonainaOfflineWidget;
 import com.fa.baiboly.widgets.MofonainaOnlineWidget;
 
@@ -70,9 +71,11 @@ public class SettingsFragment extends Fragment {
         binding.toolbar.setNavigationOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
+        setupToolbarLayout();
 
         loadAndApplySettings();
         setupHomeBackground();
+        setupCardStyle();
         setupThemeChanger();
         setupColors();
         setupTextSizeRealTime();
@@ -81,6 +84,38 @@ public class SettingsFragment extends Fragment {
         setupCardOrder();
         setupWidgetButtons();
         setupAiSettingsEntry();
+    }
+
+    /**
+     * Barre du haut translucide : le contenu défile dessous.
+     *
+     * Une seule barre, celle du fragment (titre « Fikirakirana » + flèche
+     * retour) : elle remplace celle de l'écran hôte au lieu de s'y empiler.
+     */
+    private void setupToolbarLayout() {
+        int pad = dp(16);
+
+        if (getActivity() instanceof MainActivity) {
+            // Hôte plein écran (contenu sous la barre d'état) : la barre prend
+            // la hauteur de la barre d'état, et l'hôte a déjà décalé le
+            // défilement sous sa propre barre.
+            binding.toolbar.setPadding(0, statusBarTopPx(), 0, 0);
+            binding.settingsContent.setPadding(pad, pad, pad, pad);
+            return;
+        }
+
+        int padTop = pad + EdgeBars.actionBarSizePx(requireContext());
+        binding.settingsContent.setPadding(pad, padTop, pad, pad);
+    }
+
+    /** Hauteur de la barre d'état, 0 si elle n'est pas encore connue. */
+    private int statusBarTopPx() {
+        View view = getView();
+        if (view == null) return 0;
+        androidx.core.view.WindowInsetsCompat insets =
+                androidx.core.view.ViewCompat.getRootWindowInsets(view);
+        return insets == null ? 0
+                : insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()).top;
     }
 
     // =========================
@@ -138,6 +173,48 @@ public class SettingsFragment extends Fragment {
         }
 
         dialog.show();
+    }
+
+    // =========================
+    // STYLE DES CARTES (SARY / LIQUID GLASS)
+    // =========================
+    private void setupCardStyle() {
+        updateCardStyleSummary();
+        binding.rowCardStyle.setOnClickListener(v -> showCardStylePicker());
+    }
+
+    private void updateCardStyleSummary() {
+        if (binding == null) return;
+        boolean glass = AppBackgrounds.CARD_STYLE_GLASS.equals(
+                AppBackgrounds.getCardBackgroundStyle(requireContext()));
+        binding.txtCardStyleSummary.setText(glass
+                ? "Fotsy na mainty"
+                : "Sary");
+    }
+
+    /** Choix entre la photo décorative des cartes et l'effet Liquid Glass. */
+    private void showCardStylePicker() {
+        Context context = requireContext();
+        final String[] values = {
+                AppBackgrounds.CARD_STYLE_IMAGE,
+                AppBackgrounds.CARD_STYLE_GLASS
+        };
+        final String[] labels = {
+                "Sary",
+                "Liquid Glass"
+        };
+        int checked = AppBackgrounds.CARD_STYLE_GLASS.equals(
+                AppBackgrounds.getCardBackgroundStyle(context)) ? 1 : 0;
+
+        new AlertDialog.Builder(context)
+                .setTitle("Endrik'ireo karatra")
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    AppBackgrounds.setCardBackgroundStyle(context, values[which]);
+                    updateCardStyleSummary();
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Akatona", null)
+                .show();
     }
 
     private int dp(int value) {
@@ -434,7 +511,7 @@ public class SettingsFragment extends Fragment {
                     order.add(part.trim());
                 }
             }
-            if (!order.isEmpty()) return order;
+            if (!order.isEmpty()) return CardOrderAdapter.normalize(order);
         }
         return CardOrderAdapter.getDefaultOrder();
     }

@@ -15,6 +15,10 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -29,6 +33,7 @@ import com.fa.baiboly.databinding.ActivityVersesBinding;
 import com.fa.baiboly.models.Reading;
 import com.fa.baiboly.models.Verse;
 import com.fa.baiboly.ui.ai.AiExplanationActivity;
+import com.fa.baiboly.ui.common.EdgeBars;
 import com.fa.baiboly.ui.reader.ProgramSession;
 import com.fa.baiboly.ui.reader.ReaderNeighborPageFragment;
 import com.fa.baiboly.ui.reader.ReaderSessionPagerAdapter;
@@ -135,6 +140,9 @@ public class VersesActivity extends AppCompatActivity
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
         );
 
+        // Barre translucide : le texte défile dessous.
+        setupEdgeToEdge();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 
             WindowManager.LayoutParams params =
@@ -177,6 +185,34 @@ public class VersesActivity extends AppCompatActivity
         }
 
         setupViewPagerTransform();
+    }
+
+    /**
+     * Bord à bord : status bar et barre de navigation transparentes, la
+     * toolbar (verre translucide) prend la hauteur de la status bar en
+     * padding, et le texte des pages commence sous la barre.
+     */
+    private void setupEdgeToEdge() {
+
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int barHeight = EdgeBars.applyAppBarInset(binding.appBar, bars.top);
+            // Le panneau de réglages resté sur fond uni ne passe pas sous la barre.
+            binding.settingsContainer.setPadding(0, barHeight, 0, 0);
+            // Barre flottante de sélection au-dessus de la barre système.
+            binding.selectionOverlay.setPadding(0, 0, 0, bars.bottom);
+            return insets;
+        });
+
+        ViewCompat.requestApplyInsets(binding.getRoot());
     }
 
     // =====================================================
