@@ -49,6 +49,16 @@ public class BaibolyFragment extends Fragment {
         // ✅ Afficher skeleton immédiatement (perception de chargement)
         startSkeleton();
 
+        // 🔎 Champ de référence : même verre flouté que les cartes.
+        // Posté : la photo de fond de l'écran est posée sur la racine juste
+        // avant, et la vue doit déjà avoir sa taille pour aligner le flou.
+        view.post(() -> {
+            if (binding != null) {
+                com.fa.baiboly.ui.common.AppBackgrounds
+                        .applyGlassSurface(binding.inputGlass, 28f);
+            }
+        });
+
         // 🔍 Configuration du bouton "Check" (endIcon) du TextInputLayout
         binding.layoutInput.setEndIconOnClickListener(v -> {
             String reference = binding.inputReference.getText().toString().trim();

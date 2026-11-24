@@ -1,12 +1,11 @@
 package com.fa.baiboly.ui.home;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,21 +25,26 @@ import com.google.android.material.color.MaterialColors;
 import com.fa.baiboly.MainActivity;
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.MofonainaRepository;
+import com.fa.baiboly.data.dictionary.DictionaryService;
 import com.fa.baiboly.data.fihirana.FihiranaService;
 import com.fa.baiboly.data.history.HistoryService;
 import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.perikopa.PerikopaService;
 import com.fa.baiboly.databinding.FragmentHomeBinding;
+import com.fa.baiboly.models.DictionaryEntry;
 import com.fa.baiboly.models.History;
 import com.fa.baiboly.models.MofonainaData;
 import com.fa.baiboly.models.PerikopaDay;
 import com.fa.baiboly.models.Song;
+import com.fa.baiboly.ui.common.AppBackgrounds;
+import com.fa.baiboly.ui.common.GlassCardHelper;
 import com.fa.baiboly.ui.fanekena.CodeAdapter;
 import com.fa.baiboly.ui.fanekena.FanekenaActivity;
 import com.fa.baiboly.ui.fihirana.SongDetailActivity;
 import com.fa.baiboly.ui.reader.ProgramSession;
 import com.fa.baiboly.ui.history.HistoryManageActivity;
 import com.fa.baiboly.ui.ai.AiExplanationActivity;
+import com.fa.baiboly.ui.dictionary.DictionaryDetailActivity;
 import com.fa.baiboly.data.AinaMofonainaRepository;
 import com.fa.baiboly.models.MofonainaDay;
 import com.fa.baiboly.ui.mofonaina.AinaOfDayActivity;
@@ -50,6 +54,7 @@ import com.fa.baiboly.ui.verses.VersesActivity;
 import com.fa.baiboly.widgets.MofonainaOfflineWidget;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -85,10 +90,14 @@ public class HomeFragment extends Fragment {
         loadAinaCard();
         loadPerikopa(inflater);
         loadHistory(inflater);
+        setupFavoritesCarousel();
         hideSkeletonWhenReady();
 
         // Apply card order from settings
         applyCardOrder();
+
+        // Mot du jour du dictionnaire biblique
+        setupDictionaryCard();
 
         // DAILY READING
         homeViewModel.loadTodayReading(requireContext());
@@ -158,6 +167,8 @@ public class HomeFragment extends Fragment {
     public void onResume() {
         super.onResume();
         if (binding != null) {
+            // Le fond de l'accueil peut avoir été changé dans les paramètres.
+            AppBackgrounds.refreshHomeBackground(binding.getRoot());
             loadHistory(getLayoutInflater());
         }
     }
@@ -192,6 +203,45 @@ public class HomeFragment extends Fragment {
     }
 
     /**
+     * Carrousel « Favoris » de l'accueil : une petite carte par verset favori,
+     * défilement horizontal au doigt.
+     *
+     * <p>TODO(favoris) : les versets ci-dessous sont des données de démonstration.
+     * À remplacer par les vrais favoris de l'utilisateur quand le stockage sera
+     * défini (base locale ou fichier), et supprimer le texte "TODO" de la carte.</p>
+     */
+    private void setupFavoritesCarousel() {
+        final String[][] demoVerses = {
+                {"Ampianaro ny lalanao aho, Jehovah ô; ary tariho amin'ny lalana marina aho "
+                        + "noho ny fahavaloko..", "Salamo 27:11"},
+                {"Hisaotra an'i Jehovah lalandava aho; ho eo am-bavako mandrakariva ny "
+                        + "fiderana Azy.", "Salamo 34:1"},
+                {"Mitady an'i Jehovah aho, dia mamaly ahy Izy ka manafaka ahy amin'ny "
+                        + "tahotro rehetra.", "Salamo 34:4"},
+                {"Ity olo-mahantra ity niantso, dia nihaino Jehovah ka namonjy azy tamin'ny "
+                        + "fahoriany rehetra.", "Salamo 34:6"}
+        };
+
+        LinearLayout container = binding.favoritesCarousel;
+        container.removeAllViews();
+        LayoutInflater inflater = getLayoutInflater();
+
+        for (String[] verse : demoVerses) {
+            View item = inflater.inflate(R.layout.item_favorite_verse, container, false);
+            TextView text = item.findViewById(R.id.itemVerseText);
+            TextView reference = item.findViewById(R.id.itemVerseRef);
+            text.setText(verse[0]);
+            reference.setText(verse[1]);
+            item.setOnClickListener(v -> {
+                Intent intent = new Intent(requireContext(), VersesActivity.class);
+                intent.putExtra("reading", verse[1]);
+                startActivity(intent);
+            });
+            container.addView(item);
+        }
+    }
+
+    /**
      * Helper method to add a stylized row into a container.
      * Used to keep a consistent Premium UI look throughout the fragment.
      */
@@ -204,8 +254,98 @@ public class HomeFragment extends Fragment {
         tv.setText(text);
         img.setImageResource(iconRes);
 
+        GlassCardHelper.styleRow(row, false);
+
+        // Un peu d'air entre les lignes (Mofonaina / Novakiana).
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 0, 0, Math.round(8 * getResources().getDisplayMetrics().density));
+        row.setLayoutParams(lp);
+
         row.setOnClickListener(listener);
         container.addView(row);
+    }
+
+    // =========================================================
+    // DICTIONNAIRE : MOT DU JOUR + BOUTON POUR CHANGER
+    // =========================================================
+
+    /** Mot du jour actuellement affiché (pour ouvrir sa fiche). */
+    private DictionaryEntry currentDailyWord;
+
+    /** Décalage du tirage du jour (persistant, remis à zéro demain). */
+    private int dailyWordOffset;
+
+    /**
+     * Carte « Diksionera Baiboly » de l'accueil : un mot tiré au sort pour la
+     * journée, son aperçu de définition, et un petit bouton pour en changer.
+     */
+    private void setupDictionaryCard() {
+
+        SharedPreferences prefs = requireContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+
+        final String offsetKey = "dict_word_offset_" + dayKey();
+        dailyWordOffset = prefs.getInt(offsetKey, 0);
+
+        binding.btnShuffleWord.setOnClickListener(v -> {
+            dailyWordOffset++;
+            prefs.edit().putInt(offsetKey, dailyWordOffset).apply();
+            v.animate().rotationBy(180f).setDuration(250).start();
+            loadDailyWord();
+        });
+
+        binding.cardDictionary.setOnClickListener(v -> {
+            if (currentDailyWord != null) {
+                DictionaryDetailActivity.open(requireContext(), currentDailyWord.getId());
+            }
+        });
+
+        loadDailyWord();
+    }
+
+    private static int dayKey() {
+        Calendar calendar = Calendar.getInstance();
+        return calendar.get(Calendar.YEAR) * 1000
+                + calendar.get(Calendar.DAY_OF_YEAR);
+    }
+
+    /** Charge le mot du jour hors du thread principal. */
+    private void loadDailyWord() {
+
+        final Activity activity = getActivity();
+        if (activity == null) return;
+
+        final DictionaryService dictionaryService = DictionaryService.get(activity);
+        final int offset = dailyWordOffset;
+
+        new Thread(() -> {
+            final DictionaryEntry entry = dictionaryService.getDailyWord(offset);
+
+            activity.runOnUiThread(() -> {
+                if (binding == null || !isAdded()) return;
+
+                currentDailyWord = entry;
+
+                if (entry == null) {
+                    binding.textDictWord.setText("—");
+                    binding.textDictPreview.setText("Tsy misy voambolana");
+                    binding.textDictQualifier.setVisibility(View.GONE);
+                    return;
+                }
+
+                binding.textDictWord.setText(entry.getHeadword());
+                binding.textDictPreview.setText(entry.getPreview(190));
+
+                String qualifier = entry.getQualifier();
+                if (qualifier != null && !qualifier.trim().isEmpty()) {
+                    binding.textDictQualifier.setText(qualifier);
+                    binding.textDictQualifier.setVisibility(View.VISIBLE);
+                } else {
+                    binding.textDictQualifier.setVisibility(View.GONE);
+                }
+            });
+        }).start();
     }
 
     /**
@@ -241,10 +381,6 @@ public class HomeFragment extends Fragment {
 
         // Couleur de base choisie dans les paramètres (plus de couleur par saison)
         int seasonColor = ColorManager.getPrimary(requireContext());
-
-        // Fond de la carte perikopa en couleur liturgique
-        int cardBg = blendColor(seasonColor, 0.08f);
-        binding.perikopaCardBg.setBackgroundColor(cardBg);
 
         List<String> verses = perikopa.getVerses();
         binding.perikopaContainer.removeAllViews();
@@ -286,7 +422,8 @@ public class HomeFragment extends Fragment {
     }
 
     /**
-     * Adds a perikopa row with liturgical color tinted background.
+     * Adds a perikopa row on a discreet glass surface (liturgical color kept
+     * for the icon only).
      */
     private void addPerikopaRow(ViewGroup container, String text, int seasonColor, View.OnClickListener listener) {
         View row = getLayoutInflater().inflate(R.layout.item_home_row, container, false);
@@ -299,45 +436,15 @@ public class HomeFragment extends Fragment {
         img.setImageResource(R.drawable.ic_bible);
         img.setImageTintList(ColorStateList.valueOf(seasonColor));
 
-        // Apply semi-transparent liturgical season color as background
-        int bgColor = blendColor(seasonColor, 0.10f);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(bgColor);
-        bg.setCornerRadius(12f);
-        row.setBackground(bg);
-
+        GlassCardHelper.styleRow(row, false);
         // Margin between rows
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 0, 0, 6);
+        lp.setMargins(0, 0, 0, Math.round(8 * getResources().getDisplayMetrics().density));
         row.setLayoutParams(lp);
 
         row.setOnClickListener(listener);
         container.addView(row);
-    }
-
-    /**
-     * Blend a color with the theme surface color for semi-transparent effect.
-     */
-    private int blendColor(int color, float ratio) {
-        // Resolve surface color from theme (works in both light & dark)
-        android.util.TypedValue tv = new android.util.TypedValue();
-        requireContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorSurface, tv, true);
-        int surface = tv.data;
-
-        int sr = (surface >> 16) & 0xFF;
-        int sg = (surface >> 8) & 0xFF;
-        int sb = surface & 0xFF;
-
-        int cr = (color >> 16) & 0xFF;
-        int cg = (color >> 8) & 0xFF;
-        int cb = color & 0xFF;
-
-        int r = (int) (sr + (cr - sr) * ratio);
-        int g = (int) (sg + (cg - sg) * ratio);
-        int b = (int) (sb + (cb - sb) * ratio);
-
-        return Color.rgb(r, g, b);
     }
 
     /**
@@ -403,7 +510,7 @@ public class HomeFragment extends Fragment {
             order = new ArrayList<>();
             for (String part : parts) {
                 if (!part.trim().isEmpty()) order.add(part.trim());
-            }
+            }                order = CardOrderAdapter.normalize(order);
         } else {
             order = CardOrderAdapter.getDefaultOrder();
         }
@@ -412,9 +519,11 @@ public class HomeFragment extends Fragment {
         Map<String, Integer> viewMap = new HashMap<>();
         viewMap.put("mofonaina", R.id.cardMofonaina);
         viewMap.put("reading", R.id.cardReading);
+        viewMap.put("diksionera", R.id.cardDictionary);
         viewMap.put("aina", R.id.cardAina);
         viewMap.put("perikopa", R.id.cardPerikopa);
         viewMap.put("history", R.id.cardHistory);
+        viewMap.put("favorites", R.id.cardFavorites);
 
         // Find the parent LinearLayout (inside NestedScrollView)
         android.view.ViewGroup root = binding.getRoot();
@@ -435,101 +544,160 @@ public class HomeFragment extends Fragment {
 
         if (linearParent == null) return;
 
-        // Reorder views
+        // Reorder views : on retire puis réinsère les cartes dans l'ordre
+        // choisi (bringToFront inversait l'ordre affiché).
+        List<android.view.View> ordered = new ArrayList<>();
         for (int i = 0; i < order.size(); i++) {
             Integer viewId = viewMap.get(order.get(i));
-            if (viewId != null) {
-                android.view.View view = linearParent.findViewById(viewId);
-                if (view != null) {
-                    view.bringToFront();
-                }
+            if (viewId == null) continue;
+            android.view.View view = linearParent.findViewById(viewId);
+            if (view != null && view.getParent() == linearParent && !ordered.contains(view)) {
+                ordered.add(view);
             }
+        }
+        for (android.view.View card : ordered) {
+            linearParent.removeView(card);
+        }
+        for (android.view.View card : ordered) {
+            linearParent.addView(card);
         }
 
         linearParent.requestLayout();
         linearParent.invalidate();
     }
 
+
+
     private void displayMofonaina(MofonainaData data) {
         if (data == null) return;
 
-        // Mémorise ce qui est affiché (session maison)
+        // Mémorise ce qui est affiché
         currentMofonaina = data;
 
-        // Show the mofonaina card
+        // Affiche la carte
         binding.cardMofonaina.setVisibility(View.VISIBLE);
 
         binding.textMofonainaTitle.setText(data.getTitle());
         binding.textMofonainaSubTitle.setText(data.getDate());
         binding.mofonainaDetailsContainer.removeAllViews();
 
-        // Store verseOfDay to compare with Vakiteny anio
         String verseOfDayStr = null;
 
-
-        // Adding Bible Reading 1 (hide if same as verseOfDay)
+        // Lecture biblique 1
         if (data.getBibleReading1() != null) {
             String reading1 = data.getBibleReading1().toString();
+
             if (verseOfDayStr == null || !reading1.equals(verseOfDayStr)) {
-                addPremiumRow(binding.mofonainaDetailsContainer, reading1,
+                addPremiumRow(
+                        binding.mofonainaDetailsContainer,
+                        reading1,
                         R.drawable.menu_book,
-                        v -> openHomeSession(GROUP_MOFONAINA, "verse", reading1));
+                        v -> openHomeSession(
+                                GROUP_MOFONAINA,
+                                "verse",
+                                reading1
+                        )
+                );
             }
         }
 
-        // Adding Daily Verse — PROMINENT
+        // Verset du jour — surface verre un peu plus lumineuse
         if (data.getVerseOfDay() != null) {
+
             verseOfDayStr = data.getVerseOfDay().toString();
 
-            View verseRow = getLayoutInflater().inflate(R.layout.item_home_row, binding.mofonainaDetailsContainer, false);
+            View verseRow = getLayoutInflater().inflate(
+                    R.layout.item_home_row,
+                    binding.mofonainaDetailsContainer,
+                    false
+            );
+
             TextView verseTv = verseRow.findViewById(R.id.rowText);
             ImageView verseIcon = verseRow.findViewById(R.id.rowIcon);
+
             verseTv.setText(verseOfDayStr);
             verseTv.setTextSize(15);
             verseTv.setTypeface(null, Typeface.BOLD);
-            int primaryColor = MaterialColors.getColor(verseTv, androidx.appcompat.R.attr.colorPrimary);
+
+            int primaryColor = MaterialColors.getColor(
+                    verseTv,
+                    androidx.appcompat.R.attr.colorPrimary
+            );
+
             verseTv.setTextColor(primaryColor);
             verseIcon.setImageResource(R.drawable.ic_bible);
-            verseIcon.setImageTintList(ColorStateList.valueOf(primaryColor));
+            verseIcon.setImageTintList(
+                    ColorStateList.valueOf(primaryColor)
+            );
 
-            // Prominent background
-            GradientDrawable bg = new GradientDrawable();
-            bg.setColor(blendColor(Color.parseColor("#2E7D32"), 0.06f));
-            bg.setCornerRadii(new float[]{12, 12, 12, 12, 12, 12, 12, 12});
-            verseRow.setBackground(bg);
+            GlassCardHelper.styleRow(verseRow, true);
+
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(0, 0, 0, 8);
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+
+            lp.setMargins(0, 0, 0, Math.round(10 * getResources().getDisplayMetrics().density));
             verseRow.setLayoutParams(lp);
 
             final String vRef = verseOfDayStr;
+
             verseRow.setOnClickListener(v ->
-                    openHomeSession(GROUP_MOFONAINA, "verse", vRef));
+                    openHomeSession(
+                            GROUP_MOFONAINA,
+                            "verse",
+                            vRef
+                    )
+            );
+
             binding.mofonainaDetailsContainer.addView(verseRow);
         }
 
-        // Adding Song 1
+        // Chant 1
         if (data.getSong1() != null) {
-            String songName = data.getSong1().getCategory().toUpperCase() + " " + data.getSong1().getNumber();
-            addPremiumRow(binding.mofonainaDetailsContainer, songName,
+
+            String songName = data.getSong1().getCategory().toUpperCase()
+                    + " " + data.getSong1().getNumber();
+
+            addPremiumRow(
+                    binding.mofonainaDetailsContainer,
+                    songName,
                     R.drawable.ic_music_note,
-                    v -> openHomeSession(GROUP_MOFONAINA, "song",
-                            data.getSong1().getId()));
+                    v -> openHomeSession(
+                            GROUP_MOFONAINA,
+                            "song",
+                            data.getSong1().getId()
+                    )
+            );
         }
 
-        // Adding Song 2
+        // Chant 2
         if (data.getSong2() != null) {
-            String songName = data.getSong2().getCategory().toUpperCase() + " " + data.getSong2().getNumber();
-            addPremiumRow(binding.mofonainaDetailsContainer, songName,
+
+            String songName = data.getSong2().getCategory().toUpperCase()
+                    + " " + data.getSong2().getNumber();
+
+            addPremiumRow(
+                    binding.mofonainaDetailsContainer,
+                    songName,
                     R.drawable.ic_music_note,
-                    v -> openHomeSession(GROUP_MOFONAINA, "song",
-                            data.getSong2().getId()));
+                    v -> openHomeSession(
+                            GROUP_MOFONAINA,
+                            "song",
+                            data.getSong2().getId()
+                    )
+            );
         }
 
-        // Check if Vakiteny anio (textHome) is same as verseOfDay → hide card
+        // Comparaison avec Vakiteny anio
         String homeReading = binding.textHome.getText().toString();
-        if (verseOfDayStr != null && homeReading != null && homeReading.equals(verseOfDayStr)) {
+
+        if (verseOfDayStr != null
+                && homeReading != null
+                && homeReading.equals(verseOfDayStr)) {
+
             binding.cardReading.setVisibility(View.GONE);
+
         } else {
             binding.cardReading.setVisibility(View.VISIBLE);
         }

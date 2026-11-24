@@ -26,7 +26,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="?attr/colorSurface"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:popupTheme="@style/ThemeOverlay.Material3" />
+            app:popupTheme="@style/ThemeOverlay.Baiboly.Popup" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout

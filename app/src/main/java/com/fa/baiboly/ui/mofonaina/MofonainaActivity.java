@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.text.LineBreaker;
@@ -24,6 +25,11 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.ColorManager;
@@ -35,6 +41,8 @@ import com.fa.baiboly.databinding.ActivityMofonainaBinding;
 import com.fa.baiboly.models.MofonainaData;
 import com.fa.baiboly.models.ReflectionSection;
 import com.fa.baiboly.models.Song;
+import com.fa.baiboly.ui.common.AppBackgrounds;
+import com.fa.baiboly.ui.common.EdgeBars;
 import com.fa.baiboly.ui.fihirana.SongDetailActivity;
 import com.fa.baiboly.ui.verses.VerseBottomSheetFragment;
 import com.fa.baiboly.ui.verses.VersesActivity;
@@ -66,6 +74,15 @@ public class MofonainaActivity extends AppCompatActivity {
         binding = ActivityMofonainaBinding.inflate(getLayoutInflater());
 
         setContentView(binding.getRoot());
+
+        // Barre d'état transparente : elle prend la même translucidité que la
+        // toolbar au lieu d'un bandeau d'une autre couleur.
+        setupEdgeToEdge();
+
+        // Les deux cartes du jour reçoivent la photo déclarée dans
+        // res/values/card_backgrounds.xml (elles n'avaient qu'un contour).
+        AppBackgrounds.applyPhotoToCard(binding.cardReadingToday);
+        AppBackgrounds.applyPhotoToCard(binding.cardVerseOfDay);
 
         preferences =
                 getSharedPreferences(
@@ -116,6 +133,33 @@ public class MofonainaActivity extends AppCompatActivity {
         });
 
         fetchMofonainaData();
+    }
+
+    /**
+     * Bord à bord : la barre d'état devient transparente et c'est la barre du
+     * haut (verre translucide) qui la recouvre, avec exactement la même
+     * teinte.
+     */
+    private void setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+        boolean light = (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES;
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(light);
+        controller.setAppearanceLightNavigationBars(light);
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            EdgeBars.applyAppBarInset(binding.appBar, bars.top);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(binding.getRoot());
     }
 
     private void applyGlobalTheme() {
@@ -646,7 +690,7 @@ public class MofonainaActivity extends AppCompatActivity {
 
             binding.textReading.setText(ref);
 
-            binding.cardReading
+            binding.cardReadingToday
                     .setOnClickListener(v -> openVerses(ref));
         }
 

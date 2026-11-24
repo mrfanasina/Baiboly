@@ -57,6 +57,13 @@ public class ServerManifestClient {
     // =========================================================
     public static final String DEFAULT_BASE_URL = "https://data.fjkm.mg/updates/";
 
+    // =========================================================
+    // 📦 INFOS DE MISE À JOUR DE L'APP (fichier GitHub)
+    //    Format : version_code, version_name, apk_url, file_size…
+    // =========================================================
+    public static final String APP_UPDATE_URL =
+            "https://raw.githubusercontent.com/mrfanasina/baiboly-distribution/main/update.json";
+
     private static final String PREFS_NAME = "app_settings";
     private static final String KEY_BASE_URL = "download_server_url";
 
@@ -114,6 +121,39 @@ public class ServerManifestClient {
                 }
             }
             return list;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    // =========================
+    // 📦 MISE À JOUR DE L'APP (update.json)
+    // =========================
+    /**
+     * Lit update.json et renvoie le paquet de mise à jour de l'app
+     * (type "app"), ou null si aucune mise à jour n'est publiée.
+     */
+    public DownloadEntry fetchAppUpdate() throws Exception {
+        HttpURLConnection conn = open(new URL(APP_UPDATE_URL));
+        try {
+            JSONObject json = new JSONObject(readAll(conn));
+            String apkUrl = json.optString("apk_url", "");
+            if (apkUrl.isEmpty()) return null;
+
+            DownloadEntry e = new DownloadEntry();
+            e.setType(DownloadEntry.TYPE_APP);
+            e.setVersionCode(json.optInt("version_code", 0));
+            String versionName = json.optString("version_name", "");
+            e.setVersionName(versionName);
+            e.setTitle(versionName.isEmpty() ? "Baiboly" : "Baiboly " + versionName);
+            e.setUrl(apkUrl);
+            e.setSize(json.optLong("file_size", 0L));
+
+            JSONArray changelog = json.optJSONArray("changelog");
+            if (changelog != null && changelog.length() > 0) {
+                e.setSubtitle(changelog.optString(0, ""));
+            }
+            return e;
         } finally {
             conn.disconnect();
         }

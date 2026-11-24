@@ -10,9 +10,10 @@
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"
-        app:contentInsetStartWithNavigation="0dp"
+        app:contentInsetStartWithNavigation="56dp"
         app:contentInsetStart="0dp"
         android:background="?attr/colorSurface"
+        android:elevation="6dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -60,6 +61,7 @@
 
     </androidx.appcompat.widget.Toolbar>
 
+
     <!-- NAV HOST -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment_activity_main"
@@ -68,7 +70,7 @@
         android:layout_height="0dp"
         app:defaultNavHost="true"
         app:navGraph="@navigation/mobile_navigation"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/nav_view"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -89,6 +91,7 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/nav_view"
         app:labelVisibilityMode="labeled"
+        app:itemActiveIndicatorStyle="@style/Widget.Baiboly.BottomNav.ActiveIndicator"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:background="?android:attr/windowBackground"

@@ -3,8 +3,10 @@ package com.fa.baiboly.data.search;
 import android.content.Context;
 
 import com.fa.baiboly.data.bible.BibleService;
+import com.fa.baiboly.data.dictionary.DictionaryService;
 import com.fa.baiboly.data.fanekena.FanekenaService;
 import com.fa.baiboly.data.fihirana.FihiranaService;
+import com.fa.baiboly.models.DictionaryEntry;
 import com.fa.baiboly.models.Fanekena;
 import com.fa.baiboly.models.GlobalSearchResult;
 import com.fa.baiboly.models.SearchResult;
@@ -18,17 +20,34 @@ public class GlobalSearchService {
     private final BibleService bibleService;
     private final FihiranaService fihiranaService;
     private final FanekenaService fanekenaService;
+    private final DictionaryService dictionaryService;
 
     public GlobalSearchService(Context context) {
         this.bibleService = new BibleService(context);
         this.fihiranaService = new FihiranaService(context);
         this.fanekenaService = new FanekenaService(context);
+        this.dictionaryService = DictionaryService.get(context);
     }
 
     public List<GlobalSearchResult> searchAll(String query, String lang) {
         List<GlobalSearchResult> results = new ArrayList<>();
 
         if (query == null || query.trim().length() < 2) return results;
+
+        // --- Dictionnaire biblique ---
+        // Si le texte cherché est un mot du dictionnaire, sa fiche apparaît
+        // en tête des résultats, avant les versets et les chants.
+        List<DictionaryEntry> dictionary = dictionaryService.search(query, 8);
+        for (DictionaryEntry entry : dictionary) {
+            results.add(new GlobalSearchResult(
+                    GlobalSearchResult.Type.DICTIONNAIRE,
+                    entry.getHeadword(),
+                    entry.getPreview(180),
+                    "DIKSIONERA",
+                    null,
+                    entry
+            ));
+        }
 
         // --- Versets ---
         List<SearchResult> verses = bibleService.searchVerses(query, lang);

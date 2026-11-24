@@ -8,7 +8,7 @@
     android:orientation="horizontal"
     android:baselineAligned="false"
     android:paddingHorizontal="8dp"
-    android:background="@color/background"
+    android:background="@android:color/transparent"
     android:visibility="gone">
 
     <!-- Colonne gauche : Testamenta Taloha -->

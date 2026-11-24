@@ -4,11 +4,17 @@ public class Fanekena {
     private int id;
     private String code;
     private String text;
+    private String titre;
 
     public Fanekena(int id, String code, String text) {
+        this(id, code, text, null);
+    }
+
+    public Fanekena(int id, String code, String text, String titre) {
         this.id = id;
         this.code = code;
         this.text = text;
+        this.titre = titre;
     }
 
     public int getId() {
@@ -23,6 +29,10 @@ public class Fanekena {
         return text;
     }
 
+    public String getTitre() {
+        return titre;
+    }
+
     public void setCode(String code) {
         this.code = code;
     }
@@ -33,5 +43,9 @@ public class Fanekena {
 
     public void setText(String text) {
         this.text = text;
+    }
+
+    public void setTitre(String titre) {
+        this.titre = titre;
     }
 }

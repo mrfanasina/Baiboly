@@ -1,6 +1,7 @@
 package com.fa.baiboly.ui.verses;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -24,9 +25,11 @@ import androidx.core.content.ContextCompat;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.bible.BibleService;
+import com.fa.baiboly.data.dictionary.DictionaryService;
 import com.fa.baiboly.data.parser.BibleRefParser;
 import com.fa.baiboly.data.marks.MarkService;
 import com.fa.baiboly.models.Annotation;
+import com.fa.baiboly.models.DictionaryLink;
 import com.fa.baiboly.models.Reading;
 import com.fa.baiboly.models.Verse;
 import com.fa.baiboly.models.VerseMark;
@@ -78,6 +81,9 @@ public final class VerseTextRenderer {
 
     private final BibleService bibleService;
 
+    /** Dictionnaire : tous ses mots sont soulignés dans le texte biblique. */
+    private final DictionaryService dictionaryService;
+
     /** Clés de sélection "chapitre:verset" en cours (peut être null). */
     private final Set<String> selectedVerseKeys;
 
@@ -90,6 +96,7 @@ public final class VerseTextRenderer {
                              @Nullable Set<String> selectedVerseKeys,
                              @Nullable Callbacks callbacks) {
         this.bibleService = bibleService;
+        this.dictionaryService = DictionaryService.get(context);
         this.selectedVerseKeys = selectedVerseKeys;
         this.callbacks = callbacks;
         this.nightMode = (context.getResources().getConfiguration().uiMode
@@ -306,6 +313,11 @@ public final class VerseTextRenderer {
 
             addBibleReferenceSpans(builder, rawText, verseTextStart, annotationRanges);
 
+            // =====================================================
+            // MOTS DU DICTIONNAIRE : tous soulignés (même répétés)
+            // =====================================================
+            addDictionarySpans(builder, rawText, verseTextStart, v.getId());
+
             for (Annotation ann : annotations) {
 
                 int start = verseTextStart + ann.getStartPosition();
@@ -392,6 +404,105 @@ public final class VerseTextRenderer {
                     ds.setUnderlineText(true);
                 }
             }, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    // =====================================================
+    // DICTIONNAIRE : MOTS SOULIGNÉS ET CLIQUABLES
+    // =====================================================
+
+    /**
+     * Souligne chaque occurrence d'un mot du dictionnaire dans le verset.
+     * Les positions viennent de dictionary_links (calculées sur le texte exact
+     * de la base) ; un repli localise le mot si le texte affiché a été
+     * légèrement ajusté (espaces de début/fin).
+     */
+    private void addDictionarySpans(SpannableStringBuilder builder,
+                                    String rawText,
+                                    int textStart,
+                                    int verseId) {
+
+        List<DictionaryLink> links = dictionaryService.getLinksForVerse(verseId);
+        if (links == null || links.isEmpty()) return;
+
+        int textEnd = textStart + rawText.length();
+
+        for (DictionaryLink link : links) {
+
+            String word = link.getWord();
+            if (word == null || word.isEmpty()) continue;
+
+            int start = textStart + link.getStartPosition();
+            int end = textStart + link.getEndPosition();
+
+            boolean exact = start >= textStart
+                    && end <= textEnd
+                    && end - start == word.length()
+                    && rawText.regionMatches(true, start - textStart, word, 0, word.length());
+
+            if (!exact) {
+                int found = findNearestWord(rawText, word, link.getStartPosition());
+                if (found < 0) continue;
+                start = textStart + found;
+                end = start + word.length();
+            }
+
+            builder.setSpan(
+                    new DictionaryWordSpan(link.getDictId()),
+                    start, end,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    /** Occurrence du mot la plus proche de la position attendue. */
+    private static int findNearestWord(String text, String word, int expected) {
+
+        if (text == null || word == null || word.isEmpty()) return -1;
+
+        int best = -1;
+        int bestDistance = Integer.MAX_VALUE;
+        int last = text.length() - word.length();
+
+        for (int i = 0; i <= last; i++) {
+            if (text.regionMatches(true, i, word, 0, word.length())) {
+                int distance = Math.abs(i - expected);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = i;
+                }
+            }
+        }
+
+        return best;
+    }
+
+    /**
+     * Mot du dictionnaire : souligné, et un tap ouvre sa fiche détaillée.
+     * Le tap est traité par le lecteur (VersePageFragment), qui cherche les
+     * ClickableSpan sous le doigt après les annotations.
+     */
+    private static final class DictionaryWordSpan extends ClickableSpan {
+
+        private final int dictId;
+
+        DictionaryWordSpan(int dictId) {
+            this.dictId = dictId;
+        }
+
+        @Override
+        public void onClick(@NonNull View widget) {
+            Intent intent = new Intent(widget.getContext(),
+                    com.fa.baiboly.ui.dictionary.DictionaryDetailActivity.class);
+            intent.putExtra(
+                    com.fa.baiboly.ui.dictionary.DictionaryDetailActivity.EXTRA_DICT_ID,
+                    dictId);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            widget.getContext().startActivity(intent);
+        }
+
+        @Override
+        public void updateDrawState(@NonNull TextPaint ds) {
+            ds.setUnderlineText(true);
         }
     }
 

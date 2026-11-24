@@ -1,0 +1,4 @@
+<resources>
+    <item name="tag_bg_screen" type="id" />
+    <item name="tag_bg_card" type="id" />
+</resources>

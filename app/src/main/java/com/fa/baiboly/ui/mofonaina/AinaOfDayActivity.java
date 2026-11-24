@@ -3,6 +3,7 @@ package com.fa.baiboly.ui.mofonaina;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.text.LineBreaker;
@@ -20,6 +21,11 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.ColorManager;
@@ -27,6 +33,9 @@ import com.fa.baiboly.SettingsFragment;
 import com.fa.baiboly.data.AinaMofonainaRepository;
 import com.fa.baiboly.databinding.ActivityAinaOfDayBinding;
 import com.fa.baiboly.models.MofonainaDay;
+import com.fa.baiboly.ui.common.EdgeBars;
+import com.fa.baiboly.ui.common.ReadingLinks;
+import com.fa.baiboly.ui.common.ScrollTitleAnimator;
 
 /**
  * Displays the daily devotional explanation from "Aina sy Fahasalamana".
@@ -37,7 +46,11 @@ public class AinaOfDayActivity extends AppCompatActivity {
     private ActivityAinaOfDayBinding binding;
     private SharedPreferences preferences;
 
+    private TextView themeTitleView;
+    private boolean titleShowing;
+
     private static final String PREFS_NAME = "app_settings";
+    private static final String DEFAULT_TITLE = "AINA sy FAHASALAMANA";
     public static final String KEY_THEME = "theme_mode";
     public static final String KEY_TEXT_SIZE = "text_size";
     public static final String KEY_JUSTIFICATION = "justification_mode";
@@ -60,6 +73,8 @@ public class AinaOfDayActivity extends AppCompatActivity {
         binding = ActivityAinaOfDayBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        setupEdgeToEdge();
+
         preferences = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -75,6 +90,8 @@ public class AinaOfDayActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayShowTitleEnabled(false);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
+        binding.toolbarTitle.setText(DEFAULT_TITLE);
+        setupTitleTracking();
         binding.toolbar.setNavigationOnClickListener(v -> {
             if (isSettingsOpen()) {
                 closeSettings();
@@ -84,6 +101,33 @@ public class AinaOfDayActivity extends AppCompatActivity {
         });
 
         loadData();
+    }
+
+    /**
+     * Bord à bord : barre d'état transparente, recouverte par la barre du
+     * haut en verre translucide (même teinte, pas de bandeau séparé).
+     */
+    private void setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+        boolean light = (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES;
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(light);
+        controller.setAppearanceLightNavigationBars(light);
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int top = EdgeBars.applyAppBarInset(binding.appBar, bars.top);
+            EdgeBars.scrollUnderBars(binding.mainScroll, top, bars.bottom);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(binding.getRoot());
     }
 
     private void applyGlobalTheme() {
@@ -275,6 +319,10 @@ public class AinaOfDayActivity extends AppCompatActivity {
     // =========================================================
 
     private void updateUI(MofonainaDay day) {
+        themeTitleView = null;
+        titleShowing = false;
+        binding.toolbarTitle.setText(DEFAULT_TITLE);
+
         binding.mainScroll.setVisibility(View.VISIBLE);
         binding.mainScroll.setAlpha(0f);
         binding.mainScroll.setTranslationY(24f);
@@ -293,7 +341,8 @@ public class AinaOfDayActivity extends AppCompatActivity {
         if (day.getThemeSlogan() != null && !day.getThemeSlogan().isEmpty()) {
             TextView themeView = new TextView(this);
             configureJustificationEngine(themeView, isJustified);
-            themeView.setText(day.getThemeSlogan());
+            ReadingLinks.applyBible(themeView, day.getThemeSlogan(), this::openVerse);
+            themeTitleView = themeView;
             themeView.setTypeface(Typeface.DEFAULT_BOLD);
             themeView.setTextSize(24);
             themeView.setTextColor(ContextCompat.getColor(this, R.color.teal_200));
@@ -346,19 +395,12 @@ public class AinaOfDayActivity extends AppCompatActivity {
 
             TextView prayerView = new TextView(this);
             configureJustificationEngine(prayerView, isJustified);
-            prayerView.setText(day.getPrayer());
+            ReadingLinks.applyBible(prayerView, day.getPrayer(), this::openVerse);
             prayerView.setTextSize(18);
             prayerView.setTextColor(ContextCompat.getColor(this, R.color.textPrimary));
             prayerView.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.NORMAL));
             prayerView.setLineSpacing(1.3f, 1.3f);
             prayerView.setPadding(0, 0, 0, 32);
-
-            // Card background
-            android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
-            cardBg.setColor(blendColor(Color.parseColor("#EF6C00"), 0.06f));
-            cardBg.setCornerRadius(16f);
-            prayerView.setBackground(cardBg);
-            prayerView.setPadding(24, 24, 24, 24);
 
             addJustifiableView(binding.contentContainer, prayerView);
         }
@@ -372,7 +414,10 @@ public class AinaOfDayActivity extends AppCompatActivity {
 
         // ---- APPLY USER SETTINGS ----
         applyTextSettings();
-    }    private void addAuthorCard(String author) {
+        binding.mainScroll.post(this::updateToolbarTitle);
+    }
+
+    private void addAuthorCard(String author) {
         // Separator line with spacing
         View separator = new View(this);
         LinearLayout.LayoutParams sepLp = new LinearLayout.LayoutParams(
@@ -433,7 +478,7 @@ public class AinaOfDayActivity extends AppCompatActivity {
     private void addBodyText(String text, boolean isJustified) {
         TextView body = new TextView(this);
         configureJustificationEngine(body, isJustified);
-        body.setText(text);
+        ReadingLinks.applyBible(body, text, this::openVerse);
         body.setTextSize(18);
         body.setTextColor(ContextCompat.getColor(this, R.color.textPrimary));
         body.setLineSpacing(1.3f, 1.3f);
@@ -452,6 +497,52 @@ public class AinaOfDayActivity extends AppCompatActivity {
         );
         view.setLayoutParams(lp);
         container.addView(view);
+    }
+
+    private void openVerse(String reference) {
+        Intent intent = new Intent(this,
+                com.fa.baiboly.ui.verses.VersesActivity.class);
+        intent.putExtra("reading", reference);
+        startActivity(intent);
+    }
+
+    private void setupTitleTracking() {
+        binding.mainScroll.setOnScrollChangeListener(
+                (View.OnScrollChangeListener)
+                        (v, scrollX, scrollY, oldScrollX, oldScrollY)
+                                -> updateToolbarTitle());
+    }
+
+    /**
+     * Quand le thème (le grand titre du jour) passe sous la barre, il prend
+     * la place de « AINA sy FAHASALAMANA » ; inversement en remontant.
+     */
+    private void updateToolbarTitle() {
+        if (themeTitleView == null || !themeTitleView.isAttachedToWindow()
+                || binding.appBar.getHeight() == 0) {
+            return;
+        }
+
+        int[] theme = new int[2];
+        themeTitleView.getLocationOnScreen(theme);
+        int[] bar = new int[2];
+        binding.appBar.getLocationOnScreen(bar);
+
+        boolean show = theme[1] + themeTitleView.getHeight()
+                <= bar[1] + binding.appBar.getHeight();
+
+        if (show == titleShowing) {
+            return;
+        }
+        titleShowing = show;
+
+        String title = show
+                ? themeTitleView.getText().toString().trim()
+                : DEFAULT_TITLE;
+        if (title.isEmpty()) {
+            title = DEFAULT_TITLE;
+        }
+        ScrollTitleAnimator.animate(binding.toolbarTitle, title);
     }
 
     /**

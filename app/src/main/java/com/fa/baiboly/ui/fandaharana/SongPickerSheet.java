@@ -82,6 +82,7 @@ public class SongPickerSheet extends BottomSheetDialogFragment {
         setupNumPad(view);
         applyPreset();
         updateDisplay();
+
     }
 
     // =========================================================

@@ -22,11 +22,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.search.GlobalSearchService;
 import com.fa.baiboly.databinding.ActivitySearchBinding;
+import com.fa.baiboly.models.DictionaryEntry;
 import com.fa.baiboly.models.Fanekena;
 import com.fa.baiboly.models.GlobalSearchResult;
 import com.fa.baiboly.models.SearchResult;
 import com.fa.baiboly.models.Song;
 import com.fa.baiboly.ui.ai.AiExplanationActivity;
+import com.fa.baiboly.ui.dictionary.DictionaryDetailActivity;
 import com.fa.baiboly.ui.fihirana.SongDetailActivity;
 import com.fa.baiboly.ui.verses.VersesActivity;
 import com.google.android.material.chip.Chip;
@@ -186,13 +188,14 @@ public class SearchActivity extends AppCompatActivity implements SearchAdapter.O
         }
         binding.chipGroupCategories.setVisibility(View.VISIBLE);
 
-        boolean hasVerset = false, hasFanekena = false;
+        boolean hasVerset = false, hasFanekena = false, hasDictionary = false;
         Set<String> songCategories = new LinkedHashSet<>();
 
         for (GlobalSearchResult r : results) {
             switch (r.getType()) {
                 case VERSET: hasVerset = true; break;
                 case FANEKENA: hasFanekena = true; break;
+                case DICTIONNAIRE: hasDictionary = true; break;
                 case CHANT:
                     if (r.getCategory() != null && !r.getCategory().trim().isEmpty()) {
                         songCategories.add(r.getCategory());
@@ -209,6 +212,13 @@ public class SearchActivity extends AppCompatActivity implements SearchAdapter.O
         if (hasVerset) {
             binding.chipGroupCategories.addView(
                     createChip("Baiboly", new FilterTag(GlobalSearchResult.Type.VERSET, null))
+            );
+        }
+
+        if (hasDictionary) {
+            binding.chipGroupCategories.addView(
+                    createChip("Diksionera",
+                            new FilterTag(GlobalSearchResult.Type.DICTIONNAIRE, null))
             );
         }
 
@@ -357,6 +367,14 @@ public class SearchActivity extends AppCompatActivity implements SearchAdapter.O
                 .setMessage(f.getText())
                 .setPositiveButton("Hidio", null)
                 .show();
+    }
+
+    @Override
+    public void onDictionaryClick(GlobalSearchResult item) {
+        if (item != null && item.getPayload() instanceof DictionaryEntry) {
+            DictionaryEntry entry = (DictionaryEntry) item.getPayload();
+            DictionaryDetailActivity.open(this, entry.getId());
+        }
     }
 
     @Override

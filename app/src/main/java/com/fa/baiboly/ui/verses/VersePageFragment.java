@@ -13,10 +13,14 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.bible.BibleService;
+import com.fa.baiboly.ui.common.EdgeBars;
 import com.fa.baiboly.data.marks.MarkService;
 import com.fa.baiboly.data.parser.ReadingParser;
 import com.fa.baiboly.models.Reading;
@@ -97,6 +101,19 @@ public class VersePageFragment extends Fragment implements VerseTextRenderer.Cal
         super.onViewCreated(view, savedInstanceState);
 
         textContent = view.findViewById(R.id.textContent);
+
+        // Le texte commence sous la barre translucide puis défile dessous.
+        android.view.ViewGroup pageScroll = view.findViewById(R.id.pageScroll);
+        if (pageScroll != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+                Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                EdgeBars.scrollUnderBars(pageScroll,
+                        bars.top + EdgeBars.actionBarSizePx(v.getContext()),
+                        bars.bottom);
+                return insets;
+            });
+            ViewCompat.requestApplyInsets(view);
+        }
 
         String readingStr = getArguments() != null
                 ? getArguments().getString(ARG_READING) : null;

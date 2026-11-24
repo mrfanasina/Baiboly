@@ -61,13 +61,16 @@ public class FanekenaFragment extends Fragment {
             // Textes des credos, pour afficher un extrait dans la liste
             Map<String, String> texts = service.getTexts();
 
+            // Titres des credos (colonne titre)
+            Map<String, String> titres = service.getTitres();
+
             if (getActivity() == null) return;
             getActivity().runOnUiThread(() -> {
                 if (binding == null) return;
 
                 List<Fanekena> items = new ArrayList<>();
                 for (String code : codes) {
-                    items.add(new Fanekena(0, code, texts.get(code)));
+                    items.add(new Fanekena(0, code, texts.get(code), titres.get(code)));
                 }
 
                 CodeAdapter adapter = new CodeAdapter(items, code -> {

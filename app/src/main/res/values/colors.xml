@@ -8,11 +8,17 @@
     <color name="black">#FF000000</color>
     <color name="blue">#256EC7</color>
     <color name="toolbar_bg">#CCFFFFFF</color>
+    <!-- Barre plus transparente des écrans Aina / Diksionera. -->
+    <color name="toolbar_bg_clear">#99FFFFFF</color>
+    <!-- Pastille de l'onglet actif de la bottom nav : proche du verre, discrète. -->
+    <color name="nav_indicator">#26000000</color>
     <color name="toolbar_bg_bl">#E6FFFFFF</color>
     <color name="white">#FFFFFFFF</color>
     <color name="background">#FFFFFFFF</color>
     <color name="modal_backgound">#EEFFFFFF</color>
     <color name="text_full">#000000</color>
+    <color name="glass">#CDDBDBDB</color>
+    <color name="glass2">#11DBDBDB</color>
 
     <color name="title_gray">#616161</color>
     <color name="text2">#322F2F</color>
@@ -20,6 +26,8 @@
     <color name="ic_launcher_background">#F2E9DF</color>
 
     <color name="bgColor">#F5F5F5</color>
+    <color name="whiterose">#E7DEE1</color>
+
     <color name="cardColor">#EEFBFF</color>
 
     <color name="textPrimary">#393535</color>
@@ -73,6 +81,7 @@
 
     <!-- Validation / succès -->
     <color name="success">#10B981</color>
+    <color name="success_transp">#CC10B981</color>
 
     <!-- Fond de l'app / surface -->
     <color name="window_bg">#FFFFFF</color>
@@ -91,5 +100,5 @@
     <color name="lit_icon_tint">#C40E5A</color>
     <color name="lit_heading">#7B1FA2</color>
     <!-- Fond du glissement de suppression (vers la gauche) -->
-    <color name="lit_swipe_delete">#D32F2F</color>
+    <color name="lit_swipe_delete">#7ED32F2F</color>
 </resources>

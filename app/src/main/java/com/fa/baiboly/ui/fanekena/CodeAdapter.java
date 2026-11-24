@@ -53,8 +53,8 @@ public class CodeAdapter extends RecyclerView.Adapter<CodeAdapter.VH> {
         Fanekena item = list.get(position);
         String code = item.getCode();
 
-        // "Fanekem-pinoana N" dans le titre
-        holder.text.setText(getDisplayName(code));
+        // Titre du credo (colonne titre), sinon nom deduit du code
+        holder.text.setText(getItemTitle(item));
 
         // Numero seul dans le badge ("V12" -> "12")
         holder.badge.setText(getBadgeText(code));
@@ -65,6 +65,21 @@ public class CodeAdapter extends RecyclerView.Adapter<CodeAdapter.VH> {
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClick(code);
         });
+    }
+
+    /**
+     * Titre a afficher : la colonne titre du credo si elle est renseignee,
+     * sinon le nom deduit du code.
+     */
+    public static String getItemTitle(Fanekena item) {
+        if (item == null) return "Fanekena";
+
+        String titre = item.getTitre();
+        if (titre != null && !titre.trim().isEmpty()) {
+            return titre.trim();
+        }
+
+        return getDisplayName(item.getCode());
     }
 
     /**

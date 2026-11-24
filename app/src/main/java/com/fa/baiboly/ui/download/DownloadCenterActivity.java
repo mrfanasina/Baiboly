@@ -4,6 +4,10 @@ import android.app.ActivityManager;
 import android.content.SharedPreferences;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -58,6 +62,13 @@ public class DownloadCenterActivity extends AppCompatActivity {
     private DownloadEntry appUpdate;
     private boolean updateDownloading;
 
+    /** Écoute du réseau : dès qu'une connexion est disponible, on revérifie update.json. */
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private boolean networkCallbackRegistered;
+    /** Évite deux chargements simultanés (création + retour du réseau). */
+    private boolean loadingData;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         applyGlobalTheme();
@@ -99,6 +110,54 @@ public class DownloadCenterActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        registerNetworkWatcher();
+    }
+
+    @Override
+    protected void onStop() {
+        unregisterNetworkWatcher();
+        super.onStop();
+    }
+
+    /** Détecte le retour du réseau et recharge update.json automatiquement. */
+    private void registerNetworkWatcher() {
+        if (networkCallbackRegistered) return;
+        connectivityManager =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) return;
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                runOnUiThread(() -> {
+                    if (!isFinishing()) loadData();
+                });
+            }
+        };
+
+        try {
+            connectivityManager.registerNetworkCallback(
+                    new NetworkRequest.Builder()
+                            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                            .build(),
+                    networkCallback);
+            networkCallbackRegistered = true;
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void unregisterNetworkWatcher() {
+        if (!networkCallbackRegistered || connectivityManager == null) return;
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback);
+        } catch (Exception ignored) {
+        }
+        networkCallbackRegistered = false;
+    }
+
     private void applyGlobalTheme() {
         SharedPreferences prefs =
                 getSharedPreferences("app_settings", Context.MODE_PRIVATE);
@@ -129,11 +188,14 @@ public class DownloadCenterActivity extends AppCompatActivity {
     }
 
     private void loadData() {
+        if (loadingData) return;
+        loadingData = true;
+
         // Historique récent
         recentList = historyStore.getRecent(20);
         updateRecentSection();
 
-        // Manifest du serveur (async léger)
+        // Manifest du serveur + update.json (async léger)
         binding.textServerState.setText("Miomana amin'ny serveur…");
         new Thread(() -> {
             List<DownloadEntry> fetched = new ArrayList<>();
@@ -142,9 +204,15 @@ public class DownloadCenterActivity extends AppCompatActivity {
             } catch (Exception ignored) {
             }
 
+            // Mise à jour publiée dans update.json (GitHub).
+            DownloadEntry update = null;
+            try {
+                update = manifestClient.fetchAppUpdate();
+            } catch (Exception ignored) {
+            }
+
             // Sépare le paquet "app" (mise à jour) des données —il a
             // sa carte dédiée tout en haut de l'écran.
-            DownloadEntry update = null;
             List<DownloadEntry> data = new ArrayList<>();
             for (DownloadEntry e : fetched) {
                 if (DownloadEntry.TYPE_APP.equals(e.getType())) {
@@ -161,6 +229,7 @@ public class DownloadCenterActivity extends AppCompatActivity {
             final boolean fromServer = !fetched.isEmpty();
             final DownloadEntry updateResult = update;
             runOnUiThread(() -> {
+                loadingData = false;
                 appUpdate = updateResult;
                 applyUpdateCard();
                 availableList = dataResult;
@@ -201,6 +270,12 @@ public class DownloadCenterActivity extends AppCompatActivity {
         binding.textUpdateDesc.setText(
                 "Fandaharana vaovao azo misintona avy amin'ny serveur. "
                         + "Rehefa vita ny fisintona dia atao avy hatrany ny fametrahana.");
+        if (appUpdate.getSize() > 0) {
+            binding.textUpdateSize.setVisibility(View.VISIBLE);
+            binding.textUpdateSize.setText("Habeny : " + formatBytes(appUpdate.getSize()));
+        } else {
+            binding.textUpdateSize.setVisibility(View.GONE);
+        }
         binding.btnUpdateApp.setEnabled(!updateDownloading);
         binding.btnUpdateApp.setText("Misintona");
     }

@@ -5,19 +5,29 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- CONTENT : pager (swipe entre les fanekena), déclaré AVANT l'appbar
+         pour que le texte défile DESSOUS la barre translucide. -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bgColor" />
+
     <!-- APPBAR -->
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
+        android:background="@drawable/bg_reading_bar"
         app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:popupTheme="@style/ThemeOverlay.Material3">
+            app:popupTheme="@style/ThemeOverlay.Baiboly.Popup">
 
             <!-- Titre animé au scroll : apparaît quand le titre de la page
                  disparaît derrière la toolbar (glissement vertical). -->
@@ -37,14 +47,6 @@
         </androidx.appcompat.widget.Toolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
-
-    <!-- CONTENT : pager (swipe entre les fanekena) -->
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPager"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/bgColor"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <FrameLayout
         android:id="@+id/settings_container"

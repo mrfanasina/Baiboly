@@ -1,6 +1,9 @@
 package com.fa.baiboly.ui.fanekena;
 
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -9,6 +12,11 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.viewpager2.widget.ViewPager2;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.TextView;
@@ -19,6 +27,7 @@ import com.fa.baiboly.SettingsFragment;
 import com.fa.baiboly.data.fanekena.FanekenaService;
 import com.fa.baiboly.data.history.HistoryService;
 import com.fa.baiboly.databinding.ActivityFanekenaBinding;
+import com.fa.baiboly.ui.common.EdgeBars;
 import com.fa.baiboly.ui.reader.ProgramSession;
 import com.fa.baiboly.ui.reader.ReaderNeighborPageFragment;
 import com.fa.baiboly.ui.reader.ReaderSessionPagerAdapter;
@@ -84,6 +93,9 @@ public class FanekenaActivity extends AppCompatActivity
 
         // Keep screen ON while reading songs (prevents sleep interruption)
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        // Barre d'état transparente, comme la toolbar en verre.
+        setupEdgeToEdge();
 
         service = new FanekenaService(this);
         historyService = new HistoryService(this);
@@ -228,6 +240,33 @@ public class FanekenaActivity extends AppCompatActivity
     /**
      * Configure toolbar (back navigation)
      */
+    /**
+     * Bord à bord : barre d'état transparente, la barre du haut (verre
+     * translucide) la recouvre et le texte des fanekena passe dessous.
+     */
+    private void setupEdgeToEdge() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+        boolean light = (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES;
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(light);
+        controller.setAppearanceLightNavigationBars(light);
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            EdgeBars.applyAppBarInset(binding.appBar, bars.top);
+            binding.settingsContainer.setPadding(0, bars.top, 0, 0);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(binding.getRoot());
+    }
+
     private void setupToolbar(String code) {
         setSupportActionBar(binding.toolbar);
 

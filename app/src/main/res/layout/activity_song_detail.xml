@@ -6,20 +6,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- APPBAR CORRECT -->
+    <!-- CONTENT : déclaré AVANT l'appbar pour que le chant défile DESSOUS
+         (les pages s'arrêtent sous la barre, clip désactivé côté page). -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- APPBAR : translucide et arrondie, le contenu passe dessous -->
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?android:attr/windowBackground"
+        android:background="@drawable/bg_reading_bar"
         app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
             app:navigationIcon="@drawable/ic_arrow_back"
-            android:background="?attr/colorSurface"
-            app:popupTheme="@style/ThemeOverlay.Material3"
+            app:popupTheme="@style/ThemeOverlay.Baiboly.Popup"
             >
             <!-- Titre animé : glisse verticalement (bas -> haut) quand on
                  passe de "Fihirana" au chant au scroll. Le TextView se recycle
@@ -61,12 +69,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- CONTENT -->
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPager"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
     <!-- MINI-LECTEUR : visible pendant la lecture, AU-DESSUS de la
          navigation basse (ne la masque jamais). Largeur fluide :
          le seek prend le poids, le X reste toujours visible. -->

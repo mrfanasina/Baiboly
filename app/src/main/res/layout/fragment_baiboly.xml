@@ -9,7 +9,7 @@
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/background"
+        android:background="@android:color/transparent"
         app:liftOnScroll="false"
         app:elevation="0dp">
 
@@ -19,14 +19,21 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <!-- Barre de référence Material 3 (style barre de recherche) -->
+            <!-- Barre de référence Material 3 (style barre de recherche).
+                 Le cadre est transparent : le verre flouté est posé sur le
+                 conteneur (cf. BaibolyFragment -> applyGlassSurface). -->
+            <FrameLayout
+                android:id="@+id/inputGlass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToOutline="true">
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/layoutInput"
                 style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:hintEnabled="false"
-                app:boxBackgroundColor="?attr/colorSurfaceVariant"
+                app:boxBackgroundColor="@android:color/transparent"
                 app:boxCornerRadiusBottomEnd="28dp"
                 app:boxCornerRadiusBottomStart="28dp"
                 app:boxCornerRadiusTopEnd="28dp"
@@ -50,6 +57,7 @@
                     android:textColorHint="?attr/colorOnSurfaceVariant" />
 
             </com.google.android.material.textfield.TextInputLayout>
+            </FrameLayout>
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/progressBar"
@@ -79,7 +87,7 @@
         android:orientation="horizontal"
         android:baselineAligned="false"
         android:paddingHorizontal="8dp"
-        android:background="@color/background"
+        android:background="@android:color/transparent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <!-- Colonne Testamenta Taloha (Scroll indépendant) -->
@@ -106,7 +114,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="16dp" />
+                android:paddingBottom="16dp"
+                android:tag="bg_no_cards" />
         </LinearLayout>
 
         <!-- Séparateur vertical discret (Optionnel) -->
@@ -141,7 +150,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="16dp" />
+                android:paddingBottom="16dp"
+                android:tag="bg_no_cards" />
         </LinearLayout>
 
     </LinearLayout>

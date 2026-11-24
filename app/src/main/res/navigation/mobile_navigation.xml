@@ -21,10 +21,10 @@
         android:name="com.fa.baiboly.SettingsFragment"
         android:label="Fikirakirana" />
     <fragment
-        android:id="@+id/navigation_notifications"
+        android:id="@+id/navigation_fihirana"
         android:name="com.fa.baiboly.ui.fihirana.FihiranaFragment"
         android:label="@string/title_notifications"
-        tools:layout="@layout/fragment_notifications" />
+        tools:layout="@layout/fragment_fihirana" />
     <fragment
         android:id="@+id/fanekena"
         android:name="com.fa.baiboly.ui.fanekena.FanekenaFragment"

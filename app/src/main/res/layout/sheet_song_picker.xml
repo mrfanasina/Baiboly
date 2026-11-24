@@ -26,11 +26,11 @@
         android:textColor="?attr/colorOnSurface"
         android:layout_marginBottom="14dp" />
 
-    <!-- BARRE DE SAISIE (identique au FihiranaFragment) -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="match_parent"
-        android:layout_height="72dp"
-        app:cardCornerRadius="24dp"
+    <!-- BARRE DE SAISIE (identique au FihiranaFragment) -->        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardSongEntry"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            app:cardCornerRadius="24dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp"
         app:cardBackgroundColor="?attr/colorSurfaceVariant">

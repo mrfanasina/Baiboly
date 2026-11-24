@@ -86,10 +86,33 @@ public class CardOrderAdapter extends RecyclerView.Adapter<CardOrderAdapter.View
             case "aina": return "Aina sy Fahasalamana";
             case "mofonaina": return "Mofonaina";
             case "reading": return "Vakiteny anio";
+            case "diksionera": return "Diksionera Baiboly";
             case "perikopa": return "Perikopa";
             case "history": return "Novakiana farany";
+            case "favorites": return "Tianao indrindra";
             default: return id;
         }
+    }
+
+    /**
+     * Complète un ordre enregistré : les cartes ajoutées depuis (favoris…)
+     * sont placées à la fin plutôt que d'être oubliées.
+     */
+    public static List<String> normalize(List<String> saved) {
+        List<String> order = new ArrayList<>();
+        if (saved != null) {
+            for (String id : saved) {
+                if (id != null && !id.trim().isEmpty() && !order.contains(id.trim())) {
+                    order.add(id.trim());
+                }
+            }
+        }
+        for (String id : getDefaultOrder()) {
+            if (!order.contains(id)) {
+                order.add(id);
+            }
+        }
+        return order;
     }
 
     /**
@@ -99,9 +122,12 @@ public class CardOrderAdapter extends RecyclerView.Adapter<CardOrderAdapter.View
         List<String> order = new ArrayList<>();
         order.add("mofonaina");
         order.add("reading");
+        order.add("diksionera");
         order.add("aina");
         order.add("perikopa");
         order.add("history");
+        // Nouvelle carte : par défaut tout en bas (déplaçable comme les autres).
+        order.add("favorites");
         return order;
     }
 
