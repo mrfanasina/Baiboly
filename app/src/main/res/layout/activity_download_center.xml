@@ -276,7 +276,7 @@
                                 android:layout_weight="1"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="10dp"
-                                android:text="Vaovao misintona"
+                                android:text="Fanavaozana ny application"
                                 android:textColor="?attr/colorOnSurface"
                                 android:textSize="15sp"
                                 android:textStyle="bold" />
@@ -290,11 +290,22 @@
                                 android:textStyle="bold" />
                         </LinearLayout>
 
+                        <!-- Version installée sur l'appareil -->
+                        <TextView
+                            android:id="@+id/textCurrentVersion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textSize="12sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                        <!-- Changelog complet (update.json) -->
                         <TextView
                             android:id="@+id/textUpdateDesc"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
+                            android:lineSpacingExtra="2dp"
                             android:textSize="13sp"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -308,15 +319,36 @@
                             android:textColor="?attr/colorPrimary"
                             android:visibility="gone" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnUpdateApp"
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="10dp"
-                            android:text="Misintona"
-                            app:icon="@drawable/ic_download"
-                            app:iconGravity="textStart"
-                            app:iconPadding="8dp" />
+                            android:orientation="horizontal">
+
+                            <!-- Mise à jour directe (télécharge puis ouvre l'installeur) -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnUpdateNow"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Havaozina"
+                                app:icon="@drawable/ic_arrow_up"
+                                app:iconGravity="textStart"
+                                app:iconPadding="8dp" />
+
+                            <!-- Téléchargement de l'APK vers un dossier choisi -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnDownloadApk"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:text="Alaina"
+                                app:icon="@drawable/ic_download"
+                                app:iconGravity="textStart"
+                                app:iconPadding="8dp" />
+                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

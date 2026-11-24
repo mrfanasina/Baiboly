@@ -1,28 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingStart="24dp"
-    android:paddingTop="4dp"
-    android:paddingEnd="24dp"
-    android:paddingBottom="4dp">
+    android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/textUpdateMessage"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textSize="15sp" />
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="4dp">
 
-    <CheckBox
-        android:id="@+id/checkNeverShow"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:buttonTint="?attr/colorPrimary"
-        android:text="Aza aseho intsony ity version ity"
-        android:textColor="?android:attr/textColorPrimary"
-        android:textSize="14sp" />
+        <TextView
+            android:id="@+id/textUpdateMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="15sp" />
 
-</LinearLayout>
+        <!-- Zavatra vaovao : liste complète du changelog -->
+        <TextView
+            android:id="@+id/textUpdateChangelogTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Zavatra vaovao"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/textUpdateChangelog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:lineSpacingExtra="3dp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <CheckBox
+            android:id="@+id/checkNeverShow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:buttonTint="?attr/colorPrimary"
+            android:text="Aza aseho intsony ity version ity"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+</ScrollView>

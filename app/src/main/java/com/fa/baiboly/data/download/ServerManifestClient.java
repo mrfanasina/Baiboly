@@ -64,6 +64,13 @@ public class ServerManifestClient {
     public static final String APP_UPDATE_URL =
             "https://raw.githubusercontent.com/mrfanasina/baiboly-distribution/main/update.json";
 
+    // =========================================================
+    // 🗂️ CATALOGUE DES AUTRES FICHIERS (downloads.json)
+    //    Catégories (application, données…) et versions publiées.
+    // =========================================================
+    public static final String DOWNLOADS_URL =
+            "https://raw.githubusercontent.com/mrfanasina/baiboly-distribution/main/downloads.json";
+
     private static final String PREFS_NAME = "app_settings";
     private static final String KEY_BASE_URL = "download_server_url";
 
@@ -127,6 +134,56 @@ public class ServerManifestClient {
     }
 
     // =========================
+    // 🗂️ CATALOGUE (downloads.json)
+    // =========================
+    /**
+     * Lit downloads.json et renvoie tous les éléments activés, à plat,
+     * avec leur catégorie et leur version.
+     *
+     * Format : { "categories": [ { "title": "…", "items": [ … ] } ] }
+     */
+    public List<DownloadEntry> fetchDownloads() throws Exception {
+        HttpURLConnection conn = open(new URL(DOWNLOADS_URL));
+        try {
+            JSONObject json = new JSONObject(readAll(conn));
+            JSONArray categories = json.optJSONArray("categories");
+
+            List<DownloadEntry> list = new ArrayList<>();
+            if (categories == null) return list;
+
+            for (int c = 0; c < categories.length(); c++) {
+                JSONObject category = categories.optJSONObject(c);
+                if (category == null) continue;
+                String categoryTitle = category.optString("title", "");
+                JSONArray items = category.optJSONArray("items");
+                if (items == null) continue;
+
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject o = items.optJSONObject(i);
+                    if (o == null || !o.optBoolean("enabled", true)) continue;
+
+                    String url = o.optString("url", "");
+                    if (url.isEmpty()) continue;
+
+                    DownloadEntry e = new DownloadEntry();
+                    e.setType(o.optString("type", DownloadEntry.TYPE_DATA));
+                    e.setTitle(o.optString("title", ""));
+                    e.setSubtitle(o.optString("description", ""));
+                    e.setUrl(url);
+                    e.setSize(o.optLong("file_size", 0L));
+                    e.setVersionName(o.optString("version", null));
+                    e.setPublishedAt(o.optString("published_at", ""));
+                    e.setCategoryTitle(categoryTitle);
+                    list.add(e);
+                }
+            }
+            return list;
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    // =========================
     // 📦 MISE À JOUR DE L'APP (update.json)
     // =========================
     /**
@@ -150,9 +207,16 @@ public class ServerManifestClient {
             e.setSize(json.optLong("file_size", 0L));
 
             JSONArray changelog = json.optJSONArray("changelog");
-            if (changelog != null && changelog.length() > 0) {
-                e.setSubtitle(changelog.optString(0, ""));
+            if (changelog != null) {
+                List<String> notes = new ArrayList<>();
+                for (int i = 0; i < changelog.length(); i++) {
+                    String line = changelog.optString(i, "").trim();
+                    if (!line.isEmpty()) notes.add(line);
+                }
+                e.setChangelog(notes);
+                if (!notes.isEmpty()) e.setSubtitle(notes.get(0));
             }
+            e.setPublishedAt(json.optString("published_at", ""));
             return e;
         } finally {
             conn.disconnect();

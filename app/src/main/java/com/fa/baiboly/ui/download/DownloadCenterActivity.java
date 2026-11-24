@@ -8,6 +8,7 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,6 +18,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -61,6 +64,17 @@ public class DownloadCenterActivity extends AppCompatActivity {
     /** Paquet de mise à jour de l'app proposé par le manifest (ou null). */
     private DownloadEntry appUpdate;
     private boolean updateDownloading;
+    /** Entrée dont l'APK est en cours d'enregistrement vers le dossier choisi. */
+    private DownloadEntry pendingSaveEntry;
+
+    /** Sélecteur de dossier : « Alaina » enregistre l'APK où l'utilisateur veut. */
+    private final ActivityResultLauncher<String> saveApkLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument(
+                            "application/vnd.android.package-archive"),
+                    uri -> {
+                        if (uri != null) saveApkTo(uri);
+                    });
 
     /** Écoute du réseau : dès qu'une connexion est disponible, on revérifie update.json. */
     private ConnectivityManager connectivityManager;
@@ -105,8 +119,11 @@ public class DownloadCenterActivity extends AppCompatActivity {
         refreshMemoryInfo();
 
         // Mise à jour de l'app : carte en haut de l'écran
-        binding.btnUpdateApp.setOnClickListener(v -> {
+        binding.btnUpdateNow.setOnClickListener(v -> {
             if (appUpdate != null && !updateDownloading) installUpdate();
+        });
+        binding.btnDownloadApk.setOnClickListener(v -> {
+            if (appUpdate != null && !updateDownloading) downloadApkToChosenFolder();
         });
     }
 
@@ -195,9 +212,16 @@ public class DownloadCenterActivity extends AppCompatActivity {
         recentList = historyStore.getRecent(20);
         updateRecentSection();
 
-        // Manifest du serveur + update.json (async léger)
+        // Catalogue downloads.json + manifest serveur + update.json
         binding.textServerState.setText("Miomana amin'ny serveur…");
         new Thread(() -> {
+            // Catalogue officiel : catégories, versions, autres fichiers.
+            List<DownloadEntry> catalog = new ArrayList<>();
+            try {
+                catalog = manifestClient.fetchDownloads();
+            } catch (Exception ignored) {
+            }
+
             List<DownloadEntry> fetched = new ArrayList<>();
             try {
                 fetched = manifestClient.fetchManifest();
@@ -219,23 +243,48 @@ public class DownloadCenterActivity extends AppCompatActivity {
                     if (update == null || e.getVersionCode() > update.getVersionCode()) {
                         update = e;
                     }
-                } else {
+                } else if (catalog.isEmpty()) {
+                    // Catalogue absent : on garde l'ancien manifest.
                     data.add(e);
                 }
+            }
+
+            // downloads.json a la priorité (versions des autres apps).
+            if (!catalog.isEmpty()) {
+                data.addAll(0, catalog);
             }
             if (data.isEmpty()) data.addAll(fallbackList);
 
             final List<DownloadEntry> dataResult = data;
-            final boolean fromServer = !fetched.isEmpty();
+            final boolean fromServer = !catalog.isEmpty() || !fetched.isEmpty();
             final DownloadEntry updateResult = update;
             runOnUiThread(() -> {
                 loadingData = false;
                 appUpdate = updateResult;
                 applyUpdateCard();
-                availableList = dataResult;
+                availableList = withCategoryHeaders(dataResult);
                 updateAvailableSection(fromServer);
             });
         }).start();
+    }
+
+    /**
+     * Transforme la liste en lignes affichables : un en-tête par catégorie
+     * (downloads.json) suivi de ses éléments.
+     */
+    private List<DownloadEntry> withCategoryHeaders(List<DownloadEntry> entries) {
+        List<DownloadEntry> rows = new ArrayList<>();
+        String currentCategory = null;
+        for (DownloadEntry entry : entries) {
+            String category = entry.getCategoryTitle();
+            if (category != null && !category.isEmpty()
+                    && !category.equals(currentCategory)) {
+                rows.add(DownloadEntry.header(category));
+                currentCategory = category;
+            }
+            rows.add(entry);
+        }
+        return rows;
     }
 
     // =========================================================
@@ -267,17 +316,36 @@ public class DownloadCenterActivity extends AppCompatActivity {
         } else {
             binding.textUpdateVersion.setText("");
         }
-        binding.textUpdateDesc.setText(
-                "Fandaharana vaovao azo misintona avy amin'ny serveur. "
-                        + "Rehefa vita ny fisintona dia atao avy hatrany ny fametrahana.");
+
+        // Version installée sur l'appareil.
+        String current = installedVersionName();
+        binding.textCurrentVersion.setText("Version ankehitriny : "
+                + (current.isEmpty() ? "?" : "v" + current));
+
+        // Changelog complet de update.json, affiché directement.
+        StringBuilder desc = new StringBuilder();
+        java.util.List<String> notes = appUpdate.getChangelog();
+        if (notes != null && !notes.isEmpty()) {
+            for (String note : notes) {
+                if (desc.length() > 0) desc.append('\n');
+                desc.append("• ").append(note);
+            }
+            binding.textUpdateDesc.setText(desc.toString());
+            binding.textUpdateDesc.setVisibility(View.VISIBLE);
+        } else {
+            binding.textUpdateDesc.setVisibility(View.GONE);
+        }
+
         if (appUpdate.getSize() > 0) {
             binding.textUpdateSize.setVisibility(View.VISIBLE);
             binding.textUpdateSize.setText("Habeny : " + formatBytes(appUpdate.getSize()));
         } else {
             binding.textUpdateSize.setVisibility(View.GONE);
         }
-        binding.btnUpdateApp.setEnabled(!updateDownloading);
-        binding.btnUpdateApp.setText("Misintona");
+        binding.btnUpdateNow.setEnabled(!updateDownloading);
+        binding.btnUpdateNow.setText("Havaozina");
+        binding.btnDownloadApk.setEnabled(!updateDownloading);
+        binding.btnDownloadApk.setText("Alaina");
     }
 
     /** versionCode (version name) Currently installed. */
@@ -291,12 +359,58 @@ public class DownloadCenterActivity extends AppCompatActivity {
         }
     }
 
+    /** versionName installé sur l'appareil ("5.3"), vide si illisible. */
+    private String installedVersionName() {
+        try {
+            android.content.pm.PackageInfo pi = getPackageManager()
+                    .getPackageInfo(getPackageName(), 0);
+            return pi.versionName != null ? pi.versionName : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * « Actuel » si c'est la version installée, « Ancienne » si elle est
+     * plus ancienne, « Vaovao » si elle est plus récente.
+     */
+    private String versionStatus(String version) {
+        if (version == null || version.isEmpty()) return "";
+        String current = installedVersionName();
+        if (current.isEmpty()) return "";
+        int cmp = compareVersions(version, current);
+        if (cmp == 0) return "Actuel";
+        return cmp < 0 ? "Ancienne" : "Vaovao";
+    }
+
+    /** Compare deux versions numériques ("5.2" < "5.10"). */
+    private static int compareVersions(String left, String right) {
+        String[] a = left.split("\\.");
+        String[] b = right.split("\\.");
+        int count = Math.max(a.length, b.length);
+        for (int i = 0; i < count; i++) {
+            int va = i < a.length ? parseVersionPart(a[i]) : 0;
+            int vb = i < b.length ? parseVersionPart(b[i]) : 0;
+            if (va != vb) return va < vb ? -1 : 1;
+        }
+        return 0;
+    }
+
+    private static int parseVersionPart(String part) {
+        try {
+            return Integer.parseInt(part.trim());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     /** Télécharge l'APK depuis le serveur puis lance l'installation. */
     private void installUpdate() {
         if (appUpdate == null) return;
         updateDownloading = true;
-        binding.btnUpdateApp.setEnabled(false);
-        binding.btnUpdateApp.setText("Mahandry…");
+        binding.btnUpdateNow.setEnabled(false);
+        binding.btnUpdateNow.setText("Mahandry…");
+        binding.btnDownloadApk.setEnabled(false);
 
         final DownloadEntry entry = appUpdate;
         new Thread(() -> {
@@ -325,6 +439,76 @@ public class DownloadCenterActivity extends AppCompatActivity {
                 loadData();
             });
         }, "update-download").start();
+    }
+
+    /** « Alaina » : choisir le dossier puis y enregistrer l'APK. */
+    private void downloadApkToChosenFolder() {
+        pendingSaveEntry = appUpdate;
+        saveApkLauncher.launch(suggestedApkName(appUpdate));
+    }
+
+    /** Copie l'APK téléchargé vers l'emplacement choisi par l'utilisateur. */
+    private void saveApkTo(Uri uri) {
+        final DownloadEntry entry = pendingSaveEntry != null ? pendingSaveEntry : appUpdate;
+        if (entry == null) return;
+
+        updateDownloading = true;
+        binding.btnUpdateNow.setEnabled(false);
+        binding.btnDownloadApk.setEnabled(false);
+        binding.btnDownloadApk.setText("Mahandry…");
+
+        new Thread(() -> {
+            File apk = null;
+            String error = null;
+            try {
+                apk = manifestClient.download(entry);
+                java.io.InputStream in = new java.io.FileInputStream(apk);
+                java.io.OutputStream out = getContentResolver().openOutputStream(uri);
+                if (out == null) throw new Exception("Tsy azo soratana ny rakitra");
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = in.read(buffer)) > 0) out.write(buffer, 0, len);
+                out.flush();
+                out.close();
+                in.close();
+            } catch (Exception e) {
+                error = e.getMessage();
+            }
+            final File result = apk;
+            final String msg = error;
+            runOnUiThread(() -> {
+                updateDownloading = false;
+                if (result != null && msg == null) {
+                    historyStore.add(entry, result.length(), System.currentTimeMillis());
+                    Toast.makeText(this,
+                            "Voatahiry ny APK : " + suggestedApkName(entry),
+                            Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this,
+                            "Tsy nety : " + (msg != null ? msg : "tsy misy serveur"),
+                            Toast.LENGTH_LONG).show();
+                }
+                applyUpdateCard();
+                loadData();
+            });
+        }, "update-save").start();
+    }
+
+    /** Nom de fichier proposé pour l'APK (Baiboly-v5.3.apk). */
+    private static String suggestedApkName(DownloadEntry entry) {
+        if (entry == null) return "Baiboly.apk";
+        String url = entry.getUrl();
+        if (url != null) {
+            int slash = url.lastIndexOf('/');
+            if (slash >= 0 && slash < url.length() - 1) {
+                String name = url.substring(slash + 1);
+                if (name.toLowerCase(Locale.US).endsWith(".apk")) return name;
+            }
+        }
+        String version = entry.getVersionName();
+        return version != null && !version.isEmpty()
+                ? "Baiboly-v" + version + ".apk"
+                : "Baiboly.apk";
     }
 
     /** Passe la main au système pour installer l'APK téléchargé. */
@@ -358,8 +542,21 @@ public class DownloadCenterActivity extends AppCompatActivity {
         binding.recyclerRecent.setAdapter(new RecentAdapter());
     }
 
+    private int countDownloads() {
+        int count = 0;
+        for (DownloadEntry entry : availableList) {
+            if (!entry.isHeader()) count++;
+        }
+        return count;
+    }
+
     private void updateAvailableSection(boolean fromServer) {
-        binding.chipAvailable.setText(availableList.size() + " misy hisintona");
+        int count = countDownloads();
+        binding.chipAvailable.setText(count + " misy hisintona");
+        binding.textAvailableEmpty.setVisibility(count == 0 ? View.VISIBLE : View.GONE);
+        if (count == 0) {
+            binding.textAvailableEmpty.setText("Tsy misy rakitra azo alaina amin'izao fotoana izao.");
+        }
         if (fromServer) {
             binding.textServerState.setText("● Misy");
             binding.textServerState.setTextColor(
@@ -463,24 +660,65 @@ public class DownloadCenterActivity extends AppCompatActivity {
     // =========================================================
     // ADAPTER : MISY HISINTONA
     // =========================================================
-    class AvailableAdapter extends RecyclerView.Adapter<AvailableAdapter.VH> {
+    class AvailableAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+        @Override
+        public int getItemViewType(int position) {
+            return availableList.get(position).isHeader() ? 0 : 1;
+        }
 
         @NonNull
         @Override
-        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == 0) {
+                View view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_download_category_header, parent, false);
+                return new HeaderVH(view);
+            }
             View view = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_download_available, parent, false);
             return new VH(view);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull VH holder, int position) {
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder baseHolder, int position) {
             DownloadEntry entry = availableList.get(position);
 
+            if (baseHolder instanceof HeaderVH) {
+                ((HeaderVH) baseHolder).textCategory.setText(entry.getTitle());
+                return;
+            }
+
+            VH holder = (VH) baseHolder;
             holder.itemIcon.setImageResource(iconFor(entry.getType()));
             holder.textTitle.setText(entry.getTitle());
-            holder.textSubtitle.setText(entry.getSubtitle() == null
-                    ? "" : entry.getSubtitle());
+
+            // Version de l'APK + statut : Actuel / Ancienne / Vaovao.
+            String label = "";
+            String version = entry.getVersionName();
+            boolean isApk = DownloadEntry.TYPE_APP.equals(entry.getType())
+                    || "apk".equals(entry.getType());
+            if (version != null && !version.isEmpty()) {
+                label = "v" + version;
+                if (isApk) {
+                    String status = versionStatus(version);
+                    if (!status.isEmpty()) label += " · " + status;
+                }
+            } else if (entry.getVersionCode() > 0) {
+                label = "v" + entry.getVersionCode();
+            }
+            holder.textVersion.setText(label);
+            holder.textVersion.setVisibility(
+                    label.isEmpty() ? View.GONE : View.VISIBLE);
+
+            String description = entry.getSubtitle();
+            holder.textSubtitle.setText(description == null ? "" : description);
+            holder.textSubtitle.setVisibility(
+                    description == null || description.isEmpty() ? View.GONE : View.VISIBLE);
+
+            String meta = buildMeta(entry);
+            holder.textMeta.setText(meta);
+            holder.textMeta.setVisibility(meta.isEmpty() ? View.GONE : View.VISIBLE);
 
             boolean done = historyStore.hasUrl(entry.getUrl());
             holder.btnDownload.setText(
@@ -498,17 +736,39 @@ public class DownloadCenterActivity extends AppCompatActivity {
 
         class VH extends RecyclerView.ViewHolder {
             ImageView itemIcon;
-            TextView textTitle, textSubtitle;
+            TextView textTitle, textVersion, textSubtitle, textMeta;
             com.google.android.material.button.MaterialButton btnDownload;
 
             VH(View view) {
                 super(view);
                 itemIcon = view.findViewById(R.id.itemIcon);
                 textTitle = view.findViewById(R.id.textTitle);
+                textVersion = view.findViewById(R.id.textVersion);
                 textSubtitle = view.findViewById(R.id.textSubtitle);
+                textMeta = view.findViewById(R.id.textMeta);
                 btnDownload = view.findViewById(R.id.btnDownload);
             }
         }
+
+        class HeaderVH extends RecyclerView.ViewHolder {
+            TextView textCategory;
+
+            HeaderVH(View view) {
+                super(view);
+                textCategory = view.findViewById(R.id.textCategory);
+            }
+        }
+    }
+
+    /** "38.0 MB · 24 Nov 2026" (morceaux disponibles seulement). */
+    private static String buildMeta(DownloadEntry entry) {
+        StringBuilder meta = new StringBuilder();
+        if (entry.getSize() > 0) meta.append(formatBytes(entry.getSize()));
+        if (entry.getPublishedAt() != null && !entry.getPublishedAt().isEmpty()) {
+            if (meta.length() > 0) meta.append(" · ");
+            meta.append(entry.getPublishedAt());
+        }
+        return meta.toString();
     }
 
     // =========================================================
@@ -557,6 +817,9 @@ public class DownloadCenterActivity extends AppCompatActivity {
         }
         if (DownloadEntry.TYPE_PERIKOPA.equals(type)) {
             return R.drawable.book_open;
+        }
+        if (DownloadEntry.TYPE_APP.equals(type) || "apk".equals(type)) {
+            return R.drawable.ic_download;
         }
         return R.drawable.book_bookmark_svgrepo_com;
     }

@@ -287,6 +287,8 @@ public class MainActivity extends AppCompatActivity {
         View view = getLayoutInflater().inflate(
                 R.layout.dialog_update_available, null);
         TextView message = view.findViewById(R.id.textUpdateMessage);
+        TextView changelogTitle = view.findViewById(R.id.textUpdateChangelogTitle);
+        TextView changelogText = view.findViewById(R.id.textUpdateChangelog);
         android.widget.CheckBox neverShow =
                 view.findViewById(R.id.checkNeverShow);
 
@@ -296,10 +298,23 @@ public class MainActivity extends AppCompatActivity {
         if (!version.isEmpty()) text.append(" (").append(version).append(')');
         text.append(" vonona hosintomina. Tsindrio « Hijery » hamakafaka ")
                 .append("ny fanavaozana.");
-        if (update.getSubtitle() != null && !update.getSubtitle().isEmpty()) {
-            text.append("\n\n").append(update.getSubtitle());
-        }
         message.setText(text.toString());
+
+        // Changelog complet (toutes les lignes de update.json).
+        java.util.List<String> notes = update.getChangelog();
+        if (notes != null && !notes.isEmpty()) {
+            StringBuilder log = new StringBuilder();
+            for (String note : notes) {
+                if (log.length() > 0) log.append('\n');
+                log.append("• ").append(note);
+            }
+            changelogText.setText(log.toString());
+            changelogText.setVisibility(View.VISIBLE);
+            changelogTitle.setVisibility(View.VISIBLE);
+        } else {
+            changelogText.setVisibility(View.GONE);
+            changelogTitle.setVisibility(View.GONE);
+        }
 
         new AlertDialog.Builder(this)
                 .setTitle("Fanavaozana vaovao")

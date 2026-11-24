@@ -1,5 +1,8 @@
 package com.fa.baiboly.models;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Un élément téléchargeable proposé par le serveur
  * (manifest.json) — par ex. "perikopa" d'une année,
@@ -21,6 +24,8 @@ public class DownloadEntry {
     public static final String TYPE_PERIKOPA = "perikopa";
     public static final String TYPE_MOFONAINA = "mofonaina";
     public static final String TYPE_DATA = "data";
+    /** Entrée spéciale (pas un vrai téléchargement) : titre de catégorie. */
+    public static final String TYPE_HEADER = "__header";
 
     private String type;
     private String title;
@@ -34,6 +39,12 @@ public class DownloadEntry {
     private int versionCode;
     /** Affichage "1.2.0" (optionnel, pour la carte de mise à jour). */
     private String versionName;
+    /** Date de publication (downloads.json : "2026-11-24"), optionnelle. */
+    private String publishedAt;
+    /** Catégorie d'appartenance (downloads.json : "Application Baiboly"…). */
+    private String categoryTitle;
+    /** Liste des nouveautés (update.json : champ "changelog"). */
+    private List<String> changelog = new ArrayList<>();
 
     public DownloadEntry() {
     }
@@ -100,6 +111,42 @@ public class DownloadEntry {
 
     public void setVersionName(String versionName) {
         this.versionName = versionName;
+    }
+
+    public String getPublishedAt() {
+        return publishedAt;
+    }
+
+    public void setPublishedAt(String publishedAt) {
+        this.publishedAt = publishedAt;
+    }
+
+    public String getCategoryTitle() {
+        return categoryTitle;
+    }
+
+    public void setCategoryTitle(String categoryTitle) {
+        this.categoryTitle = categoryTitle;
+    }
+
+    public List<String> getChangelog() {
+        return changelog;
+    }
+
+    public void setChangelog(List<String> changelog) {
+        this.changelog = changelog != null ? changelog : new ArrayList<>();
+    }
+
+    /** Fabrique une ligne d'en-tête de catégorie pour l'écran Downloads. */
+    public static DownloadEntry header(String title) {
+        DownloadEntry e = new DownloadEntry();
+        e.setType(TYPE_HEADER);
+        e.setTitle(title);
+        return e;
+    }
+
+    public boolean isHeader() {
+        return TYPE_HEADER.equals(type);
     }
 
     /** Résolution de l'URL relative par rapport à BASE_URL. */
