@@ -65,11 +65,18 @@ public class FanekenaRepository {
         );
     }
 
+    /**
+     * Codes des credos, fanekem-pinoana (v1, v2, …) en premier, puis les
+     * autres dans l'ordre d'insertion (id) de la base.
+     */
     public Cursor getCode() {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
         return db.rawQuery(
-                "SELECT DISTINCT code FROM creeds",
+                "SELECT code FROM creeds " +
+                        "GROUP BY code " +
+                        "ORDER BY CASE WHEN LOWER(code) GLOB 'v[0-9]*' THEN 0 ELSE 1 END, " +
+                        "MIN(id)",
                 null
         );
     }

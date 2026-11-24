@@ -176,7 +176,7 @@ public class SettingsFragment extends Fragment {
     }
 
     // =========================
-    // STYLE DES CARTES (SARY / LIQUID GLASS)
+    // STYLE DES CARTES (SARY / FOND UNI)
     // =========================
     private void setupCardStyle() {
         updateCardStyleSummary();
@@ -185,25 +185,25 @@ public class SettingsFragment extends Fragment {
 
     private void updateCardStyleSummary() {
         if (binding == null) return;
-        boolean glass = AppBackgrounds.CARD_STYLE_GLASS.equals(
+        boolean solid = AppBackgrounds.CARD_STYLE_SOLID.equals(
                 AppBackgrounds.getCardBackgroundStyle(requireContext()));
-        binding.txtCardStyleSummary.setText(glass
-                ? "Fotsy na mainty"
+        binding.txtCardStyleSummary.setText(solid
+                ? "Mainty na fotsy"
                 : "Sary");
     }
 
-    /** Choix entre la photo décorative des cartes et l'effet Liquid Glass. */
+    /** Choix entre la photo des cartes et un fond uni noir/blanc. */
     private void showCardStylePicker() {
         Context context = requireContext();
         final String[] values = {
                 AppBackgrounds.CARD_STYLE_IMAGE,
-                AppBackgrounds.CARD_STYLE_GLASS
+                AppBackgrounds.CARD_STYLE_SOLID
         };
         final String[] labels = {
                 "Sary",
-                "Liquid Glass"
+                "Mainty na fotsy"
         };
-        int checked = AppBackgrounds.CARD_STYLE_GLASS.equals(
+        int checked = AppBackgrounds.CARD_STYLE_SOLID.equals(
                 AppBackgrounds.getCardBackgroundStyle(context)) ? 1 : 0;
 
         new AlertDialog.Builder(context)

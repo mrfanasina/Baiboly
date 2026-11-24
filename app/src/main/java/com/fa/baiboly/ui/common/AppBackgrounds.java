@@ -3,8 +3,10 @@ package com.fa.baiboly.ui.common;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.GradientDrawable;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,22 +24,25 @@ import com.google.android.material.card.MaterialCardView;
  *
  * Chaque écran garde toujours la même photo : plus de changement aléatoire.
  * L'accueil utilise un fond choisi dans les paramètres (par défaut une image
- * fixe). Le style des cartes se choisit dans les paramètres :
+ * fixe). Le fond des cartes se règle de deux façons :
  * <ul>
- *   <li>{@link #CARD_STYLE_IMAGE} (par défaut) : photo décorative individuelle
- *       par carte, comme avant ;</li>
- *   <li>{@link #CARD_STYLE_GLASS} : matériau Liquid Glass de
- *       {@link GlassCardHelper}, qui floute la photo de l'écran.</li>
+ *   <li>{@link #CARD_STYLE_IMAGE} (par défaut) : photo de chaque carte, lue
+ *       dans {@code res/values/card_backgrounds.xml} ;</li>
+ *   <li>{@link #CARD_STYLE_SOLID} : fond uni noir (mode sombre) ou blanc
+ *       (mode clair), sans photo.</li>
  * </ul>
  */
 public final class AppBackgrounds {
 
     public static final String PREFS_NAME = "app_settings";
     public static final String KEY_HOME_BACKGROUND = "home_background";
-    /** Style des cartes : photo individuelle ou effet Liquid Glass. */
+    /** Style des cartes : photo individuelle ou fond uni noir/blanc. */
     public static final String KEY_CARD_STYLE = "card_background_style";
     public static final String CARD_STYLE_IMAGE = "image";
-    public static final String CARD_STYLE_GLASS = "glass";
+    /** Cartes sur fond uni : noir en mode sombre, blanc en mode clair. */
+    public static final String CARD_STYLE_SOLID = "solid";
+    /** Ancienne valeur enregistrée du style supprimé (Liquid Glass). */
+    private static final String LEGACY_CARD_STYLE_GLASS = "glass";
 
     private static final int[] PHOTOS = {
             R.drawable.fond_01, R.drawable.fond_02, R.drawable.fond_03,
@@ -77,6 +82,9 @@ public final class AppBackgrounds {
     /** Voile plus dense sur les cartes à photo, qui contiennent du texte. */
     private static final int CARD_SCRIM_LIGHT = 0xB3FFFFFF; // blanc ~70 %
     private static final int CARD_SCRIM_DARK = 0xCC000000;  // noir ~80 %
+    /** Fond uni des cartes (style "Mainty na fotsy"). */
+    private static final int CARD_SOLID_LIGHT = 0xFFFFFFFF; // blanc
+    private static final int CARD_SOLID_DARK = 0xFF000000;  // noir
     /** Voile du verre des barres (toolbar) : translucide, la photo reste visible. */
     private static final int BAR_SCRIM_LIGHT = 0x99FFFFFF; // blanc ~60 %
     private static final int BAR_SCRIM_DARK = 0xB3000000;  // noir ~70 %
@@ -93,15 +101,18 @@ public final class AppBackgrounds {
     private AppBackgrounds() {
     }
 
-    /** Style actuellement choisi pour les cartes (photo ou Liquid Glass). */
+    /** Style actuellement choisi pour les cartes (photo ou fond uni). */
     public static String getCardBackgroundStyle(Context context) {
         String saved = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(KEY_CARD_STYLE, CARD_STYLE_IMAGE);
-        return CARD_STYLE_GLASS.equals(saved) ? CARD_STYLE_GLASS : CARD_STYLE_IMAGE;
+        boolean solid = CARD_STYLE_SOLID.equals(saved)
+                || LEGACY_CARD_STYLE_GLASS.equals(saved);
+        return solid ? CARD_STYLE_SOLID : CARD_STYLE_IMAGE;
     }
 
     public static void setCardBackgroundStyle(Context context, String style) {
-        String value = CARD_STYLE_GLASS.equals(style) ? CARD_STYLE_GLASS : CARD_STYLE_IMAGE;
+        String value = CARD_STYLE_SOLID.equals(style)
+                ? CARD_STYLE_SOLID : CARD_STYLE_IMAGE;
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putString(KEY_CARD_STYLE, value).apply();
     }
@@ -197,48 +208,13 @@ public final class AppBackgrounds {
     }
 
     /**
-     * Applique le verre à une carte précise, en dehors de la décoration
-     * automatique d'un écran (utile pour tester un composant isolé).
-     * Le fond de référence est la photo de l'écran le plus proche.
+     * Photo d'une carte isolée, choisie dans {@code card_backgrounds.xml}.
+     * Ne fait rien si la carte n'y figure pas (ou y vaut {@code @null}).
      */
-    public static void applyGlassToCard(@NonNull MaterialCardView card) {
-        applyGlassToCard(card, 0);
-    }
-
-    /**
-     * Verre teinté : même matériau que les autres cartes, mais l'arrière-plan
-     * flouté est coloré par {@code tintColor} (cartes de livres colorées).
-     */
-    public static void applyGlassToCard(@NonNull MaterialCardView card, int tintColor) {
-        View root = card;
-        while (root.getTag(R.id.tag_bg_screen) == null) {
-            android.view.ViewParent parent = root.getParent();
-            if (!(parent instanceof View)) {
-                break;
-            }
-            root = (View) parent;
-        }
-
-        int photoRes = 0;
-        Object tag = root.getTag(R.id.tag_bg_screen);
-        if (tag instanceof String) {
-            String value = (String) tag;
-            int separator = value.lastIndexOf('#');
-            if (separator >= 0) {
-                try {
-                    photoRes = Integer.parseInt(value.substring(separator + 1));
-                } catch (NumberFormatException ignored) {
-                    photoRes = 0;
-                }
-            }
-        }
-
-        card.setTag(R.id.tag_bg_card, null);
-        int scrim = GlassCardHelper.isNight(card.getContext()) ? SCRIM_DARK : SCRIM_LIGHT;
-        if (tintColor != 0) {
-            GlassCardHelper.apply(card, root, photoRes, scrim, tintColor);
-        } else {
-            GlassCardHelper.apply(card, root, photoRes, scrim);
+    public static void applyPhotoToCard(@NonNull MaterialCardView card) {
+        int photoRes = mappedPhotoFor(card.getContext(), card.getId());
+        if (photoRes > 0) {
+            applyPhotoToCard(card, photoRes);
         }
     }
 
@@ -391,40 +367,38 @@ public final class AppBackgrounds {
     }
 
     /**
-     * Applique le style choisi dans les paramètres : photo individuelle de la
-     * carte, ou matériau Liquid Glass. On remplace le fond de la carte (et non
-     * un enfant) pour ne pas modifier sa mesure : les cartes en wrap_content
-     * conservent leur hauteur.
+     * Applique le style choisi pour les cartes. On remplace le fond de la
+     * carte (et non un enfant) pour ne pas modifier sa mesure : les cartes en
+     * wrap_content conservent leur hauteur.
      *
-     * <p>La carte "Aina sy Fahasalamana" garde son image de contenu d'origine et
-     * n'est donc pas concernée.</p>
+     * <p>Photo : celle déclarée dans {@code res/values/card_backgrounds.xml}.
+     * Une carte absente du fichier reçoit la photo de l'écran, sauf "Aina sy
+     * Fahasalamana" (cardAina) qui garde son image de contenu.</p>
      */
     private static void applyCardBackground(MaterialCardView card, View backgroundRoot,
                                             int screenPhoto, boolean night,
                                             boolean allowCards) {
-        if (!allowCards || card.getId() == R.id.cardAina) {
+        if (!allowCards) {
             return;
         }
 
-        if (CARD_STYLE_GLASS.equals(getCardBackgroundStyle(card.getContext()))) {
-            android.util.Log.d("GlassDbg", "glass card=" + card.getId()
-                    + " photo=" + screenPhoto + " bg=" + card.getBackground());
-            // Le style photo ne doit pas court-circuiter un retour au verre.
-            card.setTag(R.id.tag_bg_card, null);
-            GlassCardHelper.apply(card, backgroundRoot, screenPhoto,
-                    night ? SCRIM_DARK : SCRIM_LIGHT);
+        if (CARD_STYLE_SOLID.equals(getCardBackgroundStyle(card.getContext()))) {
+            applySolidCard(card, night);
             return;
         }
 
-        // Style "Sary" : on retire la couche de verre éventuelle.
-        GlassCardHelper.remove(card);
-
-        // Style "Sary" : photo décorative individuelle de la carte.
+        // Déjà décorée par applyPhotoToCard ou un passage précédent.
         if (card.getBackground() instanceof PhotoBackgroundDrawable
                 && card.getTag(R.id.tag_bg_card) != null) {
             return;
         }
-        int photoRes = cardPhoto(card.getId(), screenPhoto);
+        card.setTag(R.id.tag_bg_card, null);
+
+        int photoRes = mappedPhotoFor(card.getContext(), card.getId());
+        if (photoRes < 0) {
+            // Absente du fichier : photo de l'écran, aucune pour cardAina.
+            photoRes = card.getId() == R.id.cardAina ? 0 : screenPhoto;
+        }
         if (photoRes == 0) {
             return;
         }
@@ -439,37 +413,42 @@ public final class AppBackgrounds {
                 night ? CARD_SCRIM_DARK : CARD_SCRIM_LIGHT, radius));
     }
 
+    /** Style "Mainty na fotsy" : fond uni, noir ou blanc selon le thème. */
+    private static void applySolidCard(MaterialCardView card, boolean night) {
+        card.setTag(R.id.tag_bg_card, null);
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(night ? CARD_SOLID_DARK : CARD_SOLID_LIGHT);
+        background.setCornerRadius(Math.max(0f, card.getRadius()));
+        card.setClipToOutline(true);
+        card.setBackground(background);
+    }
+
     /**
-     * Chaque carte de l'accueil a sa propre photo ; la carte "Aina sy
-     * fahasalamana" garde son image d'origine (id cardAina -> aucune photo).
+     * Photo déclarée pour une carte dans {@code res/values/card_backgrounds.xml}.
+     *
+     * @return la ressource photo, {@code 0} si la carte y vaut {@code @null},
+     *         ou {@code -1} si la carte n'y figure pas.
      */
-    private static int cardPhoto(int cardId, int screenPhoto) {
-        if (cardId == R.id.cardAina) {
-            return 0;
+    private static int mappedPhotoFor(Context context, int cardId) {
+        if (cardId == View.NO_ID) {
+            return -1;
         }
-        int res;
-        if (cardId == R.id.cardReading) {
-            res = R.drawable.fond_02_3;
-        } else if (cardId == R.id.cardPerikopa) {
-            res = R.drawable.fond_04; // perikopa.jpg
-        } else if (cardId == R.id.cardHistory) {
-            res = R.drawable.fond_02;
-        } else if (cardId == R.id.cardMofonaina) {
-            res = R.drawable.fond_03;
-        } else {
-            return screenPhoto;
-        }
-        if (res == screenPhoto) {
-            int index = 0;
-            for (int i = 0; i < PHOTOS.length; i++) {
-                if (PHOTOS[i] == res) {
-                    index = i;
-                    break;
+        TypedArray views = context.getResources()
+                .obtainTypedArray(R.array.card_background_views);
+        TypedArray photos = context.getResources()
+                .obtainTypedArray(R.array.card_background_photos);
+        try {
+            int count = Math.min(views.length(), photos.length());
+            for (int i = 0; i < count; i++) {
+                if (views.getResourceId(i, 0) == cardId) {
+                    return photos.getResourceId(i, 0);
                 }
             }
-            res = PHOTOS[(index + 1) % PHOTOS.length];
+            return -1;
+        } finally {
+            views.recycle();
+            photos.recycle();
         }
-        return res;
     }
 
     static boolean isNight(Context context) {

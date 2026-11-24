@@ -47,6 +47,8 @@ import androidx.work.WorkManager;
 import com.fa.baiboly.data.playback.PlaybackService;
 import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.MofonainaRepository;
+import com.fa.baiboly.data.download.AppUpdateNotifier;
+import com.fa.baiboly.models.DownloadEntry;
 import com.fa.baiboly.databinding.ActivityMainBinding;
 import com.fa.baiboly.ui.common.AppBackgrounds;
 import com.fa.baiboly.ui.fihirana.PlaybackServiceBridge;
@@ -57,6 +59,9 @@ import com.fa.baiboly.worker.MofonainaSyncWorker;
 import android.content.res.ColorStateList;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
+import androidx.core.content.ContextCompat;
 import com.google.android.material.color.MaterialColors;
 
 import java.util.WeakHashMap;
@@ -205,8 +210,115 @@ public class MainActivity extends AppCompatActivity {
         // preloadMofonaina();
         scheduleMofonainaSync();
 
-        // Show tutorial on first launch
-        showTutorialIfNeeded();
+        // Show tutorial on first launch (le pop-up de mise à jour attend le
+        // prochain lancement pour ne pas s'empiler par-dessus).
+        boolean tutorialShown = showTutorialIfNeeded();
+        checkForAppUpdate(savedInstanceState == null && !tutorialShown);
+    }
+
+    // =========================================================
+    // ⬆️ MISE À JOUR : point orange dans le menu + pop-up
+    // =========================================================
+
+    /** Le pop-up n'est proposé qu'une fois par lancement de l'activité. */
+    private boolean updateDialogShown;
+    /** Vrai quand une version plus récente (non ignorée) est publiée. */
+    private boolean updateAvailable;
+
+    /**
+     * Vérifie update.json en arrière-plan. Le point orange apparaît dès
+     * qu'une version plus récente est publiée ; le pop-up n'est proposé
+     * que si l'utilisateur n'a pas coché « ne plus afficher » pour elle.
+     */
+    private void checkForAppUpdate(boolean allowPopup) {
+        AppUpdateNotifier.check(this, update -> {
+            boolean show = update != null
+                    && !AppUpdateNotifier.isDismissed(this, update);
+            setUpdateIndicator(show);
+            if (show && allowPopup && !updateDialogShown && !isFinishing()) {
+                updateDialogShown = true;
+                showUpdateDialog(update);
+            }
+        });
+    }
+
+    /**
+     * Affiche / masque la pastille orange sur l'entrée de menu
+     * « Fanavaozana ny application ».
+     */
+    private void setUpdateIndicator(boolean visible) {
+        if (updateAvailable == visible) return;
+        updateAvailable = visible;
+        invalidateOptionsMenu();
+    }
+
+    /**
+     * Icône de l'entrée « Fanavaozana ny application » : l'icône habituelle
+     * (teintée comme les autres) + une pastille orange en haut à droite
+     * quand une mise à jour (non ignorée) est disponible.
+     */
+    private Drawable downloadsMenuIcon() {
+
+        Drawable base = ContextCompat.getDrawable(this, R.drawable.ic_auto_mode);
+        if (base == null) return null;
+        base = base.mutate();
+        base.setTint(MaterialColors.getColor(
+                binding.toolbar, android.R.attr.textColorPrimary));
+
+        if (!updateAvailable) return base;
+
+        Drawable dot = ContextCompat.getDrawable(this, R.drawable.bg_update_dot);
+        if (dot == null) return base;
+
+        int baseSize = base.getIntrinsicWidth();
+        if (baseSize <= 0) {
+            baseSize = Math.round(24 * getResources().getDisplayMetrics().density);
+        }
+        int dotSize = Math.round(9 * getResources().getDisplayMetrics().density);
+
+        LayerDrawable icon = new LayerDrawable(new Drawable[]{base, dot});
+        // Pastille en haut à droite de l'icône.
+        icon.setLayerInset(1, baseSize - dotSize, 0, 0, baseSize - dotSize);
+        return icon;
+    }
+
+    /** Pop-up « mise à jour disponible » avec case « ne plus afficher ». */
+    private void showUpdateDialog(DownloadEntry update) {
+        View view = getLayoutInflater().inflate(
+                R.layout.dialog_update_available, null);
+        TextView message = view.findViewById(R.id.textUpdateMessage);
+        android.widget.CheckBox neverShow =
+                view.findViewById(R.id.checkNeverShow);
+
+        String version = AppUpdateNotifier.versionLabel(update);
+        StringBuilder text = new StringBuilder(
+                "Misy version vaovao");
+        if (!version.isEmpty()) text.append(" (").append(version).append(')');
+        text.append(" vonona hosintomina. Tsindrio « Hijery » hamakafaka ")
+                .append("ny fanavaozana.");
+        if (update.getSubtitle() != null && !update.getSubtitle().isEmpty()) {
+            text.append("\n\n").append(update.getSubtitle());
+        }
+        message.setText(text.toString());
+
+        new AlertDialog.Builder(this)
+                .setTitle("Fanavaozana vaovao")
+                .setIcon(R.drawable.ic_auto_mode)
+                .setView(view)
+                .setPositiveButton("Hijery", (d, w) -> {
+                    if (neverShow.isChecked()) {
+                        AppUpdateNotifier.dismissForVersion(this, update);
+                        setUpdateIndicator(false);
+                    }
+                    com.fa.baiboly.ui.download.DownloadCenterActivity.open(this);
+                })
+                .setNegativeButton("Aoriana", (d, w) -> {
+                    if (neverShow.isChecked()) {
+                        AppUpdateNotifier.dismissForVersion(this, update);
+                        setUpdateIndicator(false);
+                    }
+                })
+                .show();
     }
 
     @Override
@@ -450,6 +562,14 @@ public class MainActivity extends AppCompatActivity {
                     == R.id.settingsFragment;
             settings.setVisible(!onSettings);
         }
+
+        // Pastille de mise à jour sur « Fanavaozana ny application ».
+        MenuItem downloads = menu.findItem(R.id.downloads);
+        if (downloads != null) {
+            Drawable icon = downloadsMenuIcon();
+            if (icon != null) downloads.setIcon(icon);
+        }
+
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -686,13 +806,16 @@ public class MainActivity extends AppCompatActivity {
     // TUTORIEL PREMIER LANCEMENT
     // =========================================================
 
-    private void showTutorialIfNeeded() {
+    /** @return true si le tutoriel vient d'être affiché. */
+    private boolean showTutorialIfNeeded() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         boolean shown = prefs.getBoolean(KEY_TUTORIAL_SHOWN, false);
         if (!shown) {
             showTutorial();
             prefs.edit().putBoolean(KEY_TUTORIAL_SHOWN, true).apply();
+            return true;
         }
+        return false;
     }
 
     private void showTutorial() {

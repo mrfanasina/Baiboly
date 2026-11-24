@@ -17,9 +17,7 @@ import androidx.core.content.ContextCompat;
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.fihirana.FihiranaService;
 import com.fa.baiboly.models.Song;
-import com.fa.baiboly.ui.common.AppBackgrounds;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.card.MaterialCardView;
 
 import java.util.List;
 
@@ -85,15 +83,6 @@ public class SongPickerSheet extends BottomSheetDialogFragment {
         applyPreset();
         updateDisplay();
 
-        // Style verre demandé dans les paramètres : la barre de saisie suit le
-        // même matériau que les cartes de l'accueil (test de rendu isolé).
-        if (AppBackgrounds.CARD_STYLE_GLASS.equals(
-                AppBackgrounds.getCardBackgroundStyle(requireContext()))) {
-            View entry = view.findViewById(R.id.cardSongEntry);
-            if (entry instanceof MaterialCardView) {
-                AppBackgrounds.applyGlassToCard((MaterialCardView) entry);
-            }
-        }
     }
 
     // =========================================================

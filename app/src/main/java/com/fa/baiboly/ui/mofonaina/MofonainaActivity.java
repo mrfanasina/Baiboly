@@ -79,10 +79,10 @@ public class MofonainaActivity extends AppCompatActivity {
         // toolbar au lieu d'un bandeau d'une autre couleur.
         setupEdgeToEdge();
 
-        // Les deux cartes du jour reçoivent un fond photographique (elles
-        // n'avaient qu'un contour).
-        AppBackgrounds.applyPhotoToCard(binding.cardReading, R.drawable.fond_02_2);
-        AppBackgrounds.applyPhotoToCard(binding.cardVerseOfDay, R.drawable.fond_02_3);
+        // Les deux cartes du jour reçoivent la photo déclarée dans
+        // res/values/card_backgrounds.xml (elles n'avaient qu'un contour).
+        AppBackgrounds.applyPhotoToCard(binding.cardReadingToday);
+        AppBackgrounds.applyPhotoToCard(binding.cardVerseOfDay);
 
         preferences =
                 getSharedPreferences(
@@ -690,7 +690,7 @@ public class MofonainaActivity extends AppCompatActivity {
 
             binding.textReading.setText(ref);
 
-            binding.cardReading
+            binding.cardReadingToday
                     .setOnClickListener(v -> openVerses(ref));
         }
 

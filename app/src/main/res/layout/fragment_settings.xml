@@ -98,7 +98,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <!-- ========================= -->
-        <!-- STYLE DES CARTES (SARY / LIQUID GLASS) -->
+        <!-- STYLE DES CARTES (SARY / FOND UNI NOIR OU BLANC) -->
         <!-- ========================= -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardCardStyle"

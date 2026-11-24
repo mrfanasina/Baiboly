@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fonds des cartes : TOUT se règle ici, sans toucher au code Java.
+
+    Deux listes appairées par leur position :
+      - card_background_views : l'id de la carte (celui du layout) ;
+      - card_background_photos : la photo posée derrière cette carte.
+
+    Pour changer l'image d'une carte : remplacer le drawable de la 2e ligne,
+    par exemple @drawable/fond_04 -> @drawable/mon_image (image à déposer
+    dans res/drawable-nodpi/).
+
+    Pour ne plus mettre de photo sur une carte : @null.
+    Une carte absente de la liste reçoit la photo de son écran ; la carte
+    "Aina sy Fahasalamana" (cardAina) garde son image de contenu.
+-->
+<resources>
+
+    <array name="card_background_views">
+        <!-- Accueil -->
+        <item>@id/cardReading</item>
+        <item>@id/cardPerikopa</item>
+        <item>@id/cardHistory</item>
+        <item>@id/cardMofonaina</item>
+        <!-- Mofonaina (cartes du jour) -->
+        <item>@id/cardReadingToday</item>
+        <item>@id/cardVerseOfDay</item>
+    </array>
+
+    <array name="card_background_photos">
+        <item>@drawable/fond_02_3</item>
+        <item>@drawable/fond_04</item>
+        <item>@drawable/fond_02</item>
+        <item>@drawable/fond_03</item>
+        <item>@drawable/fond_02_2</item>
+        <item>@drawable/fond_02_3</item>
+    </array>
+
+</resources>

@@ -343,7 +343,7 @@ Menu **⋮ → « Fikirakirana »**. Les réglages s'appliquent immédiatement a
 | **Thème** | Mazava (clair), Maizina (sombre) ou Finday (suivre le système) |
 | **Couleurs** | Couleur principale et secondaire de l'interface |
 | **Fon'ny fandraisana** | Image de fond de l'accueil |
-| **Endrik'ireo karatra** | Cartes avec image (« Sary ») ou effet « Liquid Glass » |
+| **Endrik'ireo karatra** | Cartes avec image (« Sary ») ou fond uni noir/blanc |
 | **Habe ny soratra** | Taille du texte dans les lecteurs |
 | **Justification** | Texte aligné à gauche ou justifié |
 | **Mandingana andalana** | Affiche chaque verset sur sa propre ligne |

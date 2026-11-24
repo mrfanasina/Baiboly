@@ -137,13 +137,8 @@ public class PhotoBackgroundDrawable extends Drawable {
         return PixelFormat.TRANSLUCENT;
     }
 
-    @Override
-    public int getIntrinsicWidth() {
-        return bitmap.getWidth();
-    }
-
-    @Override
-    public int getIntrinsicHeight() {
-        return bitmap.getHeight();
-    }
+    // Volontairement aucune taille intrinsèque : ce fond est purement
+    // décoratif. S'il en exposait une (les pixels de la photo), une carte
+    // wrap_content (CardView est un FrameLayout) serait mesurée au moins à la
+    // hauteur de l'image, d'où des cartes énormes avec du vide sous le texte.
 }
