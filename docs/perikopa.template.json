@@ -1,0 +1,23 @@
+{
+  "format": "baiboly-perikopa",
+  "version": 1,
+  "year": 2028,
+  "months": [
+    {
+      "month_name": "Janoary",
+      "theme": "LOHAHEVITRA NY VOLANA",
+      "days": [
+        {
+          "date": "2028-01-01",
+          "name": "Fetin'ny Fampisehoana",
+          "season": "epifania",
+          "readings": [
+            "Sal 111:1-10",
+            "Jao 1:1-5",
+            "Efe 3:20-21"
+          ]
+        }
+      ]
+    }
+  ]
+}

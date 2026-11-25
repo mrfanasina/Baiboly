@@ -18,55 +18,58 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-
 /**
- * Client du serveur de données. PRÉPARÉ pour la suite :
+ * Client du catalogue de téléchargements.
  *
- * 1) fetchManifest() : lit BASE_URL + "manifest.json" qui décrit
- *    ce qui est téléchargeable (perikopa par année, mofonaina…)
+ * Deux fichiers, chacun son rôle (inchangés) :
+ * - update.json : la mise à jour de l'APK (une seule version publiée) ;
+ * - downloads.json : les autres fichiers à télécharger (lectures
+ *   perikopa / Aina, et tout ce qu'on ajoute ensuite), avec leur lien.
+ * Il n'y a plus de manifest.json à maintenir en parallèle.
  *
- * 2) download() : télécharge un fichier et le range dans
- *    <app>/downloads/. L'IMPORTATION DANS LA BASE BASE
- *    (perikopa_days / perikopa_readings / perikopa_months) sera
- *    branchée plus tard — c'est le point d'entrée unique.
- *
- * Format attendu du manifest.json (urls relatives à BASE_URL) :
+ * Format (voir docs/downloads.template.json) :
  * {
- *   "items": [
- *     { "type": "perikopa",   "title": "Perikopa 2026",
- *       "url": "perikopa/2026.json",   "size": 243000 },
- *     { "type": "mofonaina",  "title": "Mofonaina 14 Oktobra",
- *       "url": "mofonaina/2026-10-14.json", "size": 12000 },
- *     { "type": "app",        "title": "Mise à jour de l'app",
- *       "url": "app/baiboly-1.2.0.apk", "size": 6200000,
- *       "versionCode": 2, "versionName": "1.2.0" }
+ *   "schema_version": 1,
+ *   "base_url": "https://data.fjkm.mg/updates/",
+ *   "categories": [
+ *     { "title": "Application Baiboly",
+ *       "items": [ { "type": "apk", "title": "Baiboly 5.3",
+ *                    "url": "https://…/Baiboly-v5.3.apk",
+ *                    "file_size": 39879213, "version": "5.3",
+ *                    "version_code": 53 } ] },
+ *     { "title": "Vakiteny sy Perikopa",
+ *       "items": [ { "type": "perikopa", "dataset": "perikopa",
+ *                    "year": 2028, "title": "Perikopa 2028",
+ *                    "url": "perikopa/2028.json",
+ *                    "file_size": 66622 } ] }
  *   ]
  * }
  *
- * L'entrée "app" déclenche la carte de mise à jour de l'écran
- * Downloads (visible si versionCode > versionCode installée),
- * les autres entrées sont de la DATA (perikopa, mofonaina de
- * l'année suivante, lecture quotidienne…).
+ * - url absolue (https://…) : utilisée telle quelle ;
+ * - url relative : résolue contre "base_url" (ou BASE_URL à défaut).
+ *
+ * Ajouter une année future = ajouter une entrée dans downloads.json.
+ * L'application la voit sans mise à jour.
+ *
+ * Le téléchargement est REPRENABLE : on écrit dans un fichier ".part" et
+ * on repart de la taille déjà reçue (Range).
  */
 public class ServerManifestClient {
 
     // =========================================================
-    // 🌐 URL DU SERVEUR — à remplacer quand les fichiers perikopa
-    //    et mofonaina seront mis en ligne. Modifiable depuis le
-    //    code via setBaseUrl().
+    // 🌐 BASE DES FICHIERS RELATIFS
+    //    (les fichiers peuvent aussi avoir une URL absolue)
     // =========================================================
     public static final String DEFAULT_BASE_URL = "https://data.fjkm.mg/updates/";
 
     // =========================================================
-    // 📦 INFOS DE MISE À JOUR DE L'APP (fichier GitHub)
-    //    Format : version_code, version_name, apk_url, file_size…
+    // 📦 MISE À JOUR DE L'APP (fichier dédié, format inchangé)
     // =========================================================
     public static final String APP_UPDATE_URL =
             "https://raw.githubusercontent.com/mrfanasina/baiboly-distribution/main/update.json";
 
     // =========================================================
-    // 🗂️ CATALOGUE DES AUTRES FICHIERS (downloads.json)
-    //    Catégories (application, données…) et versions publiées.
+    // 🗂️ CATALOGUE DES FICHIERS À TÉLÉCHARGER (lectures, etc.)
     // =========================================================
     public static final String DOWNLOADS_URL =
             "https://raw.githubusercontent.com/mrfanasina/baiboly-distribution/main/downloads.json";
@@ -96,36 +99,31 @@ public class ServerManifestClient {
     }
 
     // =========================
-    // 📄 MANIFEST
+    // 🗂️ CATALOGUE (downloads.json)
     // =========================
-    public List<DownloadEntry> fetchManifest() throws Exception {
-        String manifestUrl = getBaseUrl();
-        if (!manifestUrl.endsWith("/")) manifestUrl += "/";
-        manifestUrl += "manifest.json";
-
-        HttpURLConnection conn = open(new URL(manifestUrl));
+    /**
+     * Lit downloads.json et renvoie tous les éléments activés, à plat,
+     * avec leur catégorie et leur version.
+     */
+    public List<DownloadEntry> fetchDownloads() throws Exception {
+        HttpURLConnection conn = open(new URL(DOWNLOADS_URL));
         try {
-            String body = readAll(conn);
-            JSONObject json = new JSONObject(body);
-            JSONArray items = json.optJSONArray("items");
+            JSONObject json = new JSONObject(readAll(conn));
+            String base = firstNonEmpty(json.optString("base_url", ""), getBaseUrl());
 
             List<DownloadEntry> list = new ArrayList<>();
-            if (items != null) {
-                for (int i = 0; i < items.length(); i++) {
-                    JSONObject o = items.getJSONObject(i);
-                    DownloadEntry e = new DownloadEntry();
-                    e.setType(o.optString("type", DownloadEntry.TYPE_DATA));
-                    e.setTitle(o.optString("title", ""));
-                    e.setUrl(o.optString("url", ""));
-                    e.setSize(o.optLong("size", 0L));
-                    // Paquet de mise à jour de l'app : versionCode qui
-                    // déclenche (ou non) la carte « mise à jour ».
-                    if (DownloadEntry.TYPE_APP.equals(e.getType())) {
-                        e.setVersionCode(o.optInt("versionCode", 0));
-                        e.setVersionName(o.optString("versionName", null));
-                    }
-                    list.add(e);
-                }
+            JSONArray categories = json.optJSONArray("categories");
+            if (categories == null) {
+                // Variante tolérée : { "items": [ … ] } à plat.
+                parseItems(json.optJSONArray("items"), "", base, list);
+                return list;
+            }
+
+            for (int c = 0; c < categories.length(); c++) {
+                JSONObject category = categories.optJSONObject(c);
+                if (category == null) continue;
+                String categoryTitle = category.optString("title", "");
+                parseItems(category.optJSONArray("items"), categoryTitle, base, list);
             }
             return list;
         } finally {
@@ -133,53 +131,43 @@ public class ServerManifestClient {
         }
     }
 
-    // =========================
-    // 🗂️ CATALOGUE (downloads.json)
-    // =========================
-    /**
-     * Lit downloads.json et renvoie tous les éléments activés, à plat,
-     * avec leur catégorie et leur version.
-     *
-     * Format : { "categories": [ { "title": "…", "items": [ … ] } ] }
-     */
-    public List<DownloadEntry> fetchDownloads() throws Exception {
-        HttpURLConnection conn = open(new URL(DOWNLOADS_URL));
-        try {
-            JSONObject json = new JSONObject(readAll(conn));
-            JSONArray categories = json.optJSONArray("categories");
+    private void parseItems(JSONArray items, String categoryTitle, String base,
+                            List<DownloadEntry> out) {
+        if (items == null) return;
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject o = items.optJSONObject(i);
+            if (o == null || !o.optBoolean("enabled", true)) continue;
 
-            List<DownloadEntry> list = new ArrayList<>();
-            if (categories == null) return list;
+            String url = resolveUrl(base,
+                    firstNonEmpty(o.optString("url", ""), o.optString("apk_url", "")));
+            if (url.isEmpty()) continue;
 
-            for (int c = 0; c < categories.length(); c++) {
-                JSONObject category = categories.optJSONObject(c);
-                if (category == null) continue;
-                String categoryTitle = category.optString("title", "");
-                JSONArray items = category.optJSONArray("items");
-                if (items == null) continue;
-
-                for (int i = 0; i < items.length(); i++) {
-                    JSONObject o = items.optJSONObject(i);
-                    if (o == null || !o.optBoolean("enabled", true)) continue;
-
-                    String url = o.optString("url", "");
-                    if (url.isEmpty()) continue;
-
-                    DownloadEntry e = new DownloadEntry();
-                    e.setType(o.optString("type", DownloadEntry.TYPE_DATA));
-                    e.setTitle(o.optString("title", ""));
-                    e.setSubtitle(o.optString("description", ""));
-                    e.setUrl(url);
-                    e.setSize(o.optLong("file_size", 0L));
-                    e.setVersionName(o.optString("version", null));
-                    e.setPublishedAt(o.optString("published_at", ""));
-                    e.setCategoryTitle(categoryTitle);
-                    list.add(e);
-                }
+            String type = o.optString("type", DownloadEntry.TYPE_DATA);
+            if ("apk".equalsIgnoreCase(type) || "application".equalsIgnoreCase(type)) {
+                type = DownloadEntry.TYPE_APP;
             }
-            return list;
-        } finally {
-            conn.disconnect();
+
+            DownloadEntry e = new DownloadEntry();
+            e.setType(type);
+            e.setTitle(firstNonEmpty(o.optString("title", ""), o.optString("id", "")));
+            e.setSubtitle(o.optString("description", ""));
+            e.setUrl(url);
+            e.setSize(o.optLong("file_size", o.optLong("size", 0L)));
+            e.setVersionName(emptyToNull(firstNonEmpty(
+                    o.optString("version", ""), o.optString("version_name", ""))));
+            e.setVersionCode(o.optInt("version_code", o.optInt("versionCode", 0)));
+            e.setPublishedAt(o.optString("published_at", ""));
+            e.setCategoryTitle(categoryTitle);
+
+            String dataset = emptyToNull(o.optString("dataset", ""));
+            if (dataset == null) {
+                if (DownloadEntry.TYPE_PERIKOPA.equals(type)) dataset = "perikopa";
+                else if (DownloadEntry.TYPE_AINA.equals(type)
+                        || DownloadEntry.TYPE_MOFONAINA.equals(type)) dataset = "aina";
+            }
+            e.setDataset(dataset);
+            e.setYear(o.optInt("year", 0));
+            out.add(e);
         }
     }
 
@@ -226,38 +214,114 @@ public class ServerManifestClient {
     // =========================
     // ⬇️ TÉLÉCHARGEMENT
     // =========================
+
+    /** Suivi de progression (appelé sur le thread de téléchargement). */
+    public interface ProgressListener {
+        void onProgress(long received, long total);
+    }
+
+    /** Signal consulté à chaque bloc : pause / annulation. */
+    public interface CancelSignal {
+        boolean isCancelled();
+    }
+
+    /** Téléchargement interrompu (pause ou annulation) : le .part est gardé. */
+    public static class CancelledException extends Exception {
+        public CancelledException() {
+            super("Interrompu");
+        }
+    }
+
     /**
-     * Télécharge l'entrée et écrit le fichier dans
-     * &lt;app&gt;/downloads/. Retourne le fichier écrit.
-     * (Plus tard : importer le contenu dans la base ici.)
+     * Télécharge l'entrée et écrit le fichier dans <app>/downloads/.
+     * Reprend là où le fichier ".part" s'était arrêté.
      */
-    public File download(DownloadEntry entry) throws Exception {
+    public File download(DownloadEntry entry, ProgressListener listener,
+                         CancelSignal signal) throws Exception {
         if (entry.absoluteUrl(getBaseUrl()) == null) {
             throw new Exception("URL source inconnue");
         }
         URL url = new URL(entry.absoluteUrl(getBaseUrl()));
-        HttpURLConnection conn = open(url);
+
+        File dir = downloadsDir(context);
+        File target = new File(dir, safeFileName(entry));
+        File part = new File(dir, safeFileName(entry) + ".part");
+
+        long existing = part.exists() ? part.length() : 0;
+
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(15_000);
+        conn.setReadTimeout(30_000);
+        conn.setRequestMethod("GET");
+        conn.setInstanceFollowRedirects(true);
+        conn.setRequestProperty("Accept-Encoding", "identity");
+        if (existing > 0) {
+            conn.setRequestProperty("Range", "bytes=" + existing + "-");
+        }
 
         try {
-            File dir = downloadsDir(context);
-            File out = new File(dir, safeFileName(entry));
+            int code = conn.getResponseCode();
+            if (code != 200 && code != 206) {
+                throw new Exception("HTTP " + code + " : " + url);
+            }
+
+            boolean append = existing > 0 && code == 206;
+            if (!append) {
+                existing = 0;
+                //noinspection ResultOfMethodCallIgnored
+                part.delete();
+            }
+
+            long contentLength = conn.getContentLength();
+            long total = contentLength > 0 ? existing + contentLength : -1;
 
             InputStream in = conn.getInputStream();
-            OutputStream os = new FileOutputStream(out);
-            byte[] buffer = new byte[4096];
+            OutputStream os = new FileOutputStream(part, append);
+            byte[] buffer = new byte[8192];
+            long received = existing;
+            long lastNotify = 0;
             int len;
-            while ((len = in.read(buffer)) > 0) {
-                os.write(buffer, 0, len);
+            try {
+                while ((len = in.read(buffer)) > 0) {
+                    os.write(buffer, 0, len);
+                    received += len;
+                    if (signal != null && signal.isCancelled()) {
+                        throw new CancelledException();
+                    }
+                    long now = System.currentTimeMillis();
+                    if (listener != null && now - lastNotify > 150) {
+                        lastNotify = now;
+                        listener.onProgress(received, total);
+                    }
+                }
+                os.flush();
+            } finally {
+                try {
+                    os.close();
+                } catch (Exception ignored) {
+                }
+                try {
+                    in.close();
+                } catch (Exception ignored) {
+                }
             }
-            os.flush();
-            os.close();
-            in.close();
 
-            return out;
+            if (listener != null) listener.onProgress(received, total);
 
+            // Terminé : le .part devient le fichier final.
+            if (target.exists()) //noinspection ResultOfMethodCallIgnored
+                target.delete();
+            if (!part.renameTo(target)) {
+                throw new Exception("Tsy afaka manoratra ny rakitra");
+            }
+            return target;
         } finally {
             conn.disconnect();
         }
+    }
+
+    public File download(DownloadEntry entry) throws Exception {
+        return download(entry, null, null);
     }
 
     // =========================
@@ -270,6 +334,11 @@ public class ServerManifestClient {
         return dir;
     }
 
+    /** Fichier final d'une entrée dans le dossier downloads. */
+    public static File fileFor(Context context, DownloadEntry entry) {
+        return new File(downloadsDir(context), safeFileName(entry));
+    }
+
     /** Taille totale de tout ce qui a été téléchargé du serveur. */
     public static long downloadsSize(Context context) {
         File[] files = downloadsDir(context).listFiles();
@@ -278,6 +347,26 @@ public class ServerManifestClient {
             for (File f : files) size += f.length();
         }
         return size;
+    }
+
+    // =========================
+    // 🔧 OUTILS
+    // =========================
+    private static String resolveUrl(String base, String url) {
+        if (url == null || url.isEmpty()) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        if (base == null || base.isEmpty()) return url;
+        String b = base.endsWith("/") ? base : base + "/";
+        return b + (url.startsWith("/") ? url.substring(1) : url);
+    }
+
+    private static String firstNonEmpty(String left, String right) {
+        if (left != null && !left.isEmpty()) return left;
+        return right != null ? right : "";
+    }
+
+    private static String emptyToNull(String value) {
+        return value == null || value.isEmpty() ? null : value;
     }
 
     // =========================
@@ -307,7 +396,7 @@ public class ServerManifestClient {
         return bos.toString("UTF-8");
     }
 
-    private String safeFileName(DownloadEntry entry) {
+    private static String safeFileName(DownloadEntry entry) {
         String raw = entry != null ? entry.getUrl() : null;
         if (raw == null || raw.isEmpty()) raw = entry != null ? entry.getTitle() : null;
         if (raw == null || raw.isEmpty()) raw = "download_" + System.currentTimeMillis();

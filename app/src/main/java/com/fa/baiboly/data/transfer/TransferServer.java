@@ -172,6 +172,13 @@ public class TransferServer extends NanoHTTPD {
                     o.putOpt("label", it.label);
                     o.putOpt("play_title", it.playTitle);
                 }
+                if (TransferItem.TYPE_DATA.equals(it.type)) {
+                    o.put("dataset", it.dataset);
+                    o.put("year", it.datasetYear);
+                }
+                if (TransferItem.TYPE_FILE.equals(it.type)) {
+                    o.put("name", it.fileName());
+                }
                 arr.put(o);
             }
             root.put("items", arr);
@@ -208,6 +215,36 @@ public class TransferServer extends NanoHTTPD {
                 return newFixedLengthResponse(
                         Status.OK, "application/json; charset=utf-8",
                         json.toString());
+            } catch (Exception e) {
+                notifyServed(index, false);
+                return error(e);
+            }
+        }
+
+        // Jeu de données reconstruit depuis la base (perikopa, Aina…)
+        if (TransferItem.TYPE_DATA.equals(it.type)) {
+            try {
+                JSONObject json = TransferData.datasetToJson(context, it);
+                notifyServed(index, true);
+                return newFixedLengthResponse(
+                        Status.OK, "application/json; charset=utf-8",
+                        json.toString());
+            } catch (Exception e) {
+                notifyServed(index, false);
+                return error(e);
+            }
+        }
+
+        // Fichier déjà téléchargé (JSON ou APK)
+        if (TransferItem.TYPE_FILE.equals(it.type)) {
+            try {
+                File f = it.dataFile;
+                if (f == null || !f.exists()) {
+                    return error(new Exception("Rakitra tsy hita"));
+                }
+                InputStream in = trackStream(new FileInputStream(f), index);
+                return newFixedLengthResponse(Status.OK,
+                        mimeForName(f.getName()), in, f.length());
             } catch (Exception e) {
                 notifyServed(index, false);
                 return error(e);
@@ -311,6 +348,21 @@ public class TransferServer extends NanoHTTPD {
     private static String first(Map<String, List<String>> params, String key) {
         List<String> list = params.get(key);
         return list == null || list.isEmpty() ? null : list.get(0);
+    }
+
+    private static String mimeForName(String name) {
+        if (name == null) return "application/octet-stream";
+        String lower = name.toLowerCase(java.util.Locale.US);
+        if (lower.endsWith(".json")) return "application/json; charset=utf-8";
+        if (lower.endsWith(".apk")) {
+            return "application/vnd.android.package-archive";
+        }
+        return mimeType(extensionOf(lower));
+    }
+
+    private static String extensionOf(String name) {
+        int dot = name.lastIndexOf('.');
+        return dot < 0 ? "" : name.substring(dot + 1);
     }
 
     private static String mimeType(String ext) {

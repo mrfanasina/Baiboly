@@ -9,8 +9,8 @@ import android.os.Looper;
 import com.fa.baiboly.models.DownloadEntry;
 
 /**
- * Vérifie update.json en arrière-plan et retient la version que l'utilisateur
- * a choisie de ne plus voir.
+ * Vérifie le catalogue downloads.json en arrière-plan et retient la version
+ * que l'utilisateur a choisie de ne plus voir.
  *
  * Le point orange du menu et le pop-up de démarrage utilisent tous les deux
  * {@link #isDismissed(Context, DownloadEntry)} : quand la version publiée
@@ -30,7 +30,7 @@ public final class AppUpdateNotifier {
     private AppUpdateNotifier() {
     }
 
-    /** Interroge update.json hors du thread principal. */
+    /** Interroge downloads.json hors du thread principal. */
     public static void check(Context context, Callback callback) {
         final Context app = context.getApplicationContext();
         final Handler main = new Handler(Looper.getMainLooper());
@@ -42,13 +42,9 @@ public final class AppUpdateNotifier {
             } catch (Exception ignored) {
             }
 
-            if (update != null) {
-                int code = update.getVersionCode();
-                // Sans versionCode, on fait confiance au serveur (comme la
-                // carte de l'écran Downloads).
-                if (code > 0 && code <= installedVersionCode(app)) {
-                    update = null;
-                }
+            if (update != null && !update.isNewerThan(
+                    installedVersionCode(app), installedVersionName(app))) {
+                update = null;
             }
 
             final DownloadEntry result = update;
@@ -64,6 +60,17 @@ public final class AppUpdateNotifier {
             return pi.versionCode;
         } catch (Exception e) {
             return 0;
+        }
+    }
+
+    /** versionName installée, "" si illisible. */
+    public static String installedVersionName(Context context) {
+        try {
+            PackageInfo pi = context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0);
+            return pi.versionName != null ? pi.versionName : "";
+        } catch (Exception e) {
+            return "";
         }
     }
 

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-25",
+  "categories": [
+    {
+      "id": "application",
+      "title": "Application Baiboly",
+      "order": 1,
+      "items": [
+        {
+          "id": "baiboly-5.3",
+          "title": "Baiboly 5.3",
+          "description": "Dernière version de l'application.",
+          "type": "apk",
+          "url": "https://github.com/mrfanasina/Baiboly-Releases/releases/download/5.3/Baiboly-v5.3.apk",
+          "mime_type": "application/vnd.android.package-archive",
+          "file_name": "Baiboly-v5.3.apk",
+          "file_size": 38945634,
+          "sha256": "",
+          "version": "5.3",
+          "status": ["latest", "stable"],
+          "published_at": "2026-11-15",
+          "language": "mg",
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "vakiteny",
+      "title": "Vakiteny sy Perikopa",
+      "order": 2,
+      "items": [
+        {
+          "id": "perikopa-2028",
+          "title": "Perikopa 2028",
+          "description": "Vakiteny isam-andro · taona 2028",
+          "type": "perikopa",
+          "dataset": "perikopa",
+          "year": 2028,
+          "url": "https://data.fjkm.mg/updates/perikopa/2028.json",
+          "file_size": 66622,
+          "published_at": "2027-11-01",
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "id": "aina",
+      "title": "Mofonaina sy Aina",
+      "order": 3,
+      "items": [
+        {
+          "id": "aina-2028",
+          "title": "Aina sy Fahasalamana 2028",
+          "description": "Mofonaina isan-andro · taona 2028",
+          "type": "aina",
+          "dataset": "aina",
+          "year": 2028,
+          "url": "https://data.fjkm.mg/updates/aina/2028.json",
+          "file_size": 100232,
+          "published_at": "2027-11-01",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

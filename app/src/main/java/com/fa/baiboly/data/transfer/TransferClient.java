@@ -41,9 +41,22 @@ public final class TransferClient {
         public String ext;
         public String label;
         public String playTitle;
+        // data (jeu de données reconstruit) :
+        public String dataset;
+        public int year;
+        // file (JSON/APK déjà téléchargé) :
+        public String name;
 
         public boolean isProgram() {
             return TransferItem.TYPE_PROGRAM.equals(type);
+        }
+
+        public boolean isData() {
+            return TransferItem.TYPE_DATA.equals(type);
+        }
+
+        public boolean isFile() {
+            return TransferItem.TYPE_FILE.equals(type);
         }
     }
 
@@ -83,6 +96,9 @@ public final class TransferClient {
                     it.ext = o.optString("ext", "mp3");
                     it.label = o.optString("label", null);
                     it.playTitle = o.optString("play_title", null);
+                    it.dataset = o.optString("dataset", null);
+                    it.year = o.optInt("year", 0);
+                    it.name = o.optString("name", null);
                     manifest.items.add(it);
                 }
             }

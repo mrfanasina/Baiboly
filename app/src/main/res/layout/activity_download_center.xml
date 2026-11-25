@@ -41,7 +41,7 @@
             android:fillViewport="true"
             android:clipToPadding="false"
             android:paddingTop="12dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="28dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -56,7 +56,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
                     app:cardCornerRadius="24dp"
-                    app:cardElevation="6dp">
+                    app:cardElevation="4dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -89,7 +89,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
-                                    android:text="Data avy amin'ny serveur : mofonaina, perikopa…"
+                                    android:text="Perikopa, mofonaina sy Aina · vaovao isan-taona"
                                     android:textColor="#DDFFFFFF"
                                     android:textSize="13sp" />
                             </LinearLayout>
@@ -103,50 +103,75 @@
                         </LinearLayout>
 
                         <!-- Chips stat -->
-                        <LinearLayout
+                        <HorizontalScrollView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
-                            android:orientation="horizontal">
+                            android:scrollbars="none">
 
-                            <TextView
-                                android:id="@+id/chipRecent"
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:background="@drawable/bg_download_chip"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:text="0 voasintona"
-                                android:textColor="@color/white"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
+                                android:orientation="horizontal">
 
-                            <TextView
-                                android:id="@+id/chipAvailable"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:background="@drawable/bg_download_chip"
-                                android:paddingHorizontal="12dp"
-                                android:paddingVertical="6dp"
-                                android:text="0 misy hisintona"
-                                android:textColor="@color/white"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
+                                <TextView
+                                    android:id="@+id/chipRecent"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_download_chip"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:paddingTop="6dp"
+                                    android:paddingBottom="6dp"
+                                    android:text="0 voasintona"
+                                    android:textColor="@color/white"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/chipAvailable"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:background="@drawable/bg_download_chip"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:paddingTop="6dp"
+                                    android:paddingBottom="6dp"
+                                    android:text="0 misy hisintona"
+                                    android:textColor="@color/white"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/chipQueue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:background="@drawable/bg_download_chip"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:paddingTop="6dp"
+                                    android:paddingBottom="6dp"
+                                    android:text="0 mandeha"
+                                    android:textColor="@color/white"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </HorizontalScrollView>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
                 <!-- ================================================= -->
-                <!-- 📊 CARTE MÉMOIRE UTILISÉE -->
+                <!-- 💾 ANGONA EO AN-TOERANA -->
                 <!-- ================================================= -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
-                    android:layout_marginTop="14dp"
+                    android:layout_marginTop="12dp"
                     app:cardBackgroundColor="?attr/colorSurface"
-                    app:cardCornerRadius="20dp"
+                    app:cardCornerRadius="18dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="1dp"
                     app:strokeColor="@color/card_stroke">
@@ -154,98 +179,62 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="16dp">
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
 
-                        <!-- Titre -->
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_storage"
+                            app:tint="?attr/colorPrimary" />
+
                         <LinearLayout
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:src="@drawable/ic_memory"
-                                app:tint="?attr/colorPrimary" />
+                            android:layout_weight="1"
+                            android:layout_marginStart="12dp"
+                            android:orientation="vertical">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="10dp"
-                                android:text="Fahatsiarovana ampiasaina"
+                                android:text="Angona eo an-toerana"
                                 android:textColor="?attr/colorOnSurface"
-                                android:textSize="15sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
-                        </LinearLayout>
 
-                        <!-- Barre RAM -->
-                        <com.google.android.material.progressindicator.LinearProgressIndicator
-                            android:id="@+id/progressRam"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            app:trackCornerRadius="6dp"
-                            app:indicatorColor="?attr/colorPrimary" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="1dp"
+                                android:text="Base + rakitra voasintona"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textSize="11sp" />
+                        </LinearLayout>
 
                         <TextView
-                            android:id="@+id/textRam"
+                            android:id="@+id/textStorage"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:textSize="12sp"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        <!-- Séparateur -->
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginVertical="12dp"
-                            android:background="@color/window_stroke" />
-
-                        <!-- Stockage app -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
-                                android:src="@drawable/ic_storage"
-                                app:tint="@color/secondary_text" />
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_weight="1"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="12dp"
-                                android:text="Angona eo an-toerana (base + downloads)"
-                                android:textSize="13sp"
-                                android:textColor="?attr/colorOnSurface" />
-
-                            <TextView
-                                android:id="@+id/textStorage"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="13sp"
-                                android:textStyle="bold"
-                                android:textColor="?attr/colorPrimary" />
-                        </LinearLayout>
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorPrimary" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- ================================================= -->
-                <!-- ⬆️ MISE À JOUR DE L'APP (manifest "type":"app",
-                     visible si versionCode > version installée) -->
+                <!-- ⬆️ MISE À JOUR DE L'APP -->
                 <!-- ================================================= -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardUpdate"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="12dp"
                     android:visibility="gone"
                     app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="20dp"
@@ -290,7 +279,6 @@
                                 android:textStyle="bold" />
                         </LinearLayout>
 
-                        <!-- Version installée sur l'appareil -->
                         <TextView
                             android:id="@+id/textCurrentVersion"
                             android:layout_width="match_parent"
@@ -299,7 +287,6 @@
                             android:textSize="12sp"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
-                        <!-- Changelog complet (update.json) -->
                         <TextView
                             android:id="@+id/textUpdateDesc"
                             android:layout_width="match_parent"
@@ -325,7 +312,6 @@
                             android:layout_marginTop="10dp"
                             android:orientation="horizontal">
 
-                            <!-- Mise à jour directe (télécharge puis ouvre l'installeur) -->
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnUpdateNow"
                                 android:layout_width="0dp"
@@ -336,7 +322,6 @@
                                 app:iconGravity="textStart"
                                 app:iconPadding="8dp" />
 
-                            <!-- Téléchargement de l'APK vers un dossier choisi -->
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnDownloadApk"
                                 style="@style/Widget.Material3.Button.TonalButton"
@@ -353,31 +338,164 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- ================================================= -->
-                <!-- ↩️ VOASINTONA FARANY -->
+                <!-- ⏳ EN COURS (file de téléchargement) -->
                 <!-- ================================================= -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="18dp"
-                    android:layout_marginTop="20dp"
-                    android:text="Voasintona farany"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginTop="22dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="4dp"
+                        android:layout_height="18dp"
+                        android:background="?attr/colorPrimary"
+                        android:layout_marginEnd="10dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Mandeha / miandry"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnClearFinished"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="10dp"
+                        android:text="Hamafa vita"
+                        android:textSize="11sp"
+                        android:visibility="gone" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/textRecentEmpty"
+                    android:id="@+id/textQueueEmpty"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="18dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="6dp"
+                    android:text="Tsy misy téléchargement mandeha. Safidio ny rakitra eto ambany."
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerQueue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:nestedScrollingEnabled="false" />
+
+                <!-- ================================================= -->
+                <!-- ✅ VOASINTONÀ (téléchargements terminés) -->
+                <!-- ================================================= -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
+                    android:layout_marginTop="22dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="4dp"
+                        android:layout_height="18dp"
+                        android:background="@color/success"
+                        android:layout_marginEnd="10dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Voasintonà"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/chipDownloaded"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textDownloadedEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="6dp"
                     android:text="Tsy mbola misy voasintona"
                     android:textSize="13sp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:visibility="gone" />
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/recyclerRecent"
+                    android:id="@+id/recyclerDownloaded"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:nestedScrollingEnabled="false" />
+
+                <!-- ================================================= -->
+                <!-- 🎵 FEO VOASINTONA (playback) -->
+                <!-- ================================================= -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
+                    android:layout_marginTop="22dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="4dp"
+                        android:layout_height="18dp"
+                        android:background="@color/orange"
+                        android:layout_marginEnd="10dp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="Feo voasintona"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/chipPlayback"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/textPlaybackEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="6dp"
+                    android:text="Tsy mbola misy feo nalaina"
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/recyclerPlayback"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
@@ -390,9 +508,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="18dp"
-                    android:layout_marginTop="22dp"
+                    android:layout_marginEnd="18dp"
+                    android:layout_marginTop="24dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
+
+                    <View
+                        android:layout_width="4dp"
+                        android:layout_height="18dp"
+                        android:background="?attr/colorPrimary"
+                        android:layout_marginEnd="10dp" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -403,17 +528,88 @@
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <!-- État du serveur -->
                     <TextView
                         android:id="@+id/textServerState"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="18dp"
                         android:textSize="11sp"
+                        android:textStyle="bold"
                         android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
-                <!-- État vide / chargement serveur -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="18dp"
+                    android:layout_marginTop="4dp"
+                    android:text="Safidio ny rakitra tianao, dia manindria « Alaina manontolo »."
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <!-- Sélection groupée -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="10dp"
+                    app:cardBackgroundColor="?attr/colorSurface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/card_stroke">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/textSelectedCount"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:layout_height="wrap_content"
+                                android:text="0 voasafidy"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="?attr/colorOnSurface" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnSelectAll"
+                                style="@style/Widget.Material3.Button.TextButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minWidth="0dp"
+                                android:paddingHorizontal="8dp"
+                                android:text="Safidio rehetra"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDownloadAll"
+                            android:layout_width="match_parent"
+                            android:layout_height="44dp"
+                            android:layout_marginTop="4dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="Alaina manontolo"
+                            android:textSize="13sp"
+                            app:icon="@drawable/ic_download"
+                            app:iconGravity="textStart"
+                            app:iconPadding="8dp"
+                            app:iconSize="18dp"
+                            app:cornerRadius="22dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <TextView
                     android:id="@+id/textAvailableEmpty"
                     android:layout_width="match_parent"

@@ -34,6 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.fa.baiboly.R;
 import com.fa.baiboly.data.ColorManager;
+import com.fa.baiboly.data.download.DownloadHistoryStore;
 import com.fa.baiboly.data.download.ServerManifestClient;
 import com.fa.baiboly.data.fandaharana.FandaharanaService;
 import com.fa.baiboly.data.playback.PlaybackStore;
@@ -1304,10 +1305,18 @@ public class TransferActivity extends AppCompatActivity {
             TransferClient.ReceivedItem it = manifest.items.get(i);
             String label = it.title == null || it.title.isEmpty()
                     ? it.type : it.title;
-            String sub = it.isProgram()
-                    ? getString(R.string.transfer_program_type_label)
-                    : TransferData.humanSize(it.size) + " · "
-                    + it.category.toUpperCase() + " " + it.number;
+            String sub;
+            if (it.isProgram()) {
+                sub = getString(R.string.transfer_program_type_label);
+            } else if (it.isData()) {
+                sub = "Angona · hiditra ao amin'ny base";
+            } else if (it.isFile()) {
+                sub = TransferData.humanSize(it.size) + " · rakitra";
+            } else {
+                sub = TransferData.humanSize(it.size) + " · "
+                        + (it.category == null ? "" : it.category.toUpperCase())
+                        + " " + it.number;
+            }
             ProgressEntry entry = new ProgressEntry(label, sub);
             entry.index = i;
             receiveQueue.add(entry);
@@ -1376,6 +1385,12 @@ public class TransferActivity extends AppCompatActivity {
                     if (it.isProgram()) {
                         JSONObject json = new JSONObject(readAsText(downloaded));
                         TransferData.importProgram(this, json);
+                    } else if (it.isData()) {
+                        // Perikopa / Aina : importé dans la base (il y reste).
+                        TransferData.importReceivedData(this, downloaded);
+                    } else if (it.isFile()) {
+                        // JSON ou APK déjà téléchargé : gardé tel quel.
+                        TransferData.importReceivedFile(this, downloaded);
                     } else {
                         String ext = (it.ext != null && !it.ext.isEmpty())
                                 ? it.ext : "mp3";
@@ -1526,6 +1541,12 @@ public class TransferActivity extends AppCompatActivity {
                 updateServerSelection();
                 saveSelection();
             });
+
+            // Appui long : supprimer l'élément (fichier, playback, programme).
+            holder.itemView.setOnLongClickListener(v -> {
+                confirmDeleteSendItem(it);
+                return true;
+            });
         }
 
         @Override
@@ -1586,6 +1607,54 @@ public class TransferActivity extends AppCompatActivity {
         }
         return getString(R.string.transfer_progress_title) + "  ·  "
                 + getString(R.string.transfer_queue_summary, done, running, waiting);
+    }
+
+    /**
+     * Suppression depuis la liste d'envoi : un fichier téléchargé (JSON/APK)
+     * peut être effacé, un playback ou un programme aussi. Un jeu de données
+     * reconstruit depuis la base n'a rien à supprimer.
+     */
+    private void confirmDeleteSendItem(TransferItem item) {
+        if (TransferItem.TYPE_DATA.equals(item.type)) {
+            Toast.makeText(this,
+                    "Angona averina avy amin'ny base : tsy misy rakitra hofafana",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String label = TransferItem.TYPE_FILE.equals(item.type)
+                && item.dataFile != null ? item.dataFile.getName() : item.title;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Hamafa ?")
+                .setMessage(label + "\n\nHo voafafa amin'ny finday io rakitra io.")
+                .setPositiveButton("Hamafa", (d, w) -> deleteSendItem(item))
+                .setNegativeButton("Tsia", null)
+                .show();
+    }
+
+    private void deleteSendItem(TransferItem item) {
+        boolean ok = false;
+        if (TransferItem.TYPE_FILE.equals(item.type)) {
+            File file = item.dataFile;
+            if (file != null) {
+                new DownloadHistoryStore(this).deleteByPath(file.getAbsolutePath());
+                ok = file.delete();
+            }
+        } else if (TransferItem.TYPE_PROGRAM.equals(item.type) && item.program != null) {
+            fandaharanaService.deleteProgram(item.program.getId());
+            ok = true;
+        } else if (TransferItem.TYPE_PLAYBACK.equals(item.type) && item.playback != null) {
+            ok = playbackStore.delete(item.playback.getId());
+        }
+
+        if (ok) {
+            sendChecked.remove(item.key());
+            sendItems.remove(item);
+            buildCategoryChips();
+            applyFilter();
+            saveSelection();
+        }
+        Toast.makeText(this, ok ? "Voafafa" : "Tsy voafafa",
+                Toast.LENGTH_SHORT).show();
     }
 
     /**

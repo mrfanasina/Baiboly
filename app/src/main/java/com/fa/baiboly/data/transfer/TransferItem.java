@@ -2,6 +2,7 @@ package com.fa.baiboly.data.transfer;
 
 import android.net.Uri;
 
+import com.fa.baiboly.models.Playback;
 import com.fa.baiboly.models.Program;
 
 import java.io.File;
@@ -13,13 +14,20 @@ import java.io.File;
  * - type "playback" : un fichier audio de chant (mp3/m4a/…), servi en binaire
  *   soit via File local, soit directement via l'URI content:// du dossier
  *   SAF choisi par l'utilisateur (streamé à la volée, sans copie).
+ * - type "data"     : un jeu de données RE-CONSTRUIT depuis la base
+ *   (perikopa, Aina sy Fahasalamana) au moment de l'envoi — rien n'est
+ *   stocké en double.
+ * - type "file"     : un fichier déjà téléchargé (JSON ou APK) présent
+ *   dans le dossier downloads.
  */
 public class TransferItem {
 
     public static final String TYPE_PROGRAM = "program";
     public static final String TYPE_PLAYBACK = "playback";
+    public static final String TYPE_DATA = "data";
+    public static final String TYPE_FILE = "file";
 
-    /** "program" ou "playback". */
+    /** "program", "playback", "data" ou "file". */
     public String type;
     /** Titre affichable. */
     public String title;
@@ -45,6 +53,18 @@ public class TransferItem {
     public String playTitle;
     /** Label de version ("1", "Serveur"…), null si non nommée. */
     public String label;
+    /** Playback d'origine (suppression depuis la liste d'envoi). */
+    public Playback playback;
+
+    // ---- data (reconstruit depuis la base) ----
+    /** "perikopa" ou "aina". */
+    public String dataset;
+    /** Année du jeu de données (0 si sans objet). */
+    public int datasetYear;
+
+    // ---- file (déjà téléchargé) ----
+    /** Fichier à servir (JSON téléchargé, APK…). */
+    public File dataFile;
 
     /**
      * Clé stable de l'item (persistance de la sélection d'un écran à
@@ -54,6 +74,12 @@ public class TransferItem {
         if (TYPE_PROGRAM.equals(type)) {
             return "p|" + (title == null ? "" : title);
         }
+        if (TYPE_DATA.equals(type)) {
+            return "d|" + dataset + "|" + datasetYear;
+        }
+        if (TYPE_FILE.equals(type)) {
+            return "f|" + (dataFile == null ? title : dataFile.getName());
+        }
         return "b|" + category + "|" + number + "|"
                 + (label == null ? "" : label) + "|"
                 + (playTitle == null ? "" : playTitle);
@@ -61,6 +87,12 @@ public class TransferItem {
 
     /** Nom de fichier proposé au récepteur. */
     public String fileName() {
+        if (TYPE_FILE.equals(type) && dataFile != null && dataFile.getName() != null) {
+            return dataFile.getName();
+        }
+        if (TYPE_DATA.equals(type)) {
+            return dataset + "-" + datasetYear + ".json";
+        }
         if (TYPE_PLAYBACK.equals(type) && file != null && file.getName() != null) {
             return file.getName();
         }

@@ -23,6 +23,8 @@ public class DownloadEntry {
     public static final String TYPE_APP = "app";
     public static final String TYPE_PERIKOPA = "perikopa";
     public static final String TYPE_MOFONAINA = "mofonaina";
+    /** Aina sy Fahasalamana (méditation quotidienne, JSON). */
+    public static final String TYPE_AINA = "aina";
     public static final String TYPE_DATA = "data";
     /** Entrée spéciale (pas un vrai téléchargement) : titre de catégorie. */
     public static final String TYPE_HEADER = "__header";
@@ -45,6 +47,19 @@ public class DownloadEntry {
     private String categoryTitle;
     /** Liste des nouveautés (update.json : champ "changelog"). */
     private List<String> changelog = new ArrayList<>();
+
+    /** Jeu de données importable : "perikopa", "aina"… (null si fichier simple). */
+    private String dataset;
+    /** Année couverte par le fichier (0 si inconnue). */
+    private int year;
+
+    // ---- état local (rempli par DownloadHistoryStore) ----
+    /** Fichier écrit sur l'appareil (null si rien / importé puis effacé). */
+    private String localPath;
+    /** Dernier état connu dans la file (voir DownloadQueue.STATE_*). */
+    private int state;
+    /** true : le contenu a été importé dans la base (donc protégé). */
+    private boolean imported;
 
     public DownloadEntry() {
     }
@@ -137,6 +152,46 @@ public class DownloadEntry {
         this.changelog = changelog != null ? changelog : new ArrayList<>();
     }
 
+    public String getDataset() {
+        return dataset;
+    }
+
+    public void setDataset(String dataset) {
+        this.dataset = dataset;
+    }
+
+    public int getYear() {
+        return year;
+    }
+
+    public void setYear(int year) {
+        this.year = year;
+    }
+
+    public String getLocalPath() {
+        return localPath;
+    }
+
+    public void setLocalPath(String localPath) {
+        this.localPath = localPath;
+    }
+
+    public int getState() {
+        return state;
+    }
+
+    public void setState(int state) {
+        this.state = state;
+    }
+
+    public boolean isImported() {
+        return imported;
+    }
+
+    public void setImported(boolean imported) {
+        this.imported = imported;
+    }
+
     /** Fabrique une ligne d'en-tête de catégorie pour l'écran Downloads. */
     public static DownloadEntry header(String title) {
         DownloadEntry e = new DownloadEntry();
@@ -147,6 +202,58 @@ public class DownloadEntry {
 
     public boolean isHeader() {
         return TYPE_HEADER.equals(type);
+    }
+
+    /**
+     * Jeu de données correspondant au type (perikopa / aina / mofonaina),
+     * ou null si le fichier n'est pas importable dans la base.
+     */
+    public String inferDataset() {
+        if (dataset != null && !dataset.isEmpty()) return dataset;
+        if (TYPE_PERIKOPA.equals(type)) return "perikopa";
+        if (TYPE_AINA.equals(type) || TYPE_MOFONAINA.equals(type)) return "aina";
+        return null;
+    }
+
+    /**
+     * Compare deux versions numériques ("5.2" &lt; "5.10").
+     *
+     * @return négatif si left est plus ancienne, 0 si égales (ou inconnues).
+     */
+    public static int compareVersions(String left, String right) {
+        if (left == null || left.isEmpty() || right == null || right.isEmpty()) return 0;
+        String[] a = left.split("\\.");
+        String[] b = right.split("\\.");
+        int count = Math.max(a.length, b.length);
+        for (int i = 0; i < count; i++) {
+            int va = i < a.length ? parseVersionPart(a[i]) : 0;
+            int vb = i < b.length ? parseVersionPart(b[i]) : 0;
+            if (va != vb) return va < vb ? -1 : 1;
+        }
+        return 0;
+    }
+
+    private static int parseVersionPart(String part) {
+        try {
+            return Integer.parseInt(part.trim());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Cette entrée est-elle plus récente que la version installée ?
+     * Utilise versionCode s'il est connu, sinon le numéro de version.
+     */
+    public boolean isNewerThan(int installedCode, String installedName) {
+        if (versionCode > 0 && installedCode > 0) return versionCode > installedCode;
+        if (versionCode > 0) return true;
+        if (versionName != null && !versionName.isEmpty()) {
+            if (installedName == null || installedName.isEmpty()) return true;
+            return compareVersions(versionName, installedName) > 0;
+        }
+        // Sans aucune version publiée : on fait confiance au serveur.
+        return true;
     }
 
     /** Résolution de l'URL relative par rapport à BASE_URL. */

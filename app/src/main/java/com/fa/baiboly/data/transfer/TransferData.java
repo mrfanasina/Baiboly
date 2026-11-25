@@ -3,6 +3,8 @@ package com.fa.baiboly.data.transfer;
 import android.content.Context;
 import android.net.Uri;
 
+import com.fa.baiboly.data.download.DataImportService;
+import com.fa.baiboly.data.download.ServerManifestClient;
 import com.fa.baiboly.data.fandaharana.FandaharanaService;
 import com.fa.baiboly.data.playback.PlaybackStore;
 import com.fa.baiboly.models.Playback;
@@ -16,6 +18,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Calendar;
+import java.util.Locale;
 
 /**
  * Prépare ce qui va partir (sender) et importe ce qui arrive (receiver) :
@@ -76,7 +80,113 @@ public final class TransferData {
                 items.add(it);
             }
         }
+
+        // Données reconstruites depuis la base + fichiers déjà téléchargés
+        // (JSON perikopa/aina, APK de mise à jour…).
+        addDataItems(context, items);
+        addDownloadedItems(context, items);
         return items;
+    }
+
+    /**
+     * Ajoute les jeux de données présents dans la base : ils sont
+     * reconstruits en JSON au moment où le récepteur les demande.
+     */
+    private static void addDataItems(Context context, java.util.List<TransferItem> items) {
+        DataImportService service = new DataImportService(context);
+        // La base Aina est alimentée à la première ouverture de l'écran
+        // Aina ; on la prépare ici pour pouvoir l'envoyer dans tous les cas.
+        if (!service.hasAina()) {
+            try {
+                new com.fa.baiboly.data.AinaMofonainaRepository(context)
+                        .syncFromJson();
+            } catch (Exception ignored) {
+            }
+        }
+        int year = Calendar.getInstance().get(Calendar.YEAR);
+
+        for (int y : new int[]{year, year + 1}) {
+            if (!service.hasPerikopa(y)) continue;
+            TransferItem it = new TransferItem();
+            it.type = TransferItem.TYPE_DATA;
+            it.dataset = DataImportService.DATASET_PERIKOPA;
+            it.datasetYear = y;
+            it.title = "Perikopa " + y + " (BD)";
+            it.subtitle = "Vakiteny isam-andro · averina avy amin'ny base";
+            it.size = 0;
+            items.add(it);
+        }
+
+        if (service.hasAina()) {
+            TransferItem it = new TransferItem();
+            it.type = TransferItem.TYPE_DATA;
+            it.dataset = DataImportService.DATASET_AINA;
+            it.datasetYear = year;
+            it.title = "Aina sy Fahasalamana (BD)";
+            it.subtitle = "Mofonaina isan-andro · averina avy amin'ny base";
+            it.size = 0;
+            items.add(it);
+        }
+    }
+
+    /** Ajoute les fichiers déjà téléchargés (JSON + APK) du dossier downloads. */
+    private static void addDownloadedItems(Context context,
+                                          java.util.List<TransferItem> items) {
+        File[] files = ServerManifestClient.downloadsDir(context).listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            if (f == null || !f.isFile()) continue;
+            String name = f.getName().toLowerCase(Locale.US);
+            if (name.endsWith(".part")) continue;
+            boolean apk = name.endsWith(".apk");
+            if (!apk && !name.endsWith(".json")) continue;
+
+            TransferItem it = new TransferItem();
+            it.type = TransferItem.TYPE_FILE;
+            it.dataFile = f;
+            it.title = f.getName();
+            it.subtitle = (apk ? "APK" : "JSON") + " · " + humanSize(f.length());
+            it.size = f.length();
+            items.add(it);
+        }
+    }
+
+    /** JSON d'un jeu de données, reconstruit depuis la base au moment de l'envoi. */
+    public static JSONObject datasetToJson(Context context, TransferItem item)
+            throws Exception {
+        DataImportService service = new DataImportService(context);
+        if (DataImportService.DATASET_PERIKOPA.equals(item.dataset)) {
+            return service.exportPerikopa(item.datasetYear);
+        }
+        return service.exportAina();
+    }
+
+    /** Importe un jeu de données reçu (perikopa ou Aina) dans la base. */
+    public static String importReceivedData(Context context, File json)
+            throws Exception {
+        JSONObject root = new JSONObject(readText(json));
+        DataImportService.ImportResult result =
+                new DataImportService(context).importFile(json, null);
+        if (!result.success) throw new Exception(result.message);
+        return root.optString("format", "data") + " · " + result.message;
+    }
+
+    /** Enregistre un fichier reçu (JSON/APK) dans le dossier downloads. */
+    public static File importReceivedFile(Context context, File temp) throws Exception {
+        File dir = ServerManifestClient.downloadsDir(context);
+        File dest = new File(dir, temp.getName());
+        copy(new java.io.FileInputStream(temp), new FileOutputStream(dest));
+        return dest;
+    }
+
+    private static String readText(File file) throws Exception {
+        java.io.FileInputStream fis = new java.io.FileInputStream(file);
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int len;
+        while ((len = fis.read(buffer)) > 0) bos.write(buffer, 0, len);
+        fis.close();
+        return bos.toString("UTF-8");
     }
 
     /**
@@ -140,6 +250,7 @@ public final class TransferData {
             it.ext = extensionOf(uriLastSegment(uriText));
         }
 
+        it.playback = pb;
         it.title = pb.getTitle() != null && !pb.getTitle().trim().isEmpty()
                 ? pb.getTitle().trim()
                 : pb.getCategory().toUpperCase() + " " + pb.getNumber();

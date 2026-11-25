@@ -1,0 +1,27 @@
+{
+  "format": "baiboly-aina",
+  "version": 1,
+  "cover": {
+    "title": "AINA SY FAHASALAMANA",
+    "subtitle": "Mofonaina isan'andro",
+    "institution": "LYCEE FJKM RANDZAVOLA IVOHIDAHY – FIANARANTSOA",
+    "author": "Rolph RANDRIAMANANTSOA"
+  },
+  "days": [
+    {
+      "id": "2028-01-01",
+      "date_iso": "2028-01-01",
+      "day_index": 1,
+      "day_name_mg": "ASABOTSY",
+      "day_name_en": "Saturday",
+      "month_mg": "JANOARY",
+      "month_fr": "Janvier",
+      "year": 2028,
+      "bible_reference": "Sal. 121:1–8",
+      "theme_slogan": "Ny Tompo no mpiambina anao",
+      "meditation": "…",
+      "message_today": "…",
+      "prayer": "…"
+    }
+  ]
+}
