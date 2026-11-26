@@ -1531,7 +1531,8 @@ public class TransferActivity extends AppCompatActivity {
             holder.textTitle.setText(it.title);
             holder.textSubtitle.setText(isProgram
                     ? it.subtitle
-                    : it.category.toUpperCase() + " " + it.number + " · " + it.subtitle);
+                    : (it.category == null ? "" : it.category.toUpperCase() + " ")
+                            + it.number + " · " + it.subtitle);
             holder.checkItem.setOnCheckedChangeListener(null);
             holder.checkItem.setChecked(sendChecked.contains(key));
             holder.checkItem.setOnCheckedChangeListener((b, c) -> {

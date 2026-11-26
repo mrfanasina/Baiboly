@@ -31,6 +31,7 @@ import com.fa.baiboly.data.ColorManager;
 import com.fa.baiboly.data.perikopa.PerikopaService;
 import com.fa.baiboly.data.reading.ReadingService;
 import com.fa.baiboly.databinding.ActivityMofonainaYearlyListBinding;
+import com.fa.baiboly.models.LiturgicalSeason;
 import com.fa.baiboly.models.PerikopaDay;
 import com.fa.baiboly.ui.verses.VersesActivity;
 
@@ -59,15 +60,6 @@ public class MofonainaYearlyListActivity extends AppCompatActivity {
     private static final String[] DAY_NAMES = {
             "Alahady", "Alatsinainy", "Talata", "Alarobia", "Alakamisy", "Zoma", "Asabotsy"
     };
-
-    private static final int COLOR_ADVENT = Color.parseColor("#1BCF25");
-    private static final int COLOR_KAREM = Color.parseColor("#7B1FA2");
-
-    private static final int COLOR_CHRISTMAS = Color.parseColor("#1565C0");
-    private static final int COLOR_EASTER = Color.parseColor("#E0E0E0");
-    private static final int COLOR_PENTECOST = Color.parseColor("#D32F2F");
-    private static final int COLOR_EPIPHANY = Color.parseColor("#2E7D32");
-    private static final int COLOR_ORDINARY = Color.parseColor("#2E7D32");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,10 +148,15 @@ public class MofonainaYearlyListActivity extends AppCompatActivity {
             } else {
                 ReadingService readingService = new ReadingService(this);
                 Map<String, String> readings = readingService.getAllReadingsForYear(year);
+
+                // Les périodes viennent de liturgical_seasons (base)
+                List<LiturgicalSeason> seasons = perikopaService.getAllSeasons();
+
                 for (Map.Entry<String, String> entry : readings.entrySet()) {
                     YearlyItem item = new YearlyItem();
                     item.date = entry.getKey();
                     item.reading = entry.getValue();
+                    item.season = PerikopaService.seasonForDate(seasons, item.date);
                     item.type = "mofonaina";
                     item.isToday = item.date.equals(todayStr);
                     items.add(item);
@@ -348,7 +345,8 @@ public class MofonainaYearlyListActivity extends AppCompatActivity {
                     h.cardLohahevitra.setVisibility(View.VISIBLE);
                     h.textLohahevitra.setText(listItem.lohahevitra);
 
-                    int seasonColor = COLOR_ORDINARY;
+                    int seasonColor = ColorManager.getLiturgicalColor(
+                            MofonainaYearlyListActivity.this, null);
                     for (int i = position + 1; i < items.size(); i++) {
                         if (items.get(i).yearlyItem != null) {
                             seasonColor = getSeasonColor(items.get(i).yearlyItem.season);
@@ -582,10 +580,11 @@ public class MofonainaYearlyListActivity extends AppCompatActivity {
     }
 
     /**
-     * Couleur de base choisie dans les paramètres (plus de couleur par saison).
+     * Couleur liturgique de la saison (stockée dans liturgical_seasons).
+     * Retombe sur la couleur principale du thème si la saison est inconnue.
      */
     private int getSeasonColor(String season) {
-        return ColorManager.getPrimary(this);
+        return ColorManager.getLiturgicalColor(this, season);
     }
 
     private int blendColor(int color, float ratio) {

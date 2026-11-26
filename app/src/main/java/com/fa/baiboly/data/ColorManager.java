@@ -5,8 +5,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
 
 import com.fa.baiboly.R;
+
+import java.util.Locale;
 
 /**
  * Gestion centrale des deux couleurs de base choisies par l'utilisateur
@@ -94,6 +97,40 @@ public final class ColorManager {
     public static int getSecondary(Context context) {
         int index = prefs(context).getInt(KEY_SECONDARY, UNSET);
         return index >= 0 && index < SWATCHES.length ? SWATCHES[index] : DEFAULT_SECONDARY;
+    }
+
+    /**
+     * Couleur liturgique d'une saison, telle que stockée dans
+     * liturgical_seasons.season (epifania, karemy, paska, pentekosta,
+     * advento, krismasy). Retombe sur la couleur principale du thème
+     * quand la saison est inconnue.
+     */
+    public static int getLiturgicalColor(Context context, String season) {
+        if (season == null || season.trim().isEmpty()) return getPrimary(context);
+
+        switch (season.trim().toLowerCase(Locale.ROOT)) {
+            case "advento":
+            case "advent":
+                return ContextCompat.getColor(context, R.color.liturgical_advent);
+            case "krismasy":
+            case "noely":
+            case "christmas":
+                return ContextCompat.getColor(context, R.color.liturgical_krismasy);
+            case "karemy":
+            case "careme":
+                return ContextCompat.getColor(context, R.color.liturgical_karemy);
+            case "paska":
+            case "paques":
+                return ContextCompat.getColor(context, R.color.liturgical_paska);
+            case "pentekosta":
+            case "pentecote":
+                return ContextCompat.getColor(context, R.color.liturgical_pentekosta);
+            case "epifania":
+            case "epiphanie":
+                return ContextCompat.getColor(context, R.color.liturgical_epifania);
+            default:
+                return getPrimary(context);
+        }
     }
 
     /**

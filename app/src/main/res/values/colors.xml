@@ -88,13 +88,13 @@
     <color name="window_stroke">#E5E7EB</color>
 
     <!-- Liturgical season colors -->
-    <color name="liturgical_advent">#28A21F</color>
-    <color name="liturgical_krismasy">#FDD835</color>
-    <color name="liturgical_karemy">#7B1FA2</color>
-    <color name="liturgical_paska">#FDD835</color>
-    <color name="liturgical_pentekosta">#D32F2F</color>
-    <color name="liturgical_epifania">#FDD835</color>
-    <color name="liturgical_ordinary">#2E7D32</color>
+    <color name="liturgical_advent">#218A3A</color>
+    <color name="liturgical_krismasy">#2A87C8</color>
+    <color name="liturgical_karemy">#6C3174</color>
+    <color name="liturgical_paska">#FAF9F7</color>
+    <color name="liturgical_pentekosta">#E4472E</color>
+    <color name="liturgical_epifania">#2A87C8</color>
+    <color name="liturgical_ordinary">#218A3A</color>
 
     <!-- Module Litorjia (programme de culte) -->
     <color name="lit_icon_tint">#C40E5A</color>

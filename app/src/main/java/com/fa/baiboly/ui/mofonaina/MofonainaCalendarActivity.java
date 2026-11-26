@@ -165,8 +165,12 @@ public class MofonainaCalendarActivity extends AppCompatActivity {
             ReadingService readingService = new ReadingService(this);
             Map<Integer, String> readings = readingService.getAllReadingsForMonth(year, month);
 
+            // Périodes liturgiques du mois, lues dans liturgical_seasons
+            PerikopaService perikopaService = new PerikopaService(this);
+            Map<Integer, String> seasons = perikopaService.getSeasonByDayForMonth(year, month);
+
             runOnUiThread(() -> {
-                buildCalendarGrid(year, month, readings, null);
+                buildCalendarGrid(year, month, readings, seasons);
             });
         }).start();
     }
@@ -190,7 +194,7 @@ public class MofonainaCalendarActivity extends AppCompatActivity {
     // =========================================================
     private void buildCalendarGrid(int year, int month,
                                    Map<Integer, String> readings,
-                                   Map<Integer, PerikopaDay> perikopaDays) {
+                                   Map<Integer, String> seasons) {
 
         Calendar cal = Calendar.getInstance();
         cal.set(year, month - 1, 1);
@@ -218,6 +222,7 @@ public class MofonainaCalendarActivity extends AppCompatActivity {
             item.isToday = (d == todayDay);
             item.reading = readings != null ? readings.get(d) : null;
             item.hasReading = item.reading != null && !item.reading.isEmpty();
+            item.season = seasons != null ? seasons.get(d) : null;
             items.add(item);
         }
 
@@ -313,10 +318,11 @@ public class MofonainaCalendarActivity extends AppCompatActivity {
      * Saisons DB: epifania, karemy, paska, pentekosta, advento, krismasy
      */
     /**
-     * Couleur de base choisie dans les paramètres (plus de couleur par saison).
+     * Couleur liturgique de la saison (stockée dans liturgical_seasons).
+     * Retombe sur la couleur principale du thème si la saison est inconnue.
      */
     private static int getSeasonColor(Context context, String season) {
-        return ColorManager.getPrimary(context);
+        return ColorManager.getLiturgicalColor(context, season);
     }
 
     /**

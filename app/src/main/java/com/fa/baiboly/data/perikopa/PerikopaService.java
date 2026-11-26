@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.os.Build;
 
 import com.fa.baiboly.data.bible.BibleService;
+import com.fa.baiboly.models.LiturgicalSeason;
 import com.fa.baiboly.models.PerikopaDay;
 import com.fa.baiboly.models.Reading;
 import com.fa.baiboly.data.parser.ReadingParser;
@@ -112,6 +113,56 @@ public class PerikopaService {
     // Get all lohahevitra (themes) for a year
     public Map<String, String> getAllLohahevitraForYear(int year) {
         return repository.getAllLohahevitraForYear(year);
+    }
+
+    // =========================
+    // PÉRIODES LITURGIQUES (table liturgical_seasons)
+    // =========================
+    public List<LiturgicalSeason> getAllSeasons() {
+        return repository.getAllSeasons();
+    }
+
+    /** Période liturgique d'une date (null si hors base). */
+    public String getSeasonForDate(String date) {
+        LiturgicalSeason season = repository.getSeasonForDate(date);
+        return season != null ? season.getSeason() : null;
+    }
+
+    /**
+     * Saison liturgique par jour du mois, lue dans la base.
+     * Clé = jour du mois, valeur = nom de la saison (epifania, karemy...).
+     */
+    public Map<Integer, String> getSeasonByDayForMonth(int year, int month) {
+
+        List<LiturgicalSeason> seasons = repository.getAllSeasons();
+        Map<Integer, String> result = new HashMap<>();
+
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        cal.set(year, month - 1, 1);
+        int daysInMonth = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH);
+
+        for (int day = 1; day <= daysInMonth; day++) {
+            String date = year + "-" + (month < 10 ? "0" : "") + month
+                    + "-" + (day < 10 ? "0" : "") + day;
+            String season = seasonForDate(seasons, date);
+            if (season != null) result.put(day, season);
+        }
+
+        return result;
+    }
+
+    /** Résout une date dans une liste de saisons déjà chargée. */
+    public static String seasonForDate(List<LiturgicalSeason> seasons, String date) {
+        if (seasons == null || date == null) return null;
+        for (LiturgicalSeason season : seasons) {
+            String start = season.getStartDate();
+            String end = season.getEndDate();
+            if (start == null || end == null) continue;
+            if (date.compareTo(start) >= 0 && date.compareTo(end) <= 0) {
+                return season.getSeason();
+            }
+        }
+        return null;
     }
 
     // =========================

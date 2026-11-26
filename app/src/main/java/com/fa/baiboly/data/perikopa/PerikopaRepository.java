@@ -5,8 +5,11 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import com.fa.baiboly.data.DatabaseHelper;
+import com.fa.baiboly.models.LiturgicalSeason;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PerikopaRepository {
@@ -15,6 +18,62 @@ public class PerikopaRepository {
 
     public PerikopaRepository(Context context) {
         this.dbHelper = new DatabaseHelper(context);
+    }
+
+    // 🎨 Toutes les saisons liturgiques (périodes) stockées en base
+    public List<LiturgicalSeason> getAllSeasons() {
+
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        List<LiturgicalSeason> seasons = new ArrayList<>();
+
+        Cursor cursor = db.rawQuery(
+                "SELECT id, year, season, start_date, end_date " +
+                        "FROM liturgical_seasons ORDER BY start_date ASC",
+                null
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                seasons.add(new LiturgicalSeason(
+                        cursor.getInt(0),
+                        cursor.getString(1),
+                        cursor.getString(2),
+                        cursor.getString(3),
+                        cursor.getString(4)
+                ));
+            } while (cursor.moveToNext());
+        }
+        if (cursor != null) cursor.close();
+
+        return seasons;
+    }
+
+    // 🎨 Période liturgique d'une date donnée (yyyy-MM-dd)
+    public LiturgicalSeason getSeasonForDate(String date) {
+
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        Cursor cursor = db.rawQuery(
+                "SELECT id, year, season, start_date, end_date " +
+                        "FROM liturgical_seasons " +
+                        "WHERE start_date <= ? AND end_date >= ? " +
+                        "ORDER BY start_date DESC LIMIT 1",
+                new String[]{date, date}
+        );
+
+        LiturgicalSeason season = null;
+        if (cursor != null && cursor.moveToFirst()) {
+            season = new LiturgicalSeason(
+                    cursor.getInt(0),
+                    cursor.getString(1),
+                    cursor.getString(2),
+                    cursor.getString(3),
+                    cursor.getString(4)
+            );
+        }
+        if (cursor != null) cursor.close();
+
+        return season;
     }
 
     // 📅 Tous les versets d’un jour

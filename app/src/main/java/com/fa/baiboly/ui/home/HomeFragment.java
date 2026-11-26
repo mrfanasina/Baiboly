@@ -379,8 +379,9 @@ public class HomeFragment extends Fragment {
             binding.textPerikopaDate.setVisibility(View.GONE);
         }
 
-        // Couleur de base choisie dans les paramètres (plus de couleur par saison)
-        int seasonColor = ColorManager.getPrimary(requireContext());
+        // Couleur liturgique de la saison du jour (lue dans la base)
+        int seasonColor = ColorManager.getLiturgicalColor(
+                requireContext(), perikopa.getSeason());
 
         List<String> verses = perikopa.getVerses();
         binding.perikopaContainer.removeAllViews();
