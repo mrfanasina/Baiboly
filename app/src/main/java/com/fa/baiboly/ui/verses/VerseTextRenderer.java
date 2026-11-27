@@ -311,7 +311,8 @@ public final class VerseTextRenderer {
                 annotationRanges.add(new int[]{start, end});
             }
 
-            addBibleReferenceSpans(builder, rawText, verseTextStart, annotationRanges);
+            addBibleReferenceSpans(builder, rawText, verseTextStart, annotationRanges,
+                    bookShortName, chapterForSpan);
 
             // =====================================================
             // MOTS DU DICTIONNAIRE : tous soulignés (même répétés)
@@ -375,12 +376,14 @@ public final class VerseTextRenderer {
     private void addBibleReferenceSpans(SpannableStringBuilder builder,
                                         String rawText,
                                         int textStart,
-                                        List<int[]> excludedRanges) {
+                                        List<int[]> excludedRanges,
+                                        String bookName,
+                                        int chapter) {
 
         if (callbacks == null) return;
 
         List<BibleRefParser.DetectedRef> detected =
-                BibleRefParser.detectReferences(rawText);
+                BibleRefParser.detectReferences(rawText, bookName, chapter);
 
         for (BibleRefParser.DetectedRef dr : detected) {
 

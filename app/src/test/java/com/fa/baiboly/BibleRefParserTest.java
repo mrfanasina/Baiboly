@@ -301,4 +301,87 @@ public class BibleRefParserTest {
                 "chapitre 3 verset 12 et nombre 42");
         assertTrue(refs.isEmpty());
     }
+
+    @Test
+    public void detectionNeSoulignePasLesMotsAvantLeLivre() {
+        // Le livre seul est souligné, pas « Tao amin'ny I ».
+        String text = "Tao amin'ny I Mpanjaka 4 : 3 ny";
+        List<BibleRefParser.DetectedRef> refs =
+                BibleRefParser.detectReferences(text);
+        assertEquals(1, refs.size());
+        assertEquals("1Mpa 4:3", refs.get(0).reference);
+        assertEquals("I Mpanjaka 4 : 3",
+                text.substring(refs.get(0).start, refs.get(0).end));
+    }
+
+    @Test
+    public void detectionFormesColleesAuLivre() {
+        List<BibleRefParser.DetectedRef> refs = BibleRefParser.detectReferences(
+                "Heb11,1 et 1Kor13,4-7");
+        assertEquals(2, refs.size());
+        assertEquals("Heb 11:1", refs.get(0).reference);
+        assertEquals("1Kor 13:4-7", refs.get(1).reference);
+    }
+
+    @Test
+    public void detectionGardeLePrefixeNumeriqueDuLivre() {
+        List<BibleRefParser.DetectedRef> refs = BibleRefParser.detectReferences(
+                "3 Jao 1 et 1 Jaona 2");
+        assertEquals(2, refs.size());
+        assertEquals("3Jao 1", refs.get(0).reference);
+        assertEquals("1Jao 2", refs.get(1).reference);
+    }
+
+    @Test
+    public void detectionPrefixeRomain() {
+        String text = "II Samoela 15 : 1) ; II Korintiana 2 : 9";
+        List<BibleRefParser.DetectedRef> refs =
+                BibleRefParser.detectReferences(text);
+        assertEquals(2, refs.size());
+        assertEquals("2Sam 15:1", refs.get(0).reference);
+        assertEquals("2Kor 2:9", refs.get(1).reference);
+        assertEquals("II Samoela 15 : 1",
+                text.substring(refs.get(0).start, refs.get(0).end));
+    }
+
+    @Test
+    public void detectionMarqueurLivreAnd() {
+        String text = "Joda and.9 sy Obadia and.20";
+        List<BibleRefParser.DetectedRef> refs =
+                BibleRefParser.detectReferences(text);
+        assertEquals(2, refs.size());
+        assertEquals("Jod 1:9", refs.get(0).reference);
+        assertEquals("Oba 1:20", refs.get(1).reference);
+        assertEquals("Obadia and.20",
+                text.substring(refs.get(1).start, refs.get(1).end));
+    }
+
+    @Test
+    public void detectionMarqueursAvecContexte() {
+        List<BibleRefParser.DetectedRef> refs =
+                BibleRefParser.detectReferences(
+                        "ny and.23 sy andininy 16 ary v-10", "Asa", 2);
+        assertEquals(3, refs.size());
+        assertEquals("Asa 2:23", refs.get(0).reference);
+        assertEquals("Asa 2:16", refs.get(1).reference);
+        assertEquals("Asa 2:10", refs.get(2).reference);
+    }
+
+    @Test
+    public void detectionMarqueurSuitReferencePrecedente() {
+        List<BibleRefParser.DetectedRef> refs =
+                BibleRefParser.detectReferences(
+                        "Salamo 18 dia mitovy amin'ny II Samoela 22. Jereo and.31.");
+        assertEquals(3, refs.size());
+        assertEquals("Sal 18", refs.get(0).reference);
+        assertEquals("2Sam 22", refs.get(1).reference);
+        assertEquals("2Sam 22:31", refs.get(2).reference);
+    }
+
+    @Test
+    public void detectionIgnoreLaNumerotationDeListe() {
+        List<BibleRefParser.DetectedRef> refs = BibleRefParser.detectReferences(
+                "1. Ny anaran'ny boky.\n2. Faharoa : 4.15 sy 7.8 ary 12.");
+        assertTrue(refs.isEmpty());
+    }
 }

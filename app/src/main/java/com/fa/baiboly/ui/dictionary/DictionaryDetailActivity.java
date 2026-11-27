@@ -35,25 +35,25 @@ import com.fa.baiboly.ui.common.ReadingLinks;
 import com.fa.baiboly.ui.common.ScrollTitleAnimator;
 import com.fa.baiboly.ui.verses.VersesActivity;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Fiche d'un mot du dictionnaire : grande entrée, définition complète liée
- * (références bibliques + renvois « Jereo … »), et la liste des versets où le
- * mot apparaît. Le titre du mot glisse dans la barre du haut au défilement,
- * comme dans Fihirana.
+ * (références bibliques, renvois « Jereo … » et tous les autres mots du
+ * dictionnaire soulignés), et un bouton vers la liste complète des versets
+ * où le mot apparaît. Le titre du mot glisse dans la barre du haut au
+ * défilement, comme dans Fihirana.
  */
 public class DictionaryDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_DICT_ID = "dict_id";
 
-    private static final int MAX_OCCURRENCES = 100;
+    /** Aperçu sur la fiche : au-delà, le bouton ouvre la liste complète. */
+    private static final int PREVIEW_OCCURRENCES = 3;
+
     private static final String PREFS_NAME = "app_settings";
     private static final String KEY_TEXT_SIZE = "text_size";
     private static final String KEY_JUSTIFICATION = "justification_mode";
@@ -137,35 +137,20 @@ public class DictionaryDetailActivity extends AppCompatActivity {
 
             final DictionaryEntry entry = service.getById(dictId);
             final int total = service.countOccurrences(dictId);
-            final List<DictionaryOccurrence> occurrences =
-                    service.getOccurrences(dictId, MAX_OCCURRENCES);
-
-            // Résolution des renvois « Jereo … » hors du thread principal.
-            final Map<String, Integer> dictionaryLinks = new HashMap<>();
-            if (entry != null && entry.getDefinition() != null) {
-                Set<String> seen = new HashSet<>();
-                for (ReadingLinks.CrossRef ref
-                        : ReadingLinks.findCrossReferences(entry.getDefinition())) {
-                    if (!seen.add(ref.key)) {
-                        continue;
-                    }
-                    Integer id = service.findIdByHeadword(ref.target);
-                    if (id != null) {
-                        dictionaryLinks.put(ref.key, id);
-                    }
-                }
-            }
+            final List<DictionaryOccurrence> preview =
+                    service.getOccurrences(dictId, PREVIEW_OCCURRENCES);
+            final Map<String, Integer> wordIndex = service.getWordIndex();
 
             mainHandler.post(() -> {
                 if (isFinishing() || isDestroyed()) return;
-                bind(entry, total, occurrences, dictionaryLinks);
+                bind(entry, total, preview, wordIndex);
             });
         });
     }
 
     private void bind(DictionaryEntry entry, int total,
-                      List<DictionaryOccurrence> occurrences,
-                      Map<String, Integer> dictionaryLinks) {
+                      List<DictionaryOccurrence> preview,
+                      Map<String, Integer> wordIndex) {
 
         if (entry == null) {
             finish();
@@ -196,24 +181,28 @@ public class DictionaryDetailActivity extends AppCompatActivity {
         ReadingLinks.apply(
                 binding.tvDictDefinition,
                 entry.getDefinition(),
-                dictionaryLinks,
+                wordIndex,
+                entry.getId(),
                 this::openVerse,
                 id -> open(this, id));
 
+        // Trois versets en aperçu ; le bouton ouvre la liste complète sur son
+        // propre écran.
         binding.containerDictVerses.removeAllViews();
 
-        if (occurrences == null || occurrences.isEmpty()) {
+        if (total <= 0 || preview == null || preview.isEmpty()) {
             binding.cardDictVerses.setVisibility(View.GONE);
         } else {
             binding.cardDictVerses.setVisibility(View.VISIBLE);
-            binding.tvDictCount.setText(total > MAX_OCCURRENCES
-                    ? MAX_OCCURRENCES + " / " + total + " andininy"
-                    : total + " andininy");
+            binding.tvDictCount.setText(total + " andininy");
+            binding.btnDictAllVerses.setText("Hijery ny andininy rehetra (" + total + ")");
+            binding.btnDictAllVerses.setOnClickListener(v ->
+                    DictionaryOccurrencesActivity.open(this, dictId, currentHeadword));
 
             LayoutInflater inflater = getLayoutInflater();
             int gap = Math.round(6 * getResources().getDisplayMetrics().density);
 
-            for (DictionaryOccurrence occurrence : occurrences) {
+            for (DictionaryOccurrence occurrence : preview) {
                 View row = inflater.inflate(
                         R.layout.item_dictionary_verse,
                         binding.containerDictVerses,
@@ -231,7 +220,6 @@ public class DictionaryDetailActivity extends AppCompatActivity {
                 row.setLayoutParams(lp);
 
                 row.setOnClickListener(v -> openVerse(occurrence.getReference()));
-
                 binding.containerDictVerses.addView(row);
             }
         }

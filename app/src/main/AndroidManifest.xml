@@ -104,6 +104,10 @@
             android:name=".ui.dictionary.DictionaryDetailActivity"
             android:exported="false"
             android:label="Diksionera Baiboly" />
+        <activity
+            android:name=".ui.dictionary.DictionaryOccurrencesActivity"
+            android:exported="false"
+            android:label="Andininy misy azy" />
         <activity android:name=".ui.fihirana.SolfaActivity" />
         <activity android:name=".ui.fanekena.FanekenaActivity" />
         <!-- 📝 Notes de lecture : écran central + éditeur enrichi -->

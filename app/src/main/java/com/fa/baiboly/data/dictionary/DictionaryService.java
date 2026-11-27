@@ -11,10 +11,14 @@ import com.fa.baiboly.models.DictionaryOccurrence;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Accès au dictionnaire biblique stocké dans baiboly_mg.db
@@ -35,6 +39,18 @@ public final class DictionaryService {
     private final DatabaseHelper dbHelper;
 
     private Integer entryCount;
+
+    /**
+     * Index mot normalisé -> identifiant de fiche, pour souligner dans une
+     * définition tous les mots qui ont leur propre entrée. Construit une fois
+     * par processus (3 000 entrées, plus les alias).
+     */
+    private volatile Map<String, Integer> wordIndex;
+
+    /** Fragments de vedette qui ne doivent jamais devenir des liens. */
+    private static final Set<String> INDEX_STOPWORDS = new HashSet<>(java.util.Arrays.asList(
+            "ny", "sy", "na", "ary", "dia", "no", "fa", "ka", "ho", "i", "ilay",
+            "amin", "an", "ao", "eto", "izay", "koa", "vetivety"));
 
     /**
      * Cache borné des liens d'un verset (accès le plus récent en dernier).
@@ -206,6 +222,102 @@ public final class DictionaryService {
         } finally {
             c.close();
         }
+    }
+
+    /**
+     * Index de tous les mots du dictionnaire (vedettes et alias), normalisés
+     * comme {@link #normalize(String)}, vers leur fiche. C'est ce qui permet
+     * de souligner les renvois internes d'une définition.
+     */
+    public Map<String, Integer> getWordIndex() {
+        Map<String, Integer> index = wordIndex;
+        if (index != null) {
+            return index;
+        }
+
+        synchronized (this) {
+            if (wordIndex != null) {
+                return wordIndex;
+            }
+
+            Map<String, Integer> built = new HashMap<>();
+            SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+            Cursor c = db.rawQuery(
+                    "SELECT id, headword FROM bible_dictionary", null);
+            try {
+                while (c.moveToNext()) {
+                    addHeadwordKeys(built, c.getString(1), c.getInt(0));
+                }
+            } finally {
+                c.close();
+            }
+
+            c = db.rawQuery(
+                    "SELECT dict_id, alias FROM dictionary_aliases", null);
+            try {
+                while (c.moveToNext()) {
+                    addIndexKey(built, c.getString(1), c.getInt(0));
+                }
+            } finally {
+                c.close();
+            }
+
+            wordIndex = built;
+            return built;
+        }
+    }
+
+    /**
+     * Une vedette peut contenir une précision entre parenthèses et plusieurs
+     * formes séparées par « , », « na » ou « sy » : chacune devient un lien.
+     */
+    private static void addHeadwordKeys(Map<String, Integer> index,
+                                        String headword, int id) {
+        if (headword == null) {
+            return;
+        }
+
+        int paren = headword.indexOf('(');
+        String base = paren > 0 ? headword.substring(0, paren) : headword;
+
+        for (String alternative : base.split("\\s*,\\s*")) {
+            // « , na ADORAMA » : le séparateur virgule laisse le « na » en tête.
+            String cleaned = alternative.replaceFirst("(?i)^(?:na|sy)\\s+", "");
+            for (String part : cleaned.split("(?i)\\s+(?:na|sy)\\s+")) {
+                addIndexKey(index, part, id);
+            }
+        }
+    }
+
+    private static void addIndexKey(Map<String, Integer> index,
+                                    String raw, int id) {
+        String key = normalize(raw);
+
+        while (!key.isEmpty()
+                && ".,;:!?\"".indexOf(key.charAt(key.length() - 1)) >= 0) {
+            key = key.substring(0, key.length() - 1).trim();
+        }
+
+        if (key.length() < 3 || INDEX_STOPWORDS.contains(key)) {
+            return;
+        }
+        // N'accepte que de vrais mots (lettres, apostrophes, traits d'union,
+        // espaces) : pas de « No.6 » ni de référence biblique.
+        if (!key.matches("[\\p{L}'’\\- ]+")) {
+            return;
+        }
+
+        if (!index.containsKey(key)) {
+            index.put(key, id);
+        }
+    }
+
+    /**
+     * Tous les versets où l'entrée apparaît, sans plafond d'affichage.
+     */
+    public List<DictionaryOccurrence> getAllOccurrences(int dictId) {
+        return getOccurrences(dictId, Integer.MAX_VALUE);
     }
 
     public synchronized int count() {

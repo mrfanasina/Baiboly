@@ -767,60 +767,14 @@ public class MofonainaActivity extends AppCompatActivity {
 
         SpannableString spannable = new SpannableString(text);
 
-        List<int[]> handledRanges = new ArrayList<>();
-
-        // ---------------------------------------------------
-        // 1) Marqueur "and" / "andininy" (lecture du jour).
-        //    Nécessite un verset du jour connu : sinon on saute (les
-        //    références classiques restent détectées plus bas).
-        // ---------------------------------------------------
-
-        // Marqueur "and" / "andininy" : pattern UNIQUE centralisé (liste
-        // "39b,42,44" et lettres d'article incluses — voir BibleRefParser).
-        // La référence utilisée est "<livre du jour> <chapitre>:<suffixe>"
-        // ex "Asa 2:39b,42,44" -> parsée par la liste discrète de
-        // BibleRefParser : versets 39 (complet), 42, 44 affichés, "b"
-        // conservé pur l'affichage du titre.
-        Pattern andPattern = BibleRefParser.AND_MARKER_PATTERN;
-
-        if (dayBook != null && dayChapter > 0) {
-
-            Matcher andMatcher = andPattern.matcher(text);
-
-            while (andMatcher.find()) {
-
-                int start = andMatcher.start();
-                int end = andMatcher.end();
-
-                String verseSuffix = andMatcher.group(1); // toujours non-null désormais
-
-                String reference = dayBook + " " + dayChapter
-                        + ":" + verseSuffix;
-
-                addBibleClickableSpan(spannable, start, end, reference);
-                handledRanges.add(new int[]{start, end});
-            }
-        }
-
-        // ---------------------------------------------------
-        // 2) Références classiques (détection centralisée) : "Jao 3.1",
-        //    "Heb11,1", "1 Kor 13:4-7"... Validées contre la table des
-        //    livres via BibleRefParser -> pas de faux positifs.
-        // ---------------------------------------------------
-
-        List<BibleRefParser.DetectedRef> detected =
-                BibleRefParser.detectReferences(text);
-
-        for (BibleRefParser.DetectedRef dr : detected) {
-
-            int start = dr.start;
-            int end = dr.end;
-
-            if (overlapsHandledRange(handledRanges, start, end)) {
-                continue;
-            }
-
-            addBibleClickableSpan(spannable, start, end, dr.reference);
+        // Détection centralisée (BibleRefParser) : références complètes
+        // ("Jao 3.1", "Heb11,1", "II Samoela 15:1"...) ET marqueurs de
+        // versets ("and 39b,42,44", "andininy 16", "v-10") résolus avec le
+        // livre/chapitre de la lecture du jour. Un numéro de liste ("1.")
+        // n'est jamais pris pour un verset.
+        for (BibleRefParser.DetectedRef dr
+                : BibleRefParser.detectReferences(text, dayBook, dayChapter)) {
+            addBibleClickableSpan(spannable, dr.start, dr.end, dr.reference);
         }
 
         textView.setText(spannable);

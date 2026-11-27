@@ -33,8 +33,6 @@ import com.fa.baiboly.ui.verses.VerseBottomSheetFragment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import io.noties.markwon.Markwon;
 
@@ -71,19 +69,11 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     // DÉTECTION DE RÉFÉRENCES BIBLIQUES
     // =====================================================
 
-    // Marqueur "and" / "andininy" : pattern UNIQUE centralisé dans
-    // BibleRefParser (lettres d'article "39b", listes "39b,42,44"... voyez
-    // la doc du pattern là-bas). Un simple emploi du mot dans une phrase
-    // ("andininy manontolo") ne matche pas : numéro obligatoire.
-    private static final Pattern AND_MARKER_PATTERN =
-            BibleRefParser.AND_MARKER_PATTERN;
-
-    // Références classiques : détection centralisée via BibleRefParser
-    // (table des livres officielle, "Heb11,1", "1Kor13,4-7"...). L'ancienne
-    // regex locale est remplacée par detectReferences() qui valide chaque
-    // match contre la table des livres et renvoie la référence normalisée.
-    // NB : le marqueur "and"/"andininy" reste géré localement (ci-dessus),
-    // il n'est pas un nom de livre.
+    // Détection centralisée via BibleRefParser : références complètes
+    // ("Heb11,1", "I Korintiana 13:4-7", "II Samoela 15:1"...) ET marqueurs
+    // de versets ("and 39b,42,44", "andininy 16", "v-10") résolus avec le
+    // livre/chapitre de contexte. Un simple numéro de liste ("1.", "2.") ne
+    // matche jamais.
 
     public ChatAdapter(FragmentManager fragmentManager,
                        @Nullable String contextBook,
@@ -278,50 +268,24 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
         }
 
-        List<int[]> handledRanges = new ArrayList<>();
-        boolean foundAny = false;
-
-        if (contextBook != null && contextChapter != null) {
-
-            Matcher andMatcher = AND_MARKER_PATTERN.matcher(plain);
-
-            while (andMatcher.find()) {
-
-                int start = andMatcher.start();
-                int end = andMatcher.end();
-
-                if (overlapsAnyRange(excludedRanges, start, end)) {
-                    continue;
-                }
-
-                String verseSuffix = andMatcher.group(1); // toujours non-null désormais
-
-                String reference = contextBook + " " + contextChapter
-                        + ":" + verseSuffix;
-
-                addBibleClickableSpan(spannable, start, end, reference);
-                handledRanges.add(new int[]{start, end});
-                foundAny = true;
-            }
+        int contextChapterNumber = 0;
+        try {
+            contextChapterNumber = contextChapter == null
+                    ? 0 : Integer.parseInt(contextChapter.trim());
+        } catch (NumberFormatException ignored) {
         }
 
-        List<BibleRefParser.DetectedRef> detected =
-                BibleRefParser.detectReferences(plain);
+        boolean foundAny = false;
 
-        for (BibleRefParser.DetectedRef dr : detected) {
+        for (BibleRefParser.DetectedRef dr
+                : BibleRefParser.detectReferences(
+                        plain, contextBook, contextChapterNumber)) {
 
-            int start = dr.start;
-            int end = dr.end;
-
-            if (overlapsAnyRange(excludedRanges, start, end)) {
+            if (overlapsAnyRange(excludedRanges, dr.start, dr.end)) {
                 continue;
             }
 
-            if (overlapsAnyRange(handledRanges, start, end)) {
-                continue;
-            }
-
-            addBibleClickableSpan(spannable, start, end, dr.reference);
+            addBibleClickableSpan(spannable, dr.start, dr.end, dr.reference);
             foundAny = true;
         }
 

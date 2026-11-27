@@ -29,7 +29,9 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li>références bibliques détectées par {@link BibleRefParser} ;</li>
  *   <li>renvois du dictionnaire du type « Jereo Andriamanitra » : seul le
- *       mot cible est souligné et ouvre sa fiche.</li>
+ *       mot cible est souligné et ouvre sa fiche ;</li>
+ *   <li>tous les mots de la définition qui ont leur propre fiche : soulignés
+ *       et cliquables eux aussi.</li>
  * </ul>
  *
  * <p>On n'utilise volontairement pas {@code LinkMovementMethod} : il désactive
@@ -68,6 +70,13 @@ public final class ReadingLinks {
     private static final Pattern JEREO = Pattern.compile(
             "(?i)\\bjereo\\s+(?:koa\\s+)?([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’\\- ]*?)"
                     + "(?=\\s*[).;,:!?\\n»«”\"]|$)");
+
+    /** Un mot simple (apostrophes et traits d'union internes compris). */
+    private static final Pattern WORD = Pattern.compile(
+            "[\\p{L}]+(?:['’\\-][\\p{L}]+)*");
+
+    /** Longueur maximale d'une vedette en nombre de mots (« Anjelin'ny Tompo »). */
+    private static final int MAX_HEADWORD_WORDS = 5;
 
     private ReadingLinks() {
     }
@@ -126,16 +135,19 @@ public final class ReadingLinks {
     /** Applique uniquement les liens bibliques. */
     public static void applyBible(TextView textView, String text,
                                   BibleRefHandler handler) {
-        apply(textView, text, null, handler, null);
+        apply(textView, text, null, -1, handler, null);
     }
 
     /**
-     * Applique les liens bibliques et, si {@code dictLinks} est fourni, les
-     * renvois de dictionnaire. {@code dictLinks} est indexé par
-     * {@link #normalizeTarget(String)}.
+     * Applique les liens bibliques et, si {@code dictWords} est fourni, tous
+     * les mots de dictionnaire du texte. {@code dictWords} est l'index
+     * {@link com.fa.baiboly.data.dictionary.DictionaryService#getWordIndex()}
+     * (mot normalisé -> identifiant de fiche). {@code excludeDictId} évite de
+     * souligner le mot dont on lit justement la définition.
      */
     public static void apply(TextView textView, String text,
-                             Map<String, Integer> dictLinks,
+                             Map<String, Integer> dictWords,
+                             int excludeDictId,
                              BibleRefHandler bibleHandler,
                              DictRefHandler dictHandler) {
         if (textView == null) {
@@ -148,10 +160,30 @@ public final class ReadingLinks {
         int color = linkColor(textView);
         boolean hasLinks = false;
 
-        if (dictLinks != null && !dictLinks.isEmpty() && dictHandler != null) {
+        // Références bibliques d'abord : elles sont prioritaires sur un mot du
+        // dictionnaire (« Mpanjaka », « Solomona ») présent dans la référence.
+        if (bibleHandler != null) {
+            for (BibleRefParser.DetectedRef detected
+                    : BibleRefParser.detectReferences(source)) {
+                spannable.setSpan(
+                        new LinkSpan(color,
+                                () -> bibleHandler.open(detected.reference)),
+                        detected.start, detected.end,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                usedRanges.add(new int[]{detected.start, detected.end});
+                hasLinks = true;
+            }
+        }
+
+        if (dictWords != null && !dictWords.isEmpty() && dictHandler != null) {
+            // Renvois explicites « Jereo … » dont la cible n'apparaîtrait pas
+            // comme un simple mot (ponctuation, formulation particulière).
             for (CrossRef ref : findCrossReferences(source)) {
-                Integer id = dictLinks.get(ref.key);
-                if (id == null) {
+                if (overlaps(usedRanges, ref.start, ref.end)) {
+                    continue;
+                }
+                Integer id = dictWords.get(ref.key);
+                if (id == null || id == excludeDictId) {
                     continue;
                 }
                 final int dictId = id;
@@ -161,19 +193,9 @@ public final class ReadingLinks {
                 usedRanges.add(new int[]{ref.start, ref.end});
                 hasLinks = true;
             }
-        }
 
-        if (bibleHandler != null) {
-            for (BibleRefParser.DetectedRef detected
-                    : BibleRefParser.detectReferences(source)) {
-                if (overlaps(usedRanges, detected.start, detected.end)) {
-                    continue;
-                }
-                spannable.setSpan(
-                        new LinkSpan(color,
-                                () -> bibleHandler.open(detected.reference)),
-                        detected.start, detected.end,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (addDictionaryWordSpans(spannable, source, dictWords,
+                    excludeDictId, dictHandler, color, usedRanges)) {
                 hasLinks = true;
             }
         }
@@ -183,6 +205,59 @@ public final class ReadingLinks {
         if (hasLinks) {
             installTouch(textView);
         }
+    }
+
+    /**
+     * Souligne chaque mot (ou vedette de plusieurs mots) du texte qui possède
+     * sa propre fiche. La correspondance la plus longue l'emporte, et les
+     * plages déjà liées (références bibliques) sont laissées intactes.
+     */
+    private static boolean addDictionaryWordSpans(SpannableString spannable,
+                                                  String source,
+                                                  Map<String, Integer> dictWords,
+                                                  int excludeDictId,
+                                                  DictRefHandler dictHandler,
+                                                  int color,
+                                                  List<int[]> usedRanges) {
+        List<int[]> tokens = new ArrayList<>();
+        Matcher matcher = WORD.matcher(source);
+        while (matcher.find()) {
+            tokens.add(new int[]{matcher.start(), matcher.end()});
+        }
+
+        boolean added = false;
+        int index = 0;
+        while (index < tokens.size()) {
+            int start = tokens.get(index)[0];
+            int bestEnd = -1;
+            int bestId = -1;
+
+            int maxWords = Math.min(MAX_HEADWORD_WORDS, tokens.size() - index);
+            for (int words = maxWords; words >= 1; words--) {
+                int end = tokens.get(index + words - 1)[1];
+                Integer id = dictWords.get(normalizeTarget(
+                        source.substring(start, end)));
+                if (id != null && id != excludeDictId) {
+                    bestEnd = end;
+                    bestId = id;
+                    break;
+                }
+            }
+
+            if (bestEnd <= start || overlaps(usedRanges, start, bestEnd)) {
+                index++;
+                continue;
+            }
+
+            final int dictId = bestId;
+            spannable.setSpan(
+                    new LinkSpan(color, () -> dictHandler.open(dictId)),
+                    start, bestEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            usedRanges.add(new int[]{start, bestEnd});
+            added = true;
+            index++;
+        }
+        return added;
     }
 
     private static int linkColor(TextView textView) {

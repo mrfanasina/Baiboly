@@ -562,19 +562,68 @@ public final class BibleRefParser {
         }
     }
 
-    // Livre : lettres (avec accents/apostrophes) éventuellement précédées d'un
-    // préfixe 1-3, puis espace OU rien, puis les nombres.
+    /**
+     * Un mot qui peut appartenir à un nom de livre. Les marqueurs de verset
+     * (« and », « andininy ») sont exclus : sans cela « Obadia and.20 » serait
+     * lu comme le chapitre 20 d'Obadia.
+     */
+    private static final String BOOK_WORD =
+            "(?i:(?!and\\b|andininy\\b)[\\p{L}][\\p{L}'’]*)";
+
+    // Livre : un à cinq mots (accents/apostrophes), éventuellement précédés
+    // d'un préfixe 1-3, puis espace OU rien, puis les nombres.
     // Espaces/tabulations uniquement entre les mots : jamais de saut de ligne,
     // pour ne pas "traverser" un paragraphe ("pahataperana.\n3." ne matche pas).
     // Séparateur chapitre:verset : ":", "." OU "," (forme malgache usuelle).
     // Ex matchés : "Jao 3", "Heb11,1", "1 Kor 13:4-7", "1Kor13,4-7",
     //              "Jao 3.16", "Jao 3,16", "Asan'ny Apostoly 7:54-8:1", "Jod 1:2"
     private static final Pattern REF_IN_TEXT = Pattern.compile(
-            "(?:\\b[1-3][ \\t]?)?\\b[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’]*"
-                    + "(?:[ \\t][A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’]*)*"
+            "(?:\\b[1-3][ \\t]?|\\b)" + BOOK_WORD
+                    + "(?:[ \\t]" + BOOK_WORD + "){0,4}"
                     + "[ \\t]?\\d+(?:[ \\t]?[.:,][ \\t]?\\d+)?"
                     + "(?:[ \\t]?-[ \\t]?\\d+(?:[ \\t]?[.:,][ \\t]?\\d+)?)?"
     );
+
+    /** Liste de versets d'un marqueur : "8", "3-7", "39b,42,44", "1 - 23". */
+    private static final String VERSE_LIST =
+            "\\d+(?:[ \\t]*-[ \\t]*\\d+)?[a-zA-Z]?"
+                    + "(?:[ \\t]*,[ \\t]*\\d+(?:[ \\t]*-[ \\t]*\\d+)?[a-zA-Z]?)*";
+
+    /** « v-10 », « v. 10 », « v:10 » : verset seul, toujours séparé. */
+    private static final Pattern V_MARKER_PATTERN = Pattern.compile(
+            "(?i)\\bv\\s*[.:\\-]\\s*(" + VERSE_LIST + ")");
+
+    /** Référence complète déjà recalée sur son nom de livre. */
+    private static final class FoundRef {
+        final int start;
+        final int end;
+        final int bookNumber;
+        final int chapter;
+        final String reference;
+
+        FoundRef(int start, int end, int bookNumber, int chapter, String reference) {
+            this.start = start;
+            this.end = end;
+            this.bookNumber = bookNumber;
+            this.chapter = chapter;
+            this.reference = reference;
+        }
+    }
+
+    /** Marqueur de verset (« and.18 », « andininy 16 », « v-10 »). */
+    private static final class Marker {
+        final int start;
+        final int end;
+        final int bookNumber; // 0 = pas de livre devant le marqueur
+        final String verses;
+
+        Marker(int start, int end, int bookNumber, String verses) {
+            this.start = start;
+            this.end = end;
+            this.bookNumber = bookNumber;
+            this.verses = verses;
+        }
+    }
 
     /**
      * Détecte TOUTES les références bibliques dans un texte libre.
@@ -583,17 +632,260 @@ public final class BibleRefParser {
      * le match est ignoré). La référence renvoyée est déjà normalisée.
      */
     public static List<DetectedRef> detectReferences(String text) {
+        return detectReferences(text, null, 0);
+    }
+
+    /**
+     * Variante avec contexte de lecture : quand le texte contient seulement
+     * « and 8 », « andininy 16 » ou « v-10 », le livre et le chapitre du jour
+     * servent à construire la référence. Sans contexte, ces marqueurs ne sont
+     * résolus que s'ils suivent une référence complète dans le même texte.
+     */
+    public static List<DetectedRef> detectReferences(String text,
+                                                     String contextBook,
+                                                     int contextChapter) {
         List<DetectedRef> results = new ArrayList<>();
         if (text == null || text.isEmpty()) return results;
 
+        // 1) Références complètes, recalées sur le nom du livre pour ne pas
+        //    souligner « Tao amin'ny I Mpanjaka 4 : 3 » en entier.
+        List<FoundRef> full = new ArrayList<>();
         Matcher m = REF_IN_TEXT.matcher(text);
-        while (m.find()) {
-            String candidate = m.group().trim();
-            ParsedRef parsed = parse(candidate);
-            if (parsed == null) continue;
-            results.add(new DetectedRef(m.start(), m.end(), format(parsed)));
+        int from = 0;
+        while (from < text.length()) {
+            m.region(from, text.length());
+            if (!m.find()) {
+                break;
+            }
+
+            FoundRef ref = trimToBook(text, m.start(), m.end());
+            if (ref == null) {
+                // Un mot parasite a peut-être mangé le début (« et 1 Jaona 2 ») :
+                // on retente au mot suivant (jamais au milieu d'un mot, sinon
+                // « re 3 » serait lu comme un acronyme d'Apocalypse).
+                from = nextWordStart(text, m.start() + 1);
+                continue;
+            }
+
+            full.add(ref);
+            from = ref.end;
         }
+
+        // 2) Marqueurs de versets (livre devant, ou contexte).
+        List<Marker> markers = findVerseMarkers(text, full);
+
+        // 3) Fusion dans l'ordre du texte : les marqueurs héritent du dernier
+        //    livre/chapitre rencontré.
+        Integer ctxBook = resolveBookNumber(contextBook);
+        int ctxChapter = contextChapter;
+
+        int fi = 0;
+        int mi = 0;
+        while (fi < full.size() || mi < markers.size()) {
+            boolean takeFull = mi >= markers.size()
+                    || (fi < full.size()
+                    && full.get(fi).start <= markers.get(mi).start);
+
+            if (takeFull) {
+                FoundRef ref = full.get(fi++);
+                results.add(new DetectedRef(ref.start, ref.end, ref.reference));
+                ctxBook = ref.bookNumber;
+                ctxChapter = ref.chapter;
+                continue;
+            }
+
+            Marker marker = markers.get(mi++);
+
+            int book = marker.bookNumber;
+            if (book == 0) {
+                if (ctxBook == null || ctxBook == 0 || ctxChapter <= 0) {
+                    continue;
+                }
+                book = ctxBook;
+            }
+
+            int chapter;
+            if (isSingleChapterBook(book)) {
+                chapter = 1;
+            } else if (ctxBook != null && ctxBook == book && ctxChapter > 0) {
+                chapter = ctxChapter;
+            } else {
+                continue;
+            }
+
+            ParsedRef parsed = parse(shortNameOf(book) + " " + chapter
+                    + ":" + marker.verses);
+            if (parsed == null) {
+                continue;
+            }
+
+            results.add(new DetectedRef(marker.start, marker.end, format(parsed)));
+        }
+
         return results;
+    }
+
+    /**
+     * Recale une référence candidate sur son nom de livre : « Tao amin'ny
+     * I Mpanjaka 4 : 3 » devient « I Mpanjaka 4 : 3 ». On garde le suffixe
+     * le plus court qui se parse encore (le nom du livre le plus proche des
+     * nombres).
+     */
+    private static FoundRef trimToBook(String text, int start, int end) {
+        String candidate = text.substring(start, end);
+        ParsedRef whole = parse(candidate);
+        FoundRef best = null;
+
+        for (int i = 0; i < candidate.length(); i++) {
+            if (i > 0 && candidate.charAt(i - 1) != ' '
+                    && candidate.charAt(i - 1) != '\t') {
+                continue;
+            }
+
+            ParsedRef parsed = parse(candidate.substring(i));
+            if (parsed == null || !parsed.hasNumbers) {
+                continue;
+            }
+
+            // Ne jamais perdre le préfixe du livre : « 3 Jao 1 » ne doit pas
+            // devenir « Jao 1 » (livre différent).
+            if (whole != null && parsed.bookNumber != whole.bookNumber) {
+                continue;
+            }
+
+            best = new FoundRef(start + i, end, parsed.bookNumber,
+                    parsed.startChapter, format(parsed));
+        }
+        return best;
+    }
+
+    /** Marqueurs « and » / « andininy » / « v- » d'un texte, hors références. */
+    private static List<Marker> findVerseMarkers(String text,
+                                                 List<FoundRef> full) {
+        List<Marker> markers = new ArrayList<>();
+
+        Matcher andMatcher = AND_MARKER_PATTERN.matcher(text);
+        while (andMatcher.find()) {
+            Marker marker = buildMarker(text, andMatcher.start(),
+                    andMatcher.end(), andMatcher.group(1));
+            if (marker != null
+                    && !overlapsRef(full, marker.start, marker.end)) {
+                markers.add(marker);
+            }
+        }
+
+        Matcher vMatcher = V_MARKER_PATTERN.matcher(text);
+        while (vMatcher.find()) {
+            Marker marker = buildMarker(text, vMatcher.start(),
+                    vMatcher.end(), vMatcher.group(1));
+            if (marker != null
+                    && !overlapsRef(full, marker.start, marker.end)) {
+                markers.add(marker);
+            }
+        }
+
+        markers.sort((a, b) -> Integer.compare(a.start, b.start));
+        return markers;
+    }
+
+    private static Marker buildMarker(String text, int start, int end,
+                                      String verses) {
+        int[] bookStart = new int[]{-1};
+        Integer book = resolveBookBefore(text, start, bookStart);
+
+        if (book != null && bookStart[0] >= 0) {
+            return new Marker(bookStart[0], end, book, verses);
+        }
+        return new Marker(start, end, 0, verses);
+    }
+
+    /**
+     * Cherche un nom de livre collé juste avant un marqueur (« Obadia and.20 »,
+     * « I Tantara and.6 »). Renvoie aussi le début de ce nom pour ne pas
+     * souligner les mots qui le précèdent.
+     */
+    private static Integer resolveBookBefore(String text, int markerStart,
+                                             int[] startOut) {
+        int from = Math.max(0, markerStart - 48);
+        String before = text.substring(from, markerStart);
+
+        Matcher word = Pattern.compile("[\\p{L}][\\p{L}'’]*")
+                .matcher(before);
+        List<int[]> tokens = new ArrayList<>();
+        while (word.find()) {
+            tokens.add(new int[]{word.start(), word.end()});
+        }
+
+        if (tokens.isEmpty()) {
+            return null;
+        }
+
+        // Le dernier mot doit toucher le marqueur (séparé seulement par des
+        // espaces) : « ... ; (and.18) » n'a pas de livre juste devant.
+        for (int j = tokens.get(tokens.size() - 1)[1]; j < before.length(); j++) {
+            char ch = before.charAt(j);
+            if (ch != ' ' && ch != '\t') {
+                return null;
+            }
+        }
+
+        int max = Math.min(4, tokens.size());
+        for (int len = 1; len <= max; len++) {
+            int first = tokens.size() - len;
+            int ts = tokens.get(first)[0];
+            int te = tokens.get(tokens.size() - 1)[1];
+
+            // Seulement des mots consécutifs : un chiffre ou une ponctuation
+            // entre eux interdit de prendre tout le passage pour un livre
+            // (« Marka 14 : 36 ; ... Ny and.8 »).
+            if (!onlySpaces(before, tokens, first)) {
+                break;
+            }
+
+            String candidate = before.substring(ts, te);
+            Integer book = resolveBookText(null, candidate);
+            if (book != null) {
+                startOut[0] = from + ts;
+                return book;
+            }
+        }
+        return null;
+    }
+
+    private static boolean onlySpaces(String text, List<int[]> tokens,
+                                       int first) {
+        for (int i = first + 1; i < tokens.size(); i++) {
+            int gapStart = tokens.get(i - 1)[1];
+            int gapEnd = tokens.get(i)[0];
+            for (int j = gapStart; j < gapEnd; j++) {
+                char ch = text.charAt(j);
+                if (ch != ' ' && ch != '\t') {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** Début du mot suivant : ignore les caractères d'un mot en cours. */
+    private static int nextWordStart(String text, int index) {
+        int i = index;
+        while (i < text.length() && !Character.isWhitespace(text.charAt(i))) {
+            i++;
+        }
+        while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
+            i++;
+        }
+        return i;
+    }
+
+    private static boolean overlapsRef(List<FoundRef> refs, int start, int end) {
+        for (FoundRef ref : refs) {
+            if (start < ref.end && end > ref.start) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Acronyme officiel affiché ("Jao", "1Kor"...) pour un numéro. */
